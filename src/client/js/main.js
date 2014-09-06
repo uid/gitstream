@@ -1,14 +1,11 @@
-var $ = require('zeptojs');
-var shoe = require('shoe');
-var dnode = require('dnode');
+var shoe = require('shoe'),
+    dnode = require('dnode'),
+    stream = shoe('/events'),
+    dcon;
 
-    var stream = shoe('/events');
-
-    var d = dnode();
-    d.on('remote', function (remote) {
-        remote.addListener('all', '*','*', function() {
-            console.log( arguments );
-        });
-        remote.removeListener('all', '*','*');
-    });
-    d.pipe(stream).pipe(d);
+dcon = dnode();
+dcon.on( 'remote', function (remote) {
+    'use strict';
+    remote.addEventListener( '*', '*', function() { });
+});
+dcon.pipe(stream).pipe(dcon);
