@@ -6,7 +6,7 @@ var angler = require('git-angler'),
     shoe = require('shoe'),
     spawn = require('child_process').spawn,
     user = require('./user')({
-        sqlHost: 'localhost', sqlUser: 'nhynes', sqlPass: 'localdev', sqlDb: 'gitblitz'
+        sqlHost: 'localhost', sqlUser: 'nhynes', sqlPass: 'localdev', sqlDb: 'gitstream'
     }),
     app = connect(),
     server,
@@ -14,14 +14,29 @@ var angler = require('git-angler'),
     PATH_TO_REPOS = '/srv/repos',
     backend,
     githookEndpoint = angler.githookEndpoint({ pathToRepos: PATH_TO_REPOS, eventBus: eventBus }),
-    eventBusRPCs,
     PORT = 4242;
 
+/**
+ * Verifies the MAC provided in a repo's path (ex. /username/beef42-exercise2.git)
+ * @param {String|Array} repoPath a path string or an array of path components
+ * @param {Function} cb errback that receives a boolean representing the verification status
+ */
 function verifyRepoMac( repoPath, cb ) {
-    var repoNameData = repoPath[ repoPath.length - 1 ].split('-'),
-        userId = repoPath[ repoPath.length - 2 ],
-        repoMac = repoNameData[0],
-        macMsg = userId + repoNameData.slice( 1 ).join('');
+    var splitRepoPath = ( repoPath instanceof Array ? repoPath : repoPath.split('/').slice( 1 ) ),
+        repoNameData,
+        userId,
+        repoMac,
+        macMsg;
+
+    if ( splitRepoPath.length < 2 ) {
+        cb( false );
+        return;
+    }
+
+    repoNameData = splitRepoPath[ splitRepoPath.length - 1 ].split('-');
+    userId = splitRepoPath[ splitRepoPath.length - 2 ];
+    repoMac = repoNameData[0];
+    macMsg = userId + repoNameData.slice( 1 ).join('');
 
     user.verifyMac( userId, repoMac, macMsg, cb );
 }
@@ -29,7 +44,7 @@ function verifyRepoMac( repoPath, cb ) {
 eventBus.setHandler( '*', '404', function( scope, _, data, cb ) {
     if ( !/exercise[1-9][0-9]*\.git$/.test( scope ) ) { return cb( false ); }
 
-    verifyRepoMac( scope.split('/').slice( 1 ), function( err, ok ) {
+    verifyRepoMac( scope, function( err, ok ) {
         var pathToRepo,
             exerciseRepo,
             pathToStarterRepo,
@@ -83,14 +98,51 @@ app.use( '/auth', function( req, res ) {
 });
 
 server = app.listen( PORT );
-
-eventBusRPCs = {
-    addListener: eventBus.addListener.bind( eventBus ),
-    setHandler: eventBus.setHandler.bind( eventBus ),
-    removeListener: eventBus.removeListener.bind( eventBus )
-};
-
 shoe( function( stream ) {
-    var d = dnode( eventBusRPCs );
+    var uid = stream.id,
+        eventRPCs,
+        listeners = {},
+        d;
+
+    eventRPCs = {
+        addListener: function( name, scope, event, callback, done ) {
+            verifyRepoMac( scope, function( err, ok ) {
+                if ( !err && ok ) {
+                    var uniqName = uid + ':' + name;
+                    listeners[ uniqName ] = listeners[ uniqName ] || [];
+                    listeners[ uniqName ].push({ scope: scope, event: event });
+                    eventBus.addListener( uid + ':' + name, scope, event, callback );
+                }
+
+                if ( done && done.call ) { done( !err && !!ok ); } // false && undef === undef (?!)
+            });
+        },
+        removeListener: function( name, scope, event, done ) {
+            verifyRepoMac( scope, function() {
+                var uniqName = uid + ':' + name,
+                    removed;
+                listeners[ uniqName ] = ( listeners[ uniqName] || [] )
+                    .filter( function( listener ) {
+                        return !( listener.scope === scope && listener.event === event );
+                    });
+                removed = eventBus.removeListener( uid + ':' + name, scope, event );
+
+                if ( done && done.call ) { done(); }
+            });
+        }
+    };
+
+    stream.on( 'close', function() {
+        var listener,
+            removeListeners = function( listener ) {
+                eventBus.removeListener( listenerName, listener.scope, listener.event );
+            },
+            listenerName;
+        for ( listenerName in listeners ) {
+            listener = listeners[ listenerName ].map( removeListeners );
+        }
+    });
+
+    d = dnode( eventRPCs );
     d.pipe( stream ).pipe( d );
 }).install( server, '/events' );
