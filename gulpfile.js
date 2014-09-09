@@ -1,12 +1,13 @@
 var gulp = require('gulp'),
-    uglify = require('uglify-to-browserify'),
     browserify = require('browserify'),
+    buffer = require('vinyl-buffer'),
     cache,
     concatCss = require('gulp-concat-css'),
     jscs,
     jshint,
     livereload,
     minifyCss = require('gulp-minify-css'),
+    nodeunit,
     plumber,
     prefixer = require('gulp-autoprefixer'),
     remember,
@@ -35,6 +36,7 @@ var gulp = require('gulp'),
             },
             server: 'src/server/**/*'
         },
+        tests: 'test/**/*.js',
         dist: {
             base: 'dist/',
             all: 'dist/**/*',
@@ -51,6 +53,7 @@ if ( !production ) {
     jscs = require('gulp-jscs');
     jshint = require('gulp-jshint');
     livereload = require('gulp-livereload');
+    nodeunit = require('gulp-nodeunit');
     plumber = require('gulp-plumber');
     remember = require('gulp-remember');
     rimraf = require('rimraf');
@@ -64,14 +67,20 @@ function notilde( path ) {
 }
 
 gulp.task( 'build', [ 'sass', 'browserify', 'collectstatic', 'collectserver' ] );
-gulp.task( 'default', [ 'checkstyle', 'watch', 'build' ] );
+gulp.task( 'default', [ 'checkstyle', 'test', 'watch', 'build' ] );
 
 gulp.task( 'clean', function( cb ) {
     rimraf( path.dist.base, cb );
 });
 
+gulp.task( 'test', function() {
+    gulp.src( path.tests )
+        .pipe( plumber())
+        .pipe( nodeunit() );
+});
+
 gulp.task( 'checkstyle', function() {
-    var stream = gulp.src( path.src.js )
+    var stream = gulp.src( [].concat( path.src.js, path.tests ) )
 
     if ( !production ) {
         stream = stream
@@ -113,10 +122,18 @@ gulp.task( 'browserify', function() {
     });
 
     var bundle = function() {
-        return bundler
-            .bundle()
-            .pipe( source('bundle.js') )
-            .pipe( gulp.dest( path.dist.client ) );
+        var stream = bundler.bundle()
+            .pipe( source('bundle.js') );
+
+        if ( production ) {
+            stream = stream
+                .pipe( buffer() )
+                .pipe( uglify() )
+        }
+
+        stream.pipe( gulp.dest( path.dist.client ) );
+
+        return stream;
     };
 
     if ( watching ) {
@@ -149,7 +166,7 @@ gulp.task( 'collectserver', function() {
 
 gulp.task( 'watch', function() {
     watching = true;
-    gulp.watch( notilde( path.src.js ), [ 'checkstyle' ] );
+    gulp.watch( notilde( [].concat( path.src.js, path.tests ) ), [ 'checkstyle', 'test' ] );
     gulp.watch( notilde( path.src.client.scss ), [ 'sass' ] );
     gulp.watch( notilde( path.src.client.static ), [ 'collectstatic' ] );
     gulp.watch( notilde( path.src.server ), [ 'collectserver' ] );
