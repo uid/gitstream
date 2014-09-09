@@ -76,7 +76,9 @@ gulp.task( 'clean', function( cb ) {
 gulp.task( 'test', function() {
     gulp.src( path.tests )
         .pipe( plumber())
-        .pipe( nodeunit() );
+        .pipe( nodeunit({
+            reporter: 'skip_passed'
+        }) );
 });
 
 gulp.task( 'checkstyle', function() {
@@ -165,6 +167,7 @@ gulp.task( 'collectserver', function() {
 });
 
 gulp.task( 'watch', function() {
+    livereload({ silent: true });
     watching = true;
     gulp.watch( notilde( [].concat( path.src.js, path.tests ) ), [ 'checkstyle', 'test' ] );
     gulp.watch( notilde( path.src.client.scss ), [ 'sass' ] );

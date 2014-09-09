@@ -11,8 +11,8 @@ var util = require('util'),
 /**
  * A Moore machine that represents multi-step exercises as states.
  *
- * This class is an EventEmitter that emits the `stateChanged` event
- * with the arguments: ( newState, oldState ) and the `halt` event with no arguments
+ * This class is an EventEmitter that emits the `step` event with the arguments:
+ * ( newState, oldState ) and the `halt` event with no arguments
  *
  * @param {Object} config @see ExerciseMachineConfigExample.js for configuration parameters
  * @param {String} repo the name of the repo (e.g. /nhynes/exercise2.git
@@ -61,6 +61,7 @@ _.extend( ExerciseMachine.prototype, {
      * Further steps when halted do nothing.
      *
      * @param {String} state the state into which to step
+     * @param {Array} eventData event info yielded from the listener that initated this step
      */
     _step: function( newState ) {
         var oldState = this._state,
@@ -105,23 +106,27 @@ _.extend( ExerciseMachine.prototype, {
      * Sets up the current state
      */
     _setUp: function() {
-        var stateConfig = this._states[ this._state ],
-            stateProp,
-            repoAction,
-            transitionFn,
-            uniqName;
+        var stateConfig = this._states[ this._state ];
 
-        for ( stateProp in stateConfig ) {
-            repoAction = GIT_EVENTS[ stateProp ];
-            if ( stateConfig.hasOwnProperty( stateProp ) && repoAction ) {
-                uniqName = uuid.v1();
-                this._eventBus.addListener( uniqName, this._repo, repoAction, function( stepInto ) {
-                    var eventArgs = Array.prototype.slice.call( arguments ).slice( 1 );
-                    this._step( stepInto );
-                }.bind( this, stateConfig[ stateProp ] ) );
-                this._currentListeners.push({ name: uniqName, action: repoAction });
-            }
-        }
+        _.map( stateConfig, function( stateValue, stateProp) {
+            var repoAction = GIT_EVENTS[ stateProp ],
+                uniqName;
+            if ( !repoAction ) { return; }
+
+            uniqName = uuid.v1();
+            this._eventBus.addListener( uniqName, this._repo, repoAction, function() {
+                var listenerArgs = Array.prototype.slice.call( arguments ),
+                    stepInto;
+                // stateValue is the transition function
+                if ( typeof stateValue === 'function' ) {
+                    stepInto = stateValue.apply( stateConfig, listenerArgs );
+                } else {
+                    stepInto = stateValue;
+                }
+                this._step( stepInto );
+            }.bind( this ) );
+            this._currentListeners.push({ name: uniqName, action: repoAction });
+        }.bind( this ) );
     },
 
     /**
