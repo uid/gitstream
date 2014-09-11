@@ -13,45 +13,58 @@ var util = require('util'),
  *
  * This class is an EventEmitter that emits the `step` event with the arguments:
  * ( newState, oldState ) and the `halt` event with no arguments
+ * If a time limit is specified, a `ding` event will be emitted when the timer runs out
  *
  * @param {Object} config @see ExerciseMachineConfigExample.js for configuration parameters
  * @param {String} repo the name of the repo (e.g. /nhynes/exercise2.git
  * @param {EventBus} eventBus the EventBus on which to listen for repo events
+ * Once initialized, if a time limit is set, the end timestamp will be available as .endTimestamp
  */
 function ExerciseMachine( config, repo, eventBus ) {
     if ( !config || !repo || !eventBus ) { throw Error('Missing ExerciseMachine required params'); }
     if ( !(this instanceof ExerciseMachine) ) { return new ExerciseMachine( config ); }
 
-    var startState = config.startState;
+    this._configStartState = config.startState;
     delete config.startState;
+    this._timeLimit = config.timeLimit; // in seconds
+    delete config.timeLimit;
 
     this._repo = repo;
     this._eventBus = eventBus;
 
     this._states = config;
     this._currentListeners = [];
-    this._halted = true;
-
-    if ( startState ) {
-        this.init( startState );
-    }
+    this.halted = true;
 }
 
 util.inherits( ExerciseMachine, EventEmitter );
 
 _.extend( ExerciseMachine.prototype, {
     /**
-     * Initializes this ExerciseMachine with the provided start state.
-     * This is called automatically if `startState` is provided in the configuration.
-     * This method is idempotent once the start state has been set (possibly by the constructor)
-     * @param {String} startState the start state
+     * Initializes this ExerciseMachine with the provided start state and starts the clock
+     * This method is idempotent once the machine has been started
+     * @param {String} startState the start state. Default: startState specified by config
+     * @param {Number} timeLimit the exercise time limit in seconds.
+     *  Default: timeLimit specified by config
+     * @return {ExerciseMachine} the current ExerciseMachine
      */
-    init: function( startState ) {
-        if ( this._state ) { return; }
+    init: function( startState, timeLimit ) {
+        if ( this._state !== undefined ) { return; }
 
-        this._state = startState;
-        this._halted = false;
+        this._state = startState || this._configStartState;
+        this._timeLimit = timeLimit || this._timeLimit;
+        this.halted = false;
+        if ( this._timeLimit ) {
+            Object.defineProperty( this, 'endTimestamp', {
+                value: Date.now() + this._timeLimit * 1000,
+                writable: false
+            });
+            setTimeout( function() {
+                this.emit('ding');
+            }.bind( this ), this._timeLimit * 1000 );
+        }
         this._step( this._state );
+        return this;
     },
 
     /**
@@ -69,14 +82,14 @@ _.extend( ExerciseMachine.prototype, {
             onEnter,
             onEnterResult;
 
-        if ( this._halted ) { return; }
+        if ( this.halted ) { return; }
 
         this._tearDown();
         this._state = newState;
         this.emit( 'step', newState, oldState );
 
         if ( newState === null || newStateConf === null ) {
-            this._halted = true;
+            this.halted = true;
             return this.emit('halt');
         }
 

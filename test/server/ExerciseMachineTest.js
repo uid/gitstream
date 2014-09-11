@@ -8,11 +8,12 @@ module.exports = {
         done();
     },
 
-    // initialization using init()
+    // initialization using init( startState )
     testInitialize: function( test ) {
         test.expect( 1 );
 
         var em = new ExerciseMachine({
+            startState: 'otherState',
             test: {},
             otherState: {}
         }, this.repo, this.eventBus );
@@ -22,7 +23,7 @@ module.exports = {
         test.done();
     },
 
-    // initialization using the startState parameter in the config
+    // initialization using init()
     testInitializeStartState: function( test ) {
         test.expect( 1 );
 
@@ -30,8 +31,7 @@ module.exports = {
             startState: 'test',
             test: {},
             otherState: {}
-        }, this.repo, this.eventBus );
-        em.init('otherState');
+        }, this.repo, this.eventBus ).init();
         test.strictEqual( em._state, 'test' );
 
         test.done();
@@ -62,7 +62,7 @@ module.exports = {
             startState: 'test',
             test: {},
             nextState: null
-        }, this.repo, this.eventBus );
+        }, this.repo, this.eventBus ).init();
 
         em.on( 'step', function( newState, oldState ) {
             test.strictEqual( newState, 'nextState' );
@@ -82,7 +82,7 @@ module.exports = {
             startState: 'test',
             test: 'nextState',
             nextState: null
-        }, this.repo, this.eventBus );
+        }, this.repo, this.eventBus ).init();
 
         test.strictEqual( em._state, 'nextState' );
 
@@ -98,7 +98,7 @@ module.exports = {
             startState: 'test',
             test: function() { return 'nextState'; },
             nextState: null
-        }, this.repo, this.eventBus );
+        }, this.repo, this.eventBus ).init();
 
         test.strictEqual( em._state, 'nextState' );
 
@@ -113,7 +113,7 @@ module.exports = {
             startState: 'test',
             test: function() { return null; },
             nextState: null
-        }, this.repo, this.eventBus );
+        }, this.repo, this.eventBus ).init();
 
         test.strictEqual( em._state, null );
 
@@ -130,7 +130,7 @@ module.exports = {
                 onEnter: 'nextState'
             },
             nextState: null
-        }, this.repo, this.eventBus );
+        }, this.repo, this.eventBus ).init();
 
         test.strictEqual( em._state, 'nextState' );
 
@@ -150,7 +150,7 @@ module.exports = {
                 }
             },
             nextState: null
-        }, this.repo, this.eventBus );
+        }, this.repo, this.eventBus ).init();
 
         test.strictEqual( em._state, 'nextState' );
 
@@ -170,7 +170,7 @@ module.exports = {
                 }
             },
             nextState: null
-        }, this.repo, this.eventBus );
+        }, this.repo, this.eventBus ).init();
 
         test.strictEqual( em._state, 'test' );
 
@@ -196,7 +196,7 @@ module.exports = {
                 testHelper: true
             },
             nextState: null
-        }, this.repo, this.eventBus );
+        }, this.repo, this.eventBus ).init();
 
         this.eventBus.trigger( this.repo, 'commit', [ { test: true } ] );
 
@@ -215,7 +215,7 @@ module.exports = {
                 onSomeNonGitEvent: 'nextState'
             },
             nextState: null
-        }, this.repo, this.eventBus );
+        }, this.repo, this.eventBus ).init();
 
         this.eventBus.triggerListeners( '/nhynes/test.git', 'some-non-git-event' );
 
@@ -239,7 +239,7 @@ module.exports = {
             },
             badState: null,
             goodState: null
-        }, this.repo, this.eventBus );
+        }, this.repo, this.eventBus ).init();
 
         this.eventBus.triggerListeners( this.repo, 'commit' );
         this.eventBus.triggerListeners( this.repo, 'push' );
@@ -247,5 +247,61 @@ module.exports = {
         test.strictEqual( em._state, 'goodState' );
 
         test.done();
+    },
+
+    // tests that the ding/timer done event is called when passed a timeLimit in the config
+    testDingConfig: function( test ) {
+        test.expect( 2 );
+
+        var em,
+            failTimeout;
+
+        em = new ExerciseMachine({
+            startState: 'test',
+            timeLimit: 0.1, // seconds
+            test: {}
+        }, this.repo, this.eventBus );
+
+        failTimeout = setTimeout( function() {
+            test.ok( false );
+            test.done();
+        }, 111 );
+
+        em.init();
+        test.strictEqual( em.endTimestamp, Date.now() + 0.1 * 1000 );
+
+        em.on( 'ding', function() {
+            clearTimeout( failTimeout );
+            test.ok( true );
+            test.done();
+        });
+    },
+
+    // tests that the ding/timer done event is called when passed a timeLimit in init
+    testDingInit: function( test ) {
+        test.expect( 2 );
+
+        var em,
+            failTimeout;
+
+        em = new ExerciseMachine({
+            startState: 'test',
+            timeLimit: 0.2, // seconds
+            test: {}
+        }, this.repo, this.eventBus );
+
+        failTimeout = setTimeout( function() {
+            test.ok( false );
+            test.done();
+        }, 111 );
+
+        em.init( null, 0.1 );
+        test.strictEqual( em.endTimestamp, Date.now() + 0.1 * 1000 );
+
+        em.on( 'ding', function() {
+            clearTimeout( failTimeout );
+            test.ok( true );
+            test.done();
+        });
     }
 };
