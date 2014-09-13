@@ -43,7 +43,7 @@ module.exports = function( opts ) {
                 }
 
                 if ( results.length === 0 ) {
-                    return cb( null, false );
+                    return cb( null );
                 }
 
                 userInfo = results[0];
@@ -54,6 +54,14 @@ module.exports = function( opts ) {
 
                 cb( null, mac.length >= 6 && hmac.indexOf( mac ) === 0 );
             });
+        },
+
+        createMac: function( userKey, macMsg, length ) {
+            length = length || 6; // default for repos
+            return crypto.createHmac( 'sha1', userKey )
+                .update( macMsg )
+                .digest('hex')
+                .substring( 0, length );
         }
     };
 };

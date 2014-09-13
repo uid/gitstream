@@ -268,7 +268,7 @@ module.exports = {
         }, 111 );
 
         em.init();
-        test.strictEqual( em.endTimestamp, Date.now() + 0.1 * 1000 );
+        test.ok( Math.abs( em.endTimestamp - ( Date.now() + 0.1 * 1000 ) ) <= 1 );
 
         em.on( 'ding', function() {
             clearTimeout( failTimeout );
@@ -285,7 +285,6 @@ module.exports = {
             failTimeout;
 
         em = new ExerciseMachine({
-            startState: 'test',
             timeLimit: 0.2, // seconds
             test: {}
         }, this.repo, this.eventBus );
@@ -295,8 +294,8 @@ module.exports = {
             test.done();
         }, 111 );
 
-        em.init( null, 0.1 );
-        test.strictEqual( em.endTimestamp, Date.now() + 0.1 * 1000 );
+        em.init( 'test', 0.1 );
+        test.ok( Math.abs( em.endTimestamp - ( Date.now() + 0.1 * 1000 ) ) <= 1 );
 
         em.on( 'ding', function() {
             clearTimeout( failTimeout );

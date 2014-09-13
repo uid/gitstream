@@ -60,7 +60,10 @@ _.extend( ExerciseMachine.prototype, {
                 writable: false
             });
             setTimeout( function() {
-                this.emit('ding');
+                if ( !this.halted ) {
+                    this.emit('ding');
+                    this.halt();
+                }
             }.bind( this ), this._timeLimit * 1000 );
         }
         this._step( this._state );
@@ -74,7 +77,6 @@ _.extend( ExerciseMachine.prototype, {
      * Further steps when halted do nothing.
      *
      * @param {String} state the state into which to step
-     * @param {Array} eventData event info yielded from the listener that initated this step
      */
     _step: function( newState ) {
         var oldState = this._state,
@@ -150,6 +152,13 @@ _.extend( ExerciseMachine.prototype, {
             this._eventBus.removeListener( listener.name, this._repo, listener.action );
         }.bind( this ) );
         this.currentListeners = [];
+    },
+
+    /**
+     * Forcibly halts this ExerciseMachine
+     */
+    halt: function() {
+        this._step( null );
     }
 });
 

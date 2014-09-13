@@ -1,15 +1,15 @@
 var shoe = require('shoe'),
-    dnode = require('dnode'),
     stream = shoe('http://localhost:4242/events'),
-    dcon,
-    logger = function() {
-        'use strict';
-        console.log( arguments );
+    emitter = require('duplex-emitter'),
+    events = emitter( stream ),
+    logger = function( prefix ) {
+        return function() {
+            console.log( prefix, arguments );
+        }
     };
 
-dcon = dnode();
-dcon.on( 'remote', function (remote) {
-    'use strict';
-    remote.addListener( 'name', '/nhynes/075e0b4-exercise2.git', '*', logger, logger );
-});
-dcon.pipe(stream).pipe(dcon);
+events.on('sync', logger('sync') );
+events.on( 'step', logger('step') );
+events.on( 'ding', logger('ding') );
+events.on( 'halt', logger('halt') );
+// events.emit('exerciseChanged', 'exercise1');
