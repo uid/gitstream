@@ -4,7 +4,7 @@
   "description": "An interactive Git tutor",
   "main": "dist/index.html",
   "author": "Nick Hynes",
-  "license": "AGPL-3.0",
+  "license": "MIT",
   "repository": "https://github.com/nhynes/gitstream",
   "dependencies": {
     "browserify": "^5.11.1",
