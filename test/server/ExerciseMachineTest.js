@@ -27,7 +27,7 @@ module.exports = {
     testInitializeStartState: function( test ) {
         test.expect( 1 );
 
-        var em = new ExerciseMachine({
+        var em = ExerciseMachine({
             startState: 'test',
             test: {},
             otherState: {}

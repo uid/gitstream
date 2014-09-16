@@ -22,7 +22,9 @@ var util = require('util'),
  */
 function ExerciseMachine( config, repo, eventBus ) {
     if ( !config || !repo || !eventBus ) { throw Error('Missing ExerciseMachine required params'); }
-    if ( !(this instanceof ExerciseMachine) ) { return new ExerciseMachine( config ); }
+    if ( !(this instanceof ExerciseMachine) ) {
+        return new ExerciseMachine( config, repo, eventBus );
+    }
 
     this._configStartState = config.startState;
     delete config.startState;

@@ -14,6 +14,7 @@
     "latedef": true,
     "nonew": true,
     "strict": true,
+    "globalstrict": "true",
 
     "globals": {
         "require": true,

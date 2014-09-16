@@ -10,7 +10,7 @@ module.exports = {
     testStepInit: function( test ) {
         test.expect( 2 );
 
-        var ev = new ExerciseViewer({
+        var ev = ExerciseViewer({
             testState: {
                 onEnter: function() {
                     test.ok( true );

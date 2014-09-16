@@ -9,7 +9,9 @@
 function ExerciseViewer( config, eventEmitter, context ) {
     'use strict';
 
-    if ( !(this instanceof ExerciseViewer) ) { return new ExerciseViewer.apply( null, arguments );}
+    if ( !(this instanceof ExerciseViewer) ) {
+        return new ExerciseViewer( config, eventEmitter, context );
+    }
 
     var stateEntry,
         states = {},
