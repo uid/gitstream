@@ -18,14 +18,17 @@ var util = require('util'),
  *  If a time limit is specified, a `ding` event will be emitted when the timer runs out
  *
  * @param {Object} config @see ExerciseMachineConfigExample.js for configuration parameters
- * @param {String} repo the name of the repo (e.g. /nhynes/exercise2.git
+ * @param {String} repoPaths { String path: the repo short path, String fsPath: the fs path }
+ * @param {String} exercisePath the path to the exercise directory
  * @param {EventBus} eventBus the EventBus on which to listen for repo events
  * Once initialized, if a time limit is set, the end timestamp will be available as .endTimestamp
  */
-function ExerciseMachine( config, repo, eventBus ) {
-    if ( !config || !repo || !eventBus ) { throw Error('Missing ExerciseMachine required params'); }
+function ExerciseMachine( config, repoPaths, exerciseDir, eventBus ) {
+    if ( !config || !repoPaths || !exerciseDir || !eventBus ) {
+        throw Error('Missing required param(s)');
+    }
     if ( !(this instanceof ExerciseMachine) ) {
-        return new ExerciseMachine( config, repo, eventBus );
+        return new ExerciseMachine( config, repoPaths, exerciseDir, eventBus );
     }
 
     this._configStartState = config.startState;
@@ -33,8 +36,10 @@ function ExerciseMachine( config, repo, eventBus ) {
     this._timeLimit = config.timeLimit; // in seconds
     delete config.timeLimit;
 
-    this._repo = repo;
+    this._repo = repoPaths.path;
     this._eventBus = eventBus;
+
+    this._exerciseUtils = exerciseUtils({ repoDir: repoPaths.fsPath, exerciseDir: exerciseDir });
 
     this._states = config;
     this._currentListeners = [];
@@ -113,7 +118,7 @@ _.extend( ExerciseMachine.prototype, {
             ( newStateConf.onEnter ? newStateConf.onEnter : function( done ) { done(); } );
 
         if ( typeof entryPoint === 'function' ) {
-            entryPoint.call( exerciseUtils, doneFn );
+            entryPoint.call( this._exerciseUtils, doneFn );
         } else {
             doneFn( entryPoint );
         }
@@ -123,7 +128,10 @@ _.extend( ExerciseMachine.prototype, {
      * Sets up the current state
      */
     _setUp: function() {
-        var stateConfig = this._states[ this._state ];
+        var stateConfig = this._states[ this._state ],
+            doneFn = function( stepTo, data ) {
+                this._step( stepTo, data );
+            }.bind( this );
 
         _.map( stateConfig, function( stateValue, stateProp) {
             var repoAction = GIT_EVENTS[ stateProp ],
@@ -132,15 +140,13 @@ _.extend( ExerciseMachine.prototype, {
 
             uniqName = uuid.v1();
             this._eventBus.addListener( uniqName, this._repo, repoAction, function() {
-                var listenerArgs = Array.prototype.slice.call( arguments ),
-                    stepInto;
+                var listenerArgs = Array.prototype.slice.call( arguments );
                 // stateValue is the transition function
                 if ( typeof stateValue === 'function' ) {
-                    stepInto = stateValue.apply( stateConfig, listenerArgs );
+                    stateValue.apply( this._exerciseUtils, listenerArgs.concat( doneFn ) );
                 } else {
-                    stepInto = stateValue;
+                    doneFn( stateValue );
                 }
-                this._step( stepInto );
             }.bind( this ) );
             this._currentListeners.push({ name: uniqName, action: repoAction });
         }.bind( this ) );

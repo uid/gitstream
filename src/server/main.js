@@ -61,7 +61,7 @@ function extractRepoInfoFromPath( repoPath ) {
 }
 
 /** Does the inverse of @see extractRepoInfoFromPath. macMsg is not required */
-function createRepoPath( info ) {
+function createRepoShortPath( info ) {
     return path.join( '/', info.userId, info.mac + '-' + info.exerciseName + '.git' );
 }
 
@@ -100,7 +100,7 @@ eventBus.setHandler( '*', '404', function( repoName, _, data, clonable ) {
 
         exerciseRepo = repoInfo.exerciseName + '.git'; // exerciseX.git
         pathToRepo = path.join( PATH_TO_REPOS, repoName );
-        pathToStarterRepo = path.join( PATH_TO_REPOS, '/starting', exerciseRepo );
+        pathToStarterRepo = path.join( PATH_TO_EXERCISES, '/starting', exerciseRepo );
 
         mkdir = spawn( 'mkdir', [ '-p', path.dirname( pathToRepo ) ] );
         mkdir.on( 'close', function( mkdirRet ) {
@@ -168,12 +168,17 @@ shoe( function( stream ) {
         var emConfFile = path.join( PATH_TO_EXERCISES, exerciseName, EXERCISE_CONF_FILE ),
             emConf = require( emConfFile )(),
             repoMac = user.createMac( userKey, userId + exerciseName ),
-            exerciseRepo = createRepoPath({
+            exerciseRepo = createRepoShortPath({
                 userId: userId,
                 exerciseName: exerciseName,
                 mac: repoMac
-            });
-        return new ExerciseMachine( emConf, exerciseRepo, eventBus );
+            }),
+            repoPaths = {
+                fsPath: path.join( PATH_TO_REPOS, exerciseRepo ), // repo fs path
+                path: exerciseRepo // repo short path
+            },
+            exerciseDir = path.join( PATH_TO_EXERCISES, exerciseName );
+        return new ExerciseMachine( emConf, repoPaths, exerciseDir, eventBus );
     }
 
     /** Forward events from the exerciseMachine to the client */
