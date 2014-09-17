@@ -7,22 +7,19 @@ module.exports = function() {
         },
 
         committedFile: {
-            onPostReceive: 'pushed'
+            onReceive: 'pushed'
         },
 
         pushed: function( done ) {
             this.fileExists( 'hg_sux.txt', function( exists ) {
-                this.commitMsgContains(/Git is great/i, function( err, logContains ) {
+                this.commitMsgContains(/git is great/i, function( err, logContains ) {
                     var statusMsg;
                     if ( exists ) {
                         done('done');
-                    } else {
-                        if ( !exists ) {
-                            statusMsg = 'nofile';
-                        } else if ( !logContains ) {
-                            statusMsg = 'badmsg';
-                        }
-                        done( 'createFile', statusMsg );
+                    } else if( !exists ){
+                        done('createFile');
+                    } else if ( !statusMsg ) {
+                        done('committedFile');
                     }
                 });
             }.bind( this ) );

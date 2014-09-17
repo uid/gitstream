@@ -16,13 +16,14 @@ var angler = require('git-angler'),
     eventBus = new angler.EventBus(),
     PATH_TO_REPOS = '/srv/repos',
     PATH_TO_EXERCISES = '/srv/exercises',
-    repoNameRe = /exercise[1-9][0-9]*\.git$/,
+    repoNameRe = /\/[a-z][a-z0-9]+\/[a-f0-9]{6,}-.+.git$/,
     backend,
     rcon = redis.createClient(),
+    gitHTTPMount = '/repos', // no trailing slash
     githookEndpoint = angler.githookEndpoint({
         pathToRepos: PATH_TO_REPOS,
         eventBus: eventBus,
-        gitHTTPMount: '/repos/'
+        gitHTTPMount: gitHTTPMount
     }),
     CLIENT_IDLE_TIMEOUT = 60 * 60 * 1000, // 1 hr before resting client state expires
     PORT = 4242,
@@ -132,7 +133,8 @@ app.use( '/hooks', githookEndpoint );
 
 app.use( '/go', function( req, res ) {
     // invoked from the "go" script in client repo
-    var repo = req.headers['x-gitstream-repo'];
+    var remoteUrl = req.headers['x-gitstream-repo'],
+        repo = remoteUrl.substring( remoteUrl.indexOf( gitHTTPMount ) + gitHTTPMount.length );
     verifyAndGetRepoInfo( repo, function( err, repoInfo ) {
         if ( !err && repoInfo ) {
             rcon.publish( repoInfo.userId + ':go', repoInfo.exerciseName, logErr );
@@ -157,7 +159,7 @@ shoe( function( stream ) {
         FIELD_EXERCISE_STATE = 'exerciseState',
         FIELD_END_TIME = 'endTime',
         FIELD_CURRENT_EXERCISE = 'currentExercise',
-        EXERCISE_CONF_FILE = 'exercise.conf';
+        EXERCISE_CONF_FILE = 'exerciseConf.js';
 
     stream.on( 'close', function() {
         if ( exerciseMachine ) { exerciseMachine.halt(); }
@@ -184,17 +186,20 @@ shoe( function( stream ) {
     /** Forward events from the exerciseMachine to the client */
     function initExerciseMachineListeners( exerciseMachine ) {
         exerciseMachine.on( 'ding', function() {
-            events.emit.apply( null, [ 'ding' ].concat( arguments ) );
+            var args = [ 'ding' ].concat( Array.prototype.slice.call( arguments ) );
+            events.emit.apply( events, args );
             rcon.hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME );
         });
 
         exerciseMachine.on( 'step', function( newState ) {
-            events.emit.apply( null, [ 'step' ].concat( arguments ) );
+            var args = [ 'step' ].concat( Array.prototype.slice.call( arguments ) );
+            events.emit.apply( events, args );
             rcon.hset( userId, FIELD_EXERCISE_STATE, newState, logErr );
         });
 
         exerciseMachine.on( 'halt', function() {
-            events.emit.apply( null, [ 'halt' ].concat( arguments ) );
+            var args = [ 'halt' ].concat( Array.prototype.slice.call( arguments ) );
+            events.emit.apply( events, args );
             rcon.hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME );
         });
     }

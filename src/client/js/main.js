@@ -21,7 +21,7 @@ events.on('sync', function( newState ) {
     // load exercise config
     // create new exercise machine
 
-    events.emit('exerciseChanged', 'exercise1');
+    events.emit('exerciseChanged', 'createPushNewFile');
 });
 
 // forward exercise events to exercise machine emitter
