@@ -86,10 +86,12 @@ _.extend( ExerciseMachine.prototype, {
     _step: function( newState ) {
         var oldState = this._state,
             newStateConf = this._states[ newState ],
-            onEnter,
-            output, // output of stepping into a state
-            stepTo,
-            stepData;
+            entryPoint,
+            doneFn = function( stepTo, stepData ) {
+                this.emit( 'step', newState, oldState, stepData );
+                if ( stepTo !== undefined ) { this._step( stepTo ); }
+                this._setUp();
+            }.bind( this );
 
         if ( this.halted ) { return; }
 
@@ -98,8 +100,8 @@ _.extend( ExerciseMachine.prototype, {
 
         if ( newState === null || newStateConf === null ) {
             this.halted = true;
-            this.emit( 'step', newState, oldState );
-            this.emit( 'halt', newState );
+            if ( newState !== null ) { this.emit( 'step', newState, oldState ); }
+            this.emit( 'halt', newState !== null ? newState : oldState );
             return;
         }
 
@@ -107,30 +109,14 @@ _.extend( ExerciseMachine.prototype, {
             throw Error('No definition for state: ' + newState + '. Prev state: ' + oldState );
         }
 
-        // if a state evaluates to a reference to another state, then go to the new state
-        if ( typeof newStateConf !== 'object' ) { // i.e. string, function, or null
-            stepTo = typeof newStateConf === 'function' ? newStateConf() : newStateConf;
+        entryPoint = typeof newStateConf !== 'object' ? newStateConf :
+            ( newStateConf.onEnter ? newStateConf.onEnter : function( done ) { done(); } );
+
+        if ( typeof entryPoint === 'function' ) {
+            entryPoint.call( exerciseUtils, doneFn );
         } else {
-            onEnter = newStateConf.onEnter;
-            if ( onEnter ) {
-                if ( typeof onEnter === 'string' ) { return this._step( onEnter ); }
-
-                output = onEnter.call( exerciseUtils );
-                // if output is { stepTo, data }, stepTo is new state, data is output data
-                // if output is null or string, step to that state
-                // otherwise, output is the output data
-                // very clear, right?
-                if ( output.stepTo || output.stepTo === null ||
-                    output === null || typeof output === 'string' ) {
-                    stepTo = ( output && output.stepTo ? output.stepTo : output );
-                }
-                stepData = output && output.data ? output.data : output;
-            }
+            doneFn( entryPoint );
         }
-
-        this.emit( 'step', newState, oldState, stepData );
-        if ( stepTo || stepTo === null ) { this._step( stepTo ); }
-        this._setUp();
     },
 
     /**

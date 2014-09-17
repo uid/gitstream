@@ -39,17 +39,20 @@ module.exports = {
 
     // verify that halting emits 'halt' event and that further steps do nothing
     testHalt: function( test ) {
-        test.expect( 1 );
+        test.expect( 2 );
 
         var em = new ExerciseMachine({
             testHalt: null,
             otherState: {}
         }, this.repo, this.eventBus );
-        em.on( 'halt', function() {
+
+        em.on( 'halt', function( haltState ) {
+            test.strictEqual( haltState, 'testHalt' );
             em._step('otherState');
             test.strictEqual( em._state, 'testHalt' );
             test.done();
         });
+
         em.init('testHalt');
 
     },
@@ -82,17 +85,15 @@ module.exports = {
             em = new ExerciseMachine({
                 startState: 'test',
                 test: {
-                    onEnter: function() {
-                        return {
-                            data: 'some data',
-                            stepTo: 'nextState'
-                        };
+                    onEnter: function( done ) {
+                        done( 'nextState', 'some data' );
                     }
                 },
                 nextState: null
             }, this.repo, this.eventBus );
 
         em.on( 'step', function( newState, oldState, data ) {
+            // console.log( arguments );
             stepCount++;
             if ( stepCount === 1 ) {
                 test.strictEqual( newState, 'test' );
@@ -133,11 +134,16 @@ module.exports = {
 
         var em = new ExerciseMachine({
             startState: 'test',
-            test: function() { return 'nextState'; },
+            test: function( done ) { done('nextState'); },
             nextState: null
-        }, this.repo, this.eventBus ).init();
+        }, this.repo, this.eventBus );
 
-        test.strictEqual( em._state, 'nextState' );
+        em.on( 'halt', function( haltState ) {
+            test.strictEqual( haltState, 'nextState' );
+            test.done();
+        });
+
+        em.init();
 
         test.done();
     },
@@ -190,16 +196,19 @@ module.exports = {
         var em = new ExerciseMachine({
             startState: 'test',
             test: {
-                onEnter: function() {
-                    return 'nextState';
+                onEnter: function( done ) {
+                    done( null );
                 }
             },
             nextState: null
-        }, this.repo, this.eventBus ).init();
+        }, this.repo, this.eventBus );
 
-        test.strictEqual( em._state, 'nextState' );
+        em.on( 'halt', function( haltState ) {
+            test.strictEqual( haltState, 'test' );
+            test.done();
+        });
 
-        test.done();
+        em.init();
     },
 
     // stepping into a state that defines a non-string-returning function for onEntry should
