@@ -119,7 +119,6 @@ backend = angler.gitHttpBackend({
     eventBus: eventBus,
     authenticator: function( params, cb ) {
         verifyAndGetRepoInfo( params.repoPath, function( err, repoInfo ) {
-            console.log( err, repoInfo );
             var ok = !err && repoInfo,
                 status = err ? 500 : ( repoInfo ? 200 : 404 );
             cb({ ok: ok, status: status });
@@ -132,6 +131,7 @@ app.use( '/repos', backend );
 app.use( '/hooks', githookEndpoint );
 
 app.use( '/go', function( req, res ) {
+    // invoked from the "go" script in client repo
     var repo = req.headers['x-gitstream-repo'];
     verifyAndGetRepoInfo( repo, function( err, repoInfo ) {
         if ( !err && repoInfo ) {
@@ -179,18 +179,17 @@ shoe( function( stream ) {
     /** Forward events from the exerciseMachine to the client */
     function initExerciseMachineListeners( exerciseMachine ) {
         exerciseMachine.on( 'ding', function() {
-            events.emit('ding');
+            events.emit.apply( null, [ 'ding' ].concat( arguments ) );
             rcon.hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME );
         });
 
-        exerciseMachine.on( 'step', function( oldState, newState ) {
-            events.emit( 'step', oldState, newState );
+        exerciseMachine.on( 'step', function( newState ) {
+            events.emit.apply( null, [ 'step' ].concat( arguments ) );
             rcon.hset( userId, FIELD_EXERCISE_STATE, newState, logErr );
-            // TODO: possibly add ability to return output data
         });
 
         exerciseMachine.on( 'halt', function() {
-            events.emit('halt');
+            events.emit.apply( null, [ 'halt' ].concat( arguments ) );
             rcon.hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME );
         });
     }
@@ -214,6 +213,7 @@ shoe( function( stream ) {
             if ( err ) { return events.emit( 'err', err ); }
 
             if ( clientState.exerciseState && timeRemaining > 0 ) {
+                // there's already an excercise running. reconnect to it
                 exerciseMachine = createExerciseMachine( clientState.currentExercise );
                 exerciseMachine.init( clientState.exerciseState, timeRemaining / 1000 );
 
@@ -232,11 +232,12 @@ shoe( function( stream ) {
     rsub.subscribe( userId + ':go' );
     rsub.on( 'message', function( channel, exerciseName ) {
         rcon.hgetall( userId, function( err, state ) {
+            // only start exercise if user is on the exercise page
             if ( exerciseName !== state.currentExercise ) { return; }
 
             var startState;
 
-            if ( exerciseMachine ) { exerciseMachine.halt(); }
+            if ( exerciseMachine ) { exerciseMachine.halt(); } // stop the old machine
             exerciseMachine = createExerciseMachine( exerciseName );
             exerciseMachine.init();
 

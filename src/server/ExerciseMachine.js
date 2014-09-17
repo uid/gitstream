@@ -1,5 +1,6 @@
 var util = require('util'),
     utils = require('./utils'),
+    exerciseUtils = require('./exerciseUtils'),
     _ = require('lodash'),
     uuid = require('node-uuid'),
     EventEmitter = require('events').EventEmitter,
@@ -11,9 +12,10 @@ var util = require('util'),
 /**
  * A Moore machine that represents multi-step exercises as states.
  *
- * This class is an EventEmitter that emits the `step` event with the arguments:
- * ( newState, oldState ) and the `halt` event with no arguments
- * If a time limit is specified, a `ding` event will be emitted when the timer runs out
+ * This class is an EventEmitter:
+ *  Event `step`: (newState, oldState, data)
+ *  Event `halt`: (haltState)`
+ *  If a time limit is specified, a `ding` event will be emitted when the timer runs out
  *
  * @param {Object} config @see ExerciseMachineConfigExample.js for configuration parameters
  * @param {String} repo the name of the repo (e.g. /nhynes/exercise2.git
@@ -53,7 +55,6 @@ _.extend( ExerciseMachine.prototype, {
     init: function( startState, timeLimit ) {
         if ( this._state !== undefined ) { return; }
 
-        this._state = startState || this._configStartState;
         this._timeLimit = timeLimit || this._timeLimit;
         this.halted = false;
         if ( this._timeLimit ) {
@@ -68,12 +69,14 @@ _.extend( ExerciseMachine.prototype, {
                 }
             }.bind( this ), this._timeLimit * 1000 );
         }
-        this._step( this._state );
+        this._step( startState || this._configStartState );
         return this;
     },
 
     /**
      * Steps the ExerciseMachine into the given state and fires a corresponding event
+     *  Event `step`: (newState, oldState, data)
+     *  Event `halt`: (haltState)
      *
      * The `null` state is defined as the halt state. States returning `null` are also halt states
      * Further steps when halted do nothing.
@@ -84,38 +87,49 @@ _.extend( ExerciseMachine.prototype, {
         var oldState = this._state,
             newStateConf = this._states[ newState ],
             onEnter,
-            onEnterResult;
+            output, // output of stepping into a state
+            stepTo,
+            stepData;
 
         if ( this.halted ) { return; }
 
         this._tearDown();
         this._state = newState;
-        this.emit( 'step', newState, oldState );
 
         if ( newState === null || newStateConf === null ) {
             this.halted = true;
-            return this.emit('halt');
+            this.emit( 'step', newState, oldState );
+            this.emit( 'halt', newState );
+            return;
         }
 
-        if ( newStateConf === undefined ) {
+        if ( this.state !== undefined && newStateConf === undefined ) {
             throw Error('No definition for state: ' + newState + '. Prev state: ' + oldState );
         }
 
         // if a state evaluates to a reference to another state, then go to the new state
-
         if ( typeof newStateConf !== 'object' ) { // i.e. string, function, or null
-            this._step( ( typeof newStateConf === 'function' ? newStateConf() : newStateConf ) );
-            return;
+            stepTo = typeof newStateConf === 'function' ? newStateConf() : newStateConf;
+        } else {
+            onEnter = newStateConf.onEnter;
+            if ( onEnter ) {
+                if ( typeof onEnter === 'string' ) { return this._step( onEnter ); }
+
+                output = onEnter.call( exerciseUtils );
+                // if output is { stepTo, data }, stepTo is new state, data is output data
+                // if output is null or string, step to that state
+                // otherwise, output is the output data
+                // very clear, right?
+                if ( output.stepTo || output.stepTo === null ||
+                    output === null || typeof output === 'string' ) {
+                    stepTo = ( output && output.stepTo ? output.stepTo : output );
+                }
+                stepData = output && output.data ? output.data : output;
+            }
         }
 
-        onEnter = newStateConf.onEnter;
-        if ( onEnter ) {
-            if ( typeof onEnter === 'string' ) { return this._step( onEnter ); }
-
-            onEnterResult = onEnter();
-            if ( onEnterResult || onEnterResult === null ) { return this._step( onEnterResult ); }
-        }
-
+        this.emit( 'step', newState, oldState, stepData );
+        if ( stepTo || stepTo === null ) { this._step( stepTo ); }
         this._setUp();
     },
 

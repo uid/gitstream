@@ -73,6 +73,43 @@ module.exports = {
         em._step('nextState');
     },
 
+    // verify that stepping into a data and state-returning state emits the appropriate data
+    // and that the newly specified state is stepped into
+    testStepDataStep: function( test ) {
+        test.expect( 3 );
+
+        var stepCount = 0,
+            em = new ExerciseMachine({
+                startState: 'test',
+                test: {
+                    onEnter: function() {
+                        return {
+                            data: 'some data',
+                            stepTo: 'nextState'
+                        };
+                    }
+                },
+                nextState: null
+            }, this.repo, this.eventBus );
+
+        em.on( 'step', function( newState, oldState, data ) {
+            stepCount++;
+            if ( stepCount === 1 ) {
+                test.strictEqual( newState, 'test' );
+                test.strictEqual( data, 'some data' );
+            } else if ( stepCount === 2 ) {
+                test.strictEqual( newState, 'nextState' );
+                test.done();
+            } else {
+                test.ok( false );
+            }
+        });
+
+        em.init();
+
+        em._step('nextState');
+    },
+
     // stepping into a state with a string value should go to the state specified by the value
     // shorthand for defining an onEnter value
     testStepStringForwarding: function( test ) {
@@ -107,17 +144,25 @@ module.exports = {
 
     // stepping into a state with a funtion value should halt if the return value is null
     testStepFunctionHalting: function( test ) {
-        test.expect( 1 );
+        test.expect( 2 );
 
-        var em = new ExerciseMachine({
-            startState: 'test',
-            test: function() { return null; },
-            nextState: null
-        }, this.repo, this.eventBus ).init();
+        var stepCount = 0,
+            em = new ExerciseMachine({
+                startState: 'test',
+                test: function() { return null; },
+                nextState: null
+            }, this.repo, this.eventBus );
 
-        test.strictEqual( em._state, null );
+        em.on( 'step', function( newState, oldState ) {
+            stepCount++;
+            if ( stepCount === 2 ) {
+                test.strictEqual( newState, null );
+                test.strictEqual( oldState, 'test' );
+                test.done();
+            }
+        });
 
-        test.done();
+        em.init();
     },
 
     // stepping into a state that defines a string for onEntry should forward to that state
