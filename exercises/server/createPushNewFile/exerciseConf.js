@@ -3,28 +3,30 @@ module.exports = function() {
         startState: 'createFile',
 
         createFile: {
-            onCommit: 'committedFile'
+            handlePreCommit: function( repo, action, info, gitDone, stepDone ) {
+                if ( info.logMsg.toLowerCase() === 'git is great' ) {
+                    gitDone();
+                    stepDone('committedFile');
+                } else {
+                    gitDone( 1, 'GitStream [COMMIT REJECTED] Incorrect log message.' +
+                                'Expected "git is great" but was: "' + info.logMsg + '"' );
+                    stepDone( 'createFile', info.logMsg );
+                }
+            }
         },
 
         committedFile: {
-            onReceive: 'pushed'
-        },
-
-        pushed: function( done ) {
-            this.fileExists( 'hg_sux.txt', function( exists ) {
-                this.commitMsgContains(/git is great/i, function( err, logContains ) {
-                    var statusMsg;
+            onReceive: function() {
+                this.fileExists( 'hg_sux.txt', function( exists ) {
                     if ( exists ) {
-                        done('done');
-                    } else if( !exists ){
-                        done('createFile');
-                    } else if ( !statusMsg ) {
+                        done('pushed');
+                    } else {
                         done('committedFile');
                     }
                 });
-            }.bind( this ) );
+            }
         },
 
-        done: null
+        pushed: null
     };
 };
