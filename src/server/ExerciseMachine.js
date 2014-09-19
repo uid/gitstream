@@ -89,12 +89,13 @@ _.extend( ExerciseMachine.prototype, {
      *
      * @param {String} state the state into which to step
      */
-    _step: function( newState ) {
+    _step: function( newState, incomingData ) {
         var oldState = this._state,
             newStateConf = this._states[ newState ],
             entryPoint,
             doneFn = function( stepTo, stepData ) {
-                this.emit( 'step', newState, oldState, stepData );
+                var emitData = { prev: incomingData, new: stepData };
+                this.emit( 'step', newState, oldState, emitData );
                 if ( stepTo !== undefined ) { this._step( stepTo ); }
                 this._setUp();
             }.bind( this );
@@ -131,8 +132,7 @@ _.extend( ExerciseMachine.prototype, {
     _setUp: function() {
         var stateConfig = this._states[ this._state ],
             doneFn = function( stepTo, data ) {
-                this.emit( 'step-out', stepTo, this._state, data );
-                this._step( stepTo );
+                this._step( stepTo, data );
             }.bind( this );
 
         _.map( stateConfig, function( stateValue, stateProp) {

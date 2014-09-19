@@ -98,7 +98,7 @@ module.exports = {
             stepCount++;
             if ( stepCount === 1 ) {
                 test.strictEqual( newState, 'test' );
-                test.strictEqual( data, 'some data' );
+                test.strictEqual( data.new, 'some data' );
             } else if ( stepCount === 2 ) {
                 test.strictEqual( newState, 'nextState' );
                 test.done();

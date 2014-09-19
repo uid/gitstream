@@ -210,11 +210,6 @@ shoe( function( stream ) {
             rcon.hset( userId, FIELD_EXERCISE_STATE, newState, logErr );
         });
 
-        exerciseMachine.on( 'step-out', function() {
-            var args = [ 'step-out' ].concat( Array.prototype.slice.call( arguments ) );
-            events.emit.apply( events, args );
-        });
-
         exerciseMachine.on( 'halt', function() {
             var args = [ 'halt' ].concat( Array.prototype.slice.call( arguments ) );
             events.emit.apply( events, args );
