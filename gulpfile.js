@@ -31,7 +31,7 @@ var gulp = require('gulp'),
                 static: [
                     'src/client/resources/**/*',
                     'src/client/exercises/**/*',
-                    'src/client/index.html'
+                    'src/client/*.html'
                 ]
             },
             server: 'src/server/**/*'
