@@ -127,6 +127,21 @@ backend = angler.gitHttpBackend({
     }
 });
 
+// hard resets and checks out the updated HEAD after a push to a non-bare remote repo
+// this can't be done inside of the post-receive hook, for some reason
+eventBus.setHandler( '*', 'receive', function( repo, action, updates, done ) {
+    var repoPath = path.resolve( PATH_TO_REPOS, '.' + repo ),
+        gitreset = spawn( 'git', [ 'reset', '--hard' ], { cwd: repoPath }),
+        gitcheckout;
+
+    gitreset.on( 'close', function() {
+        gitcheckout = spawn( 'git', [ 'checkout', ':/' ], { cwd: repoPath });
+        gitcheckout.on( 'close', function() {
+            done();
+        });
+    });
+});
+
 app.use( compression() );
 app.use( '/repos', backend );
 app.use( '/hooks', githookEndpoint );
@@ -146,8 +161,6 @@ app.use( '/go', function( req, res ) {
 });
 
 server = app.listen( PORT );
-
-eventBus.addListener('name', '*', '*', function() { console.log( arguments ); });
 
 shoe( function( stream ) {
     var events = duplexEmitter( stream ),
@@ -195,6 +208,11 @@ shoe( function( stream ) {
             var args = [ 'step' ].concat( Array.prototype.slice.call( arguments ) );
             events.emit.apply( events, args );
             rcon.hset( userId, FIELD_EXERCISE_STATE, newState, logErr );
+        });
+
+        exerciseMachine.on( 'step-out', function() {
+            var args = [ 'step-out' ].concat( Array.prototype.slice.call( arguments ) );
+            events.emit.apply( events, args );
         });
 
         exerciseMachine.on( 'halt', function() {

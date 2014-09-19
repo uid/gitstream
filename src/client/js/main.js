@@ -9,6 +9,7 @@ var shoe = require('shoe'),
     exerciseEvents = eventEmitter({}),
     triggerExerciseEvent = function( eventName ) {
         return function() {
+            console.log( arguments );
             exerciseEvents.emit.apply( null, [ eventName ].concat( arguments ) );
         }
     },
