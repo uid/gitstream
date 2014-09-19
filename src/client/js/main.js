@@ -26,5 +26,6 @@ events.on('sync', function( newState ) {
 
 // forward exercise events to exercise machine emitter
 events.on( 'step', triggerExerciseEvent('step') );
+events.on( 'step-out', triggerExerciseEvent('step-out') );
 events.on( 'halt', triggerExerciseEvent('halt') );
 events.on( 'ding', triggerExerciseEvent('ding') );

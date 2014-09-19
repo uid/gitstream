@@ -263,6 +263,35 @@ module.exports = {
         this.eventBus.trigger( this.repo, 'commit', [ { test: true } ] );
     },
 
+    // same as above but for handlers
+    testEventedStepHandler: function( test ) {
+        test.expect( 5 );
+
+        var em = new ExerciseMachine({
+            startState: 'test',
+            test: {
+                handleCommit: function( repo, action, info, done ) {
+                    test.strictEqual( repo, '/nhynes/test.git' );
+                    test.strictEqual( action, 'commit' );
+                    test.ok( info.test );
+                    test.ok( this.fileExists );
+                    done('nextState');
+                }
+            },
+            nextState: null
+        }, this.repoPaths, this.exerciseDir, this.eventBus );
+
+
+        em.on( 'halt', function( haltState ) {
+            test.strictEqual( haltState, 'nextState' );
+            test.done();
+        });
+
+        em.init();
+
+        this.eventBus.trigger( this.repo, 'commit', [ { test: true } ] );
+    },
+
     testEventedStepString: function( test ) {
         test.expect( 1 );
 

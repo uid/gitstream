@@ -4,13 +4,13 @@ var util = require('util'),
     _ = require('lodash'),
     uuid = require('node-uuid'),
     EventEmitter = require('events').EventEmitter,
-    GIT_EVENTS = utils.events2Props( 'pre-pull', 'pull', 'pre-clone', 'clone', 'pre-push', 'push',
-        'pre-info', 'info', 'merge', 'pre-rebase', 'pre-commit', 'commit', 'checkout',
-        'pre-receive', 'receive' );
+    GIT_EVENTS = utils.events2Props( [ 'on', 'handle' ],
+        [ 'pre-pull', 'pull', 'pre-clone', 'clone', 'pre-push', 'push', 'pre-info', 'info',
+        'merge', 'pre-rebase', 'pre-commit', 'commit', 'checkout', 'pre-receive', 'receive' ] );
 
 
 /**
- * A Moore machine that represents multi-step exercises as states.
+ * A state machine that represents multi-step exercises as states.
  *
  * This class is an EventEmitter:
  *  Event `step`: (newState, oldState, data)
@@ -43,6 +43,7 @@ function ExerciseMachine( config, repoPaths, exerciseDir, eventBus ) {
 
     this._states = config;
     this._currentListeners = [];
+    this._currentHandlers = [];
     this.halted = true;
 }
 
@@ -130,16 +131,26 @@ _.extend( ExerciseMachine.prototype, {
     _setUp: function() {
         var stateConfig = this._states[ this._state ],
             doneFn = function( stepTo, data ) {
-                this._step( stepTo, data );
+                this.emit( 'step-out', stepTo, this._state, data );
+                this._step( stepTo );
             }.bind( this );
 
         _.map( stateConfig, function( stateValue, stateProp) {
             var repoAction = GIT_EVENTS[ stateProp ],
-                uniqName;
+                uniqName,
+                registerFn;
             if ( !repoAction ) { return; }
 
-            uniqName = uuid.v1();
-            this._eventBus.addListener( uniqName, this._repo, repoAction, function() {
+            if ( stateProp.indexOf('handle') === 0 ) {
+                registerFn = this._eventBus.setHandler.bind( this._eventBus );
+                this._currentHandlers.push({ action: repoAction });
+            } else {
+                uniqName = uuid.v1();
+                registerFn = this._eventBus.addListener.bind( this._eventBus, uniqName );
+                this._currentListeners.push({ name: uniqName, action: repoAction });
+            }
+
+            registerFn( this._repo, repoAction, function() {
                 var listenerArgs = Array.prototype.slice.call( arguments );
                 // stateValue is the transition function
                 if ( typeof stateValue === 'function' ) {
@@ -148,7 +159,6 @@ _.extend( ExerciseMachine.prototype, {
                     doneFn( stateValue );
                 }
             }.bind( this ) );
-            this._currentListeners.push({ name: uniqName, action: repoAction });
         }.bind( this ) );
     },
 
@@ -159,7 +169,11 @@ _.extend( ExerciseMachine.prototype, {
         this._currentListeners.map( function( listener ) {
             this._eventBus.removeListener( listener.name, this._repo, listener.action );
         }.bind( this ) );
-        this.currentListeners = [];
+        this._currentHandlers.map( function( handler  ) {
+            this._eventBus.setHandler( this._repo, handler.action, undefined );
+        }.bind( this ) );
+        this._currentListeners = [];
+        this._currentHandlers = [];
     },
 
     /**
