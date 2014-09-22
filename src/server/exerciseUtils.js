@@ -56,6 +56,31 @@ module.exports = function( config ) {
         },
 
         /**
+         * Simulates collaboration by moving a file/directory from the exercise dir into the
+         * working repo and then adding and committing.
+         * @param {String} filenameSrc the name of the file in the exercise dir to be moved
+         * @param {String} filenameDest the name of the file in the repo dir to overwrite
+         * @param {String} commitMsg the commit message to use
+         * @param {Function} callback (err)
+         */
+        simulateCollaboration: function( filenameSrc, filenameDest, commitMsg, callback ) {
+            var exerciseFilePath = path.join( exercisePath, filenameSrc ),
+                repoFilePath = path.join( repoPath, filenameDest ),
+                cp = spawn( 'cp', [ '-R', exerciseFilePath, repoFilePath ] );
+
+            cp.on( 'close', function( code ) {
+                if ( code !== 0 ) { return; }
+
+                utils.git( repoPath, 'add', filenameDest, function( err, data ) {
+                    if ( err ) { return console.err( 'ERROR: ', err ); }
+                    utils.git( repoPath, 'commit', [ '-m', commitMsg ], callback );
+                });
+            });
+
+            cp.stderr.on( 'data', function( err ) { console.err( 'ERROR:', err.toString() ); });
+        },
+
+        /**
          * Returns the log message for a specified commit
          * @param {String} ref the ref to check. Default: HEAD
          * @param {Function} callback (err, String logMsg)
