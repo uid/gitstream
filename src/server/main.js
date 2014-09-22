@@ -11,6 +11,7 @@ var angler = require('git-angler'),
         sqlHost: 'localhost', sqlUser: 'nhynes', sqlPass: 'localdev', sqlDb: 'gitstream'
     }),
     ExerciseMachine = require('./ExerciseMachine'),
+    utils = require('./utils'),
     app = connect(),
     server,
     eventBus = new angler.EventBus(),
@@ -151,12 +152,25 @@ app.use( '/go', function( req, res ) {
     var remoteUrl = req.headers['x-gitstream-repo'],
         repo = remoteUrl.substring( remoteUrl.indexOf( gitHTTPMount ) + gitHTTPMount.length );
     verifyAndGetRepoInfo( repo, function( err, repoInfo ) {
+        var repoPath = path.join( PATH_TO_REPOS, repo );
         if ( !err && repoInfo ) {
             rcon.publish( repoInfo.userId + ':go', repoInfo.exerciseName, logErr );
+            utils.getInitialCommit( repoPath, function( err, initCommitSHA ) {
+                if ( err ) {
+                    res.writeHead( 404 );
+                    res.end();
+                    return;
+                }
+                utils.git( repoPath, 'checkout', initCommitSHA, function() {
+                    utils.git( repoPath, 'branch', '-f master', function() {
+                        utils.git( repoPath, 'checkout', 'master', res.end );
+                    });
+                });
+            });
         } else {
             res.writeHead( 403 );
+            res.end();
         }
-        res.end();
     });
 });
 

@@ -1,4 +1,5 @@
-var spawn = require('child_process').spawn;
+var spawn = require('child_process').spawn,
+    fs = require('fs');
 
 module.exports = {
     /**
@@ -28,9 +29,10 @@ module.exports = {
      * @param {Function} callback (err, commitSHA:String)
      */
     getInitialCommit: function( repo, callback ) {
-        this.git( repo, 'log', '--pretty="%H"', function( errData, data ) {
+        this.git( repo, 'log', '--pretty="%H"', function( err, data ) {
+            if ( err ) { return callback( err ); }
             var commitIds = data.trim().replace( /"/g, '' ).split('\n');
-            callback( errData, commitIds[ commitIds.length - 1 ] );
+            callback( null, commitIds[ commitIds.length - 1 ] );
         });
     },
 
@@ -42,17 +44,21 @@ module.exports = {
      * @param {Function} callback an errback (err, data) called upon completion
      */
     git: function( repo, cmd, args, callback ) {
-        var cmdArgs = ( args instanceof Array ? args : args.trim().split(' ') ),
-            git = spawn( 'git', [ cmd ].concat( cmdArgs ), { cwd: repo } ),
-            output = '',
-            errOutput = '';
+        var cb = callback || function() {};
+        fs.stat( repo, function( err ) {
+            if ( err ) { return cb( err ); }
+            var cmdArgs = ( args instanceof Array ? args : args.trim().split(' ') ),
+                git = spawn( 'git', [ cmd ].concat( cmdArgs ), { cwd: repo } ),
+                output = '',
+                errOutput = '';
 
-        git.stderr.on( 'data', function( data ) { errOutput += data.toString(); });
-        git.stdout.on( 'data', function( data ) { output += data.toString(); });
+            git.stderr.on( 'data', function( data ) { errOutput += data.toString(); });
+            git.stdout.on( 'data', function( data ) { output += data.toString(); });
 
-        git.on( 'close', function( code ) {
-            errOutput = errOutput || ( code !== 0 ? code.toString : '' );
-            callback( errOutput, output );
+            git.on( 'close', function( code ) {
+                errOutput = errOutput || ( code !== 0 ? code.toString : '' );
+                cb( errOutput, output );
+            });
         });
     }
 };
