@@ -2,31 +2,35 @@ var diff = require('diff'),
     fs = require('fs'),
     path = require('path'),
     spawn = require('child_process').spawn,
-    q = require('q');
+    q = require('q'),
+    utils = require('./utils');
 
 // TODO: write tests
 module.exports = function( config ) {
     var repoDir = config.repoDir,
-        exerciseDir = config.exerciseDir;
+        exerciseDir = config.exerciseDir,
+        exercisePath = path.resolve( exerciseDir ),
+        repoPath = path.resolve( repoDir );
 
     return {
         /**
          * Compares a file in an exercise repo with a the reference file in the exercise directory
-         * @param {String} filename the name of the file to validate
+         * @param {String} verifyFilename the name of the file to validate
+         * @param {String} referenceFilename the name of the file against which to validate
          * @param {Function} callback receives a diff object or null if files are identical
          */
-        compareFiles: function( filename, callback ) {
+        compareFiles: function( verifyFilename, referenceFilename, callback ) {
             var fileToVerify = q.defer(),
                 verifyAgainst = q.defer(),
-                resolver = function( pathBase, deferred ) {
+                resolver = function( pathBase, filename, deferred ) {
                     fs.readFile( path.join( pathBase, filename ), function( err, data ) {
                         if ( err ) { return deferred.reject( err ); }
                         deferred.resolve( data.toString() );
                     });
                 };
 
-            resolver( repoDir, fileToVerify );
-            resolver( exerciseDir, verifyAgainst );
+            resolver( repoDir, verifyFilename, fileToVerify );
+            resolver( exerciseDir, referenceFilename, verifyAgainst );
 
             q.all([ fileToVerify.promise, verifyAgainst.promise ])
                 .fail( function( error ) { callback( error ); })
@@ -45,7 +49,7 @@ module.exports = function( config ) {
          */
         fileContains: function( filename, needle, callback ) {
             var needleRegExp = needle instanceof RegExp ? needle : new RegExp( needle );
-            fs.readFile( filename, function( err, data ) {
+            fs.readFile( path.join( repoPath, filename ), function( err, data ) {
                 if ( err ) { return callback( err ); }
                 callback( null, needleRegExp.test( data.toString() ) );
             });
@@ -58,17 +62,10 @@ module.exports = function( config ) {
          */
         getCommitMsg: function( ref, callback ) {
             var cb = callback || ref,
-                realRef = callback && ref ? ref : 'HEAD',
-                log = spawn( 'git', [ 'log', '-n1', '--pretty="%s"', realRef ], {
-                    cwd: path.resolve( repoDir )
-                });
+                realRef = callback && ref ? ref : 'HEAD';
 
-            log.stdout.on( 'data', function( logMsg ) {
-                cb( null, logMsg.toString() );
-            });
-
-            log.stderr.on( 'data', function( errMsg ) {
-                cb( errMsg.toString() );
+            utils.git( repoPath, 'log', [ '-n1', '--pretty="%s"', realRef ], function( err, data ) {
+                cb( err, data );
             });
         },
 
