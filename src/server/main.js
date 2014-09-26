@@ -191,7 +191,10 @@ shoe( function( stream ) {
         EXERCISE_CONF_FILE = 'exerciseConf.js';
 
     stream.on( 'close', function() {
-        if ( exerciseMachine ) { exerciseMachine.halt(); }
+        if ( exerciseMachine ) {
+            exerciseMachine.removeAllListeners();
+            exerciseMachine.halt();
+        }
         rsub.quit();
     });
 
@@ -248,17 +251,19 @@ shoe( function( stream ) {
             }
 
             userKeyDeferred.promise.done( function( userKey ) {
-                var timeRemaining = clientState.endTime - Date.now();
+                var timeRemaining = clientState[ FIELD_END_TIME ] - Date.now(),
+                    exerciseState = clientState[ FIELD_EXERCISE_STATE ],
+                    currentExercise = clientState[ FIELD_CURRENT_EXERCISE ];
 
                 if ( err ) { return events.emit( 'err', err ); }
 
-                if ( clientState.exerciseState && timeRemaining > 0 ) {
+                if ( exerciseState && timeRemaining > 0 ) {
                     // there's already an excercise running. reconnect to it
-                    exerciseMachine = createExerciseMachine( clientState.currentExercise );
-                    exerciseMachine.init( clientState.exerciseState, timeRemaining / 1000 );
+                    exerciseMachine = createExerciseMachine( currentExercise );
+                    exerciseMachine.init( exerciseState, timeRemaining / 1000 );
 
                     initExerciseMachineListeners( exerciseMachine );
-                } else if ( clientState.exerciseState ) { // last exercise has expired
+                } else if ( exerciseState ) { // last exercise has expired
                     rcon.hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME );
                     delete clientState[ FIELD_EXERCISE_STATE ];
                     delete clientState[ FIELD_END_TIME ];
