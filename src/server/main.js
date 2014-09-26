@@ -16,7 +16,7 @@ var angler = require('git-angler'),
     server,
     eventBus = new angler.EventBus(),
     PATH_TO_REPOS = '/srv/repos',
-    PATH_TO_EXERCISES = '/srv/exercises',
+    PATH_TO_EXERCISES = 'exercises/',
     repoNameRe = /\/[a-z][a-z0-9]+\/[a-f0-9]{6,}-.+.git$/,
     backend,
     rcon = redis.createClient(),
@@ -93,16 +93,14 @@ eventBus.setHandler( '*', '404', function( repoName, _, data, clonable ) {
 
     verifyAndGetRepoInfo( repoName, function( err, repoInfo ) {
         var pathToRepo,
-            exerciseRepo,
             pathToStarterRepo,
             mkdir,
             cp;
 
         if ( err || !repoInfo ) { return clonable( false ); }
 
-        exerciseRepo = repoInfo.exerciseName + '.git'; // exerciseX.git
         pathToRepo = path.join( PATH_TO_REPOS, repoName );
-        pathToStarterRepo = path.join( PATH_TO_EXERCISES, '/starting', exerciseRepo );
+        pathToStarterRepo = path.join( PATH_TO_EXERCISES, repoInfo.exerciseName, 'starting.git' );
 
         mkdir = spawn( 'mkdir', [ '-p', path.dirname( pathToRepo ) ] );
         mkdir.on( 'close', function( mkdirRet ) {
@@ -199,7 +197,7 @@ shoe( function( stream ) {
     });
 
     function createExerciseMachine( exerciseName ) {
-        var emConfFile = path.join( PATH_TO_EXERCISES, exerciseName, EXERCISE_CONF_FILE ),
+        var emConfFile = path.resolve( PATH_TO_EXERCISES, exerciseName, EXERCISE_CONF_FILE ),
             emConf = require( emConfFile )(),
             repoMac = user.createMac( userKey, userId + exerciseName ),
             exerciseRepo = createRepoShortPath({
