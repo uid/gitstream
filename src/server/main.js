@@ -163,7 +163,9 @@ app.use( '/go', function( req, res ) {
                 }
                 utils.git( repoPath, 'checkout', initCommitSHA, function() {
                     utils.git( repoPath, 'branch', '-f master', function() {
-                        utils.git( repoPath, 'checkout', 'master', res.end );
+                        utils.git( repoPath, 'checkout', 'master', function() {
+                            res.end();
+                        });
                     });
                 });
             });
@@ -232,70 +234,77 @@ shoe( function( stream ) {
     }
 
     // on connect, sync the client with the stored client state
-    user.getUserKey( userId, function( err, key ) {
-        if ( err ) { return events.emit( 'err', err ); }
-        userKey = key;
-        userKeyDeferred.resolve( key );
-    });
-
-    rcon.hgetall( userId, function( err, clientState ) {
-        if ( !clientState ) {
-            clientState = { currentExercise: null };
-            rcon.hmset( userId, clientState, logErr );
-        }
-
-        userKeyDeferred.promise.done( function( userKey ) {
-            var timeRemaining = clientState.endTime - Date.now();
-
+    events.on( 'sync', function() {
+        user.getUserKey( userId, function( err, key ) {
             if ( err ) { return events.emit( 'err', err ); }
+            userKey = key;
+            userKeyDeferred.resolve( key );
+        });
 
-            if ( clientState.exerciseState && timeRemaining > 0 ) {
-                // there's already an excercise running. reconnect to it
-                exerciseMachine = createExerciseMachine( clientState.currentExercise );
-                exerciseMachine.init( clientState.exerciseState, timeRemaining / 1000 );
-
-                initExerciseMachineListeners( exerciseMachine );
-            } else if ( clientState.exerciseState ) { // last exercise has expired
-                rcon.hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME );
-                delete clientState[ FIELD_EXERCISE_STATE ];
-                delete clientState[ FIELD_END_TIME ];
+        rcon.hgetall( userId, function( err, clientState ) {
+            if ( !clientState ) {
+                clientState = { currentExercise: null };
+                rcon.hmset( userId, clientState, logErr );
             }
 
-            clientState.key = userKey;
-            events.emit( 'sync', clientState );
+            userKeyDeferred.promise.done( function( userKey ) {
+                var timeRemaining = clientState.endTime - Date.now();
+
+                if ( err ) { return events.emit( 'err', err ); }
+
+                if ( clientState.exerciseState && timeRemaining > 0 ) {
+                    // there's already an excercise running. reconnect to it
+                    exerciseMachine = createExerciseMachine( clientState.currentExercise );
+                    exerciseMachine.init( clientState.exerciseState, timeRemaining / 1000 );
+
+                    initExerciseMachineListeners( exerciseMachine );
+                } else if ( clientState.exerciseState ) { // last exercise has expired
+                    rcon.hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME );
+                    delete clientState[ FIELD_EXERCISE_STATE ];
+                    delete clientState[ FIELD_END_TIME ];
+                }
+
+                clientState.key = userKey;
+                events.emit( 'sync', clientState );
+            });
         });
-    });
 
-    rsub.subscribe( userId + ':go' );
-    rsub.on( 'message', function( channel, exerciseName ) {
-        rcon.hgetall( userId, function( err, state ) {
-            // only start exercise if user is on the exercise page
-            if ( exerciseName !== state.currentExercise ) { return; }
+        rsub.subscribe( userId + ':go' );
+        rsub.on( 'message', function( channel, exerciseName ) {
+            rcon.hgetall( userId, function( err, state ) {
+                // only start exercise if user is on the exercise page
+                if ( exerciseName !== state.currentExercise ) { return; }
 
-            var startState;
+                var startState;
 
-            if ( exerciseMachine ) { exerciseMachine.halt(); } // stop the old machine
-            exerciseMachine = createExerciseMachine( exerciseName );
-            exerciseMachine.init();
+                if ( exerciseMachine ) { exerciseMachine.halt(); }
+                exerciseMachine = createExerciseMachine( exerciseName );
+                exerciseMachine.init();
 
-            startState = exerciseMachine._state;
+                startState = exerciseMachine._state;
 
-            initExerciseMachineListeners( exerciseMachine );
+                initExerciseMachineListeners( exerciseMachine );
 
-            rcon.hmset( userId,
-                   FIELD_EXERCISE_STATE, startState,
-                   FIELD_END_TIME, exerciseMachine.endTimestamp,
-                   logErr );
+                rcon.hmset( userId,
+                       FIELD_EXERCISE_STATE, startState,
+                       FIELD_END_TIME, exerciseMachine.endTimestamp,
+                       logErr );
 
-            state[ FIELD_EXERCISE_STATE ] = startState;
-            state[ FIELD_END_TIME ] = exerciseMachine.endTimestamp;
+                state[ FIELD_EXERCISE_STATE ] = startState;
+                state[ FIELD_END_TIME ] = exerciseMachine.endTimestamp;
 
-            events.emit( 'sync', state );
+                events.emit( 'sync', state );
+            });
         });
-    });
+
+    }.bind( this ));
+
 
     events.on( 'exerciseChanged', function( newExercise ) {
-        exerciseMachine = undefined;
+        if ( exerciseMachine ) { // stop the old machine
+            exerciseMachine.halt();
+            exerciseMachine = null;
+        }
 
         rcon.multi()
             .expire( userId, CLIENT_IDLE_TIMEOUT )

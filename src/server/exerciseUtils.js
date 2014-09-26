@@ -71,7 +71,7 @@ module.exports = function( config ) {
             cp.on( 'close', function( code ) {
                 if ( code !== 0 ) { return; }
 
-                utils.git( repoPath, 'add', filenameDest, function( err, data ) {
+                utils.git( repoPath, 'add', filenameDest, function( err ) {
                     if ( err ) { return console.err( 'ERROR: ', err ); }
                     utils.git( repoPath, 'commit', [ '-m', commitMsg ], callback );
                 });
