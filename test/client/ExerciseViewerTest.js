@@ -7,18 +7,36 @@ module.exports = {
         done();
     },
 
+    testInitFn: function( test ) {
+        test.expect( 1 );
+
+        var ev = ExerciseViewer({
+            start: {
+                testState: function() {
+                    test.ok( true );
+                },
+                notTestState: function() {
+                    test.ok( false );
+                }
+            }
+        }, this.events );
+
+        ev.init( 'testState' );
+        ev.init( 'notTestState' );
+        test.done();
+    },
+
     testStepInit: function( test ) {
-        test.expect( 2 );
+        test.expect( 1 );
 
         var ev = ExerciseViewer({
             testState: {
                 onEnter: function() {
                     test.ok( true );
-                    test.strictEqual( this.test, 'testing' );
                     test.done();
                 }
             }
-        }, this.events, { test: 'testing' } );
+        }, this.events );
 
         this.events.emit( 'step', 'testState', null );
     },
@@ -47,32 +65,30 @@ module.exports = {
     },
 
     testStepHalt: function( test ) {
-        test.expect( 2 );
+        test.expect( 1 );
 
         var ev = new ExerciseViewer({
             onHalt: function( haltState ) {
-                test.strictEqual( this.hey, 'did you halt?' );
                 test.strictEqual( haltState, 'haltsHere' );
                 test.done();
             },
             haltsHere: {}
-        }, this.events, { hey: 'did you halt?' } );
+        }, this.events );
 
         this.events.emit( 'step', 'haltsHere', null );
-        this.events.emit( 'halt' );
+        this.events.emit( 'halt', 'haltsHere' );
     },
 
     testStepDing: function( test ) {
-        test.expect( 2 );
+        test.expect( 1 );
 
         var ev = new ExerciseViewer({
             onDing: function( dingState ) {
-                test.strictEqual( this.hey, 'this is not an RPG' );
                 test.strictEqual( dingState, 'levelUp' );
                 test.done();
             },
             levelUp: {}
-        }, this.events, { hey: 'this is not an RPG' } );
+        }, this.events );
 
         this.events.emit( 'step', 'levelUp', null );
         this.events.emit( 'ding' );

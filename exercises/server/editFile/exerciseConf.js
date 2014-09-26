@@ -1,34 +1,33 @@
 module.exports = function() {
     return {
-        timeLimit: 30,
+        timeLimit: 20,
+        startState: 'editFile',
 
-        startState: 'createFile',
-
-        createFile: {
+        editFile: {
             handlePreCommit: function( repo, action, info, gitDone, stepDone ) {
-                if ( info.logMsg.toLowerCase() === 'git is great' ) {
+                if ( info.logMsg.toLowerCase() === 'wrote a nice poem' ) {
                     gitDone();
                     stepDone('committedFile');
                 } else {
                     gitDone( 1, 'GitStream [COMMIT REJECTED] Incorrect log message.' +
-                                ' Expected "git is great" but was: "' + info.logMsg + '"' );
-                    stepDone( 'createFile', info.logMsg );
+                                'Expected "wrote a nice poem" but was: "' + info.logMsg + '"' );
+                    stepDone( 'editFile', info.logMsg );
                 }
             }
         },
 
         committedFile: {
             onReceive: function( repo, action, info, done ) {
-                this.fileExists( 'hg_sux.txt', function( exists ) {
-                    if ( exists ) {
-                        done('pushed');
+                this.fileContains( 'a_nice_poem.txt', /.+/, function( err, containsString ) {
+                    if ( containsString ) {
+                        done('done');
                     } else {
-                        done('createFile');
+                        done('editFile');
                     }
                 });
             }
         },
 
-        pushed: null
+        done: null
     };
 };

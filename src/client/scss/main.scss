@@ -1,1 +1,15 @@
 @import '../../node_modules/normalize.css/normalize.css';
+
+#countdown {
+    margin: auto;
+    font-weight: bold;
+    display: inline-block;
+    padding: 20px;
+    border: 1px solid grey;
+    font-size: 150%;
+    border-radius: 10px;
+
+    &.runningout {
+        color: red;
+    }
+}
