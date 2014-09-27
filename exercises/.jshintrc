@@ -1,0 +1,23 @@
+{
+    "curly": true,
+    "eqeqeq": true,
+    "eqnull": true,
+    "expr": true,
+    "immed": true,
+    "noarg": true,
+    "quotmark": "single",
+    "undef": true,
+    "unused": true,
+    "browser": true,
+    "bitwise": true,
+    "freeze": true,
+    "latedef": true,
+    "nonew": true,
+    "strict": true,
+    "globalstrict": "true",
+
+    "globals": {
+        "require": true,
+        "module": true
+    }
+}

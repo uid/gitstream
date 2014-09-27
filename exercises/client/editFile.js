@@ -1,3 +1,5 @@
+'use strict';
+
 var $ = require('zeptojs');
 
 module.exports = function() {
@@ -28,6 +30,5 @@ module.exports = function() {
                 $('#statusMessages').append('<h3 style="color:red">Not quite. The file should contain a poem about git (i.e. should contain the string "git")</h3>');
             }
         }
-    }
+    };
 };
-

@@ -1,3 +1,5 @@
+'use strict';
+
 var $ = require('zeptojs');
 
 module.exports = function() {
@@ -28,5 +30,5 @@ module.exports = function() {
                 $('#statusMessages').append('<h3 style="color:red">Not quite. The file name should have been &quot;hg_sux.txt&quot;</h3>');
             }
         }
-    }
+    };
 };

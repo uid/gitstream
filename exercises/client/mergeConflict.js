@@ -1,3 +1,5 @@
+'use strict';
+
 var $ = require('zeptojs');
 
 module.exports = function() {
@@ -9,7 +11,8 @@ module.exports = function() {
             if ( haltState === 'done' ) {
                 $('#statusMessages').append('<h1 style="color:green">Good job! You did it!</h1>');
             } else if ( haltState === 'broken' ) {
-                $('#statusMessages').append('<h1 style="color:red">You got the merge wrong. Now you have to try again!</h1>');
+                $('#statusMessages')
+                .append('<h1 style="color:red">You got the merge wrong. Run go.sh to try again!</h1>');
             }
         },
 
@@ -19,10 +22,7 @@ module.exports = function() {
             }
         },
 
-        editFile: {
-            editFile: function() {
-                $('#statusMessages').append('<h3 style="color:red">You have to edit merge_me.txt and commit+push your changes</h3>');
-            },
+        pushCommit: {
             pullRepo: function() {
                 $('#statusMessages').append('<h3>You should have noticed that you weren\'t able to push your changes. There\'s a merge conflict! Pull the repo and resolve it.</h3>');
             }
@@ -33,5 +33,5 @@ module.exports = function() {
                 $('#statusMessages').append('<h3>So far so good. Now, resolve the merge conflict in favor of the upstream changes (i.e. not yours) and add+commit+push your merge</h3>');
             }
         }
-    }
+    };
 };
