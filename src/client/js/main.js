@@ -3,7 +3,7 @@
 var shoe = require('shoe'),
     $ = require('zeptojs'),
     _ = require('lodash'),
-    stream = shoe('http://localhost:4242/events'),
+    stream = shoe('/events'),
     streamEmitter = require('duplex-emitter'),
     eventEmitter = require('event-emitter'),
     ExerciseViewer = require('./ExerciseViewer'),

@@ -8,7 +8,7 @@ var angler = require('git-angler'),
     spawn = require('child_process').spawn,
     q = require('q'),
     user = require('./user')({
-        sqlHost: 'localhost', sqlUser: 'nhynes', sqlPass: 'localdev', sqlDb: 'gitstream'
+        sqlHost: 'localhost', sqlUser: 'root', sqlPass: 'root', sqlDb: 'gitstream'
     }),
     ExerciseMachine = require('./ExerciseMachine'),
     utils = require('./utils'),
@@ -145,8 +145,14 @@ app.use( compression() );
 app.use( '/repos', backend );
 app.use( '/hooks', githookEndpoint );
 
+// invoked from the "go" script in client repo
 app.use( '/go', function( req, res ) {
-    // invoked from the "go" script in client repo
+    if ( !req.headers['x-gitstream-repo'] ) {
+        res.writeHead(400);
+        res.end();
+        return;
+    }
+
     var remoteUrl = req.headers['x-gitstream-repo'],
         repo = remoteUrl.substring( remoteUrl.indexOf( gitHTTPMount ) + gitHTTPMount.length );
     verifyAndGetRepoInfo( repo, function( err, repoInfo ) {

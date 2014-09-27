@@ -147,7 +147,7 @@ gulp.task( 'browserify', function() {
 });
 
 gulp.task( 'collectstatic', function() {
-    var stream = gulp.src( notilde( path.src.client.static ), { read: false } );
+    var stream = gulp.src( notilde( path.src.client.static ) );
 
     if( !production ) {
         stream = stream.pipe( cache('static') );
@@ -157,7 +157,8 @@ gulp.task( 'collectstatic', function() {
 });
 
 gulp.task( 'collectserver', function() {
-    var stream = gulp.src( notilde( path.src.server ), { read: false } );
+    var stream = gulp.src( notilde( path.src.server ) )
+                     .pipe( plumber() );
 
     if( !production ) {
         stream = stream.pipe( cache('server') );
