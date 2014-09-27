@@ -1,3 +1,5 @@
+'use strict';
+
 var mergeme = 'merge_me.txt',
     mergeCollab = 'merge_me_collaborated.txt';
 
@@ -7,18 +9,20 @@ module.exports = function() {
         startState: 'editFile',
 
         editFile: {
-            handlePrePush: function( repo, action, info, gitDone, stepDone ) {
-                this.simulateCollaboration( mergeCollab, mergeme, 'Eat that!', function( err ) {
+            handlePreCommit: function( repo, action, info, gitDone, stepDone ) {
+                this.simulateCollaboration( mergeCollab, mergeme, 'Eat that!', function() {
                     gitDone();
-                    stepDone('pullRepo');
+                    stepDone('pushCommit');
                 });
             }
         },
+        // possibly disable all pulls between these states to prevent pulling down the conflict
+        pushCommit: {
+            onPreInfo: 'pullRepo'
+        },
 
         pullRepo: {
-            onPull: function( repo, action, info, done ) {
-                done('mergeFile');
-            }
+            onPull: 'mergeFile'
         },
 
         mergeFile: {

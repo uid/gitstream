@@ -34,7 +34,7 @@ var gulp = require('gulp'),
                     'src/client/*.html'
                 ]
             },
-            server: 'src/server/**/*'
+            server: [ 'src/server/**/*', 'src/server/**/.*/**/*' ]
         },
         tests: 'test/**/*.js',
         dist: {
@@ -147,7 +147,7 @@ gulp.task( 'browserify', function() {
 });
 
 gulp.task( 'collectstatic', function() {
-    var stream = gulp.src( notilde( path.src.client.static ) )
+    var stream = gulp.src( notilde( path.src.client.static ), { read: false } );
 
     if( !production ) {
         stream = stream.pipe( cache('static') );
@@ -157,7 +157,7 @@ gulp.task( 'collectstatic', function() {
 });
 
 gulp.task( 'collectserver', function() {
-    var stream = gulp.src( notilde( path.src.server ) )
+    var stream = gulp.src( notilde( path.src.server ), { read: false } );
 
     if( !production ) {
         stream = stream.pipe( cache('server') );
