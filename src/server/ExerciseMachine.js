@@ -8,7 +8,6 @@ var util = require('util'),
         [ 'pre-pull', 'pull', 'pre-clone', 'clone', 'pre-push', 'push', 'pre-info', 'info',
         'merge', 'pre-rebase', 'pre-commit', 'commit', 'checkout', 'pre-receive', 'receive' ] );
 
-
 /**
  * A state machine that represents multi-step exercises as states.
  *

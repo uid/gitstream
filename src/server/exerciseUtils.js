@@ -111,7 +111,6 @@ module.exports = function( config ) {
             });
         },
 
-
         /**
          * Checks for the existence of a file in the repo
          * @param {String} filename the path to the file

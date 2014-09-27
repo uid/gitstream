@@ -1,3 +1,5 @@
+'use strict';
+
 /**
  * A Mealy machine that represents multi-step exercises as states.
  * This class is intended to be connected to an ExerciseMachine via an EventEmitter
@@ -6,8 +8,6 @@
  * @param {EventEmitter} eventEmitter the emitter of ExerciseMachine eventEmitter
  */
 function ExerciseViewer( config, eventEmitter ) {
-    'use strict';
-
     if ( !(this instanceof ExerciseViewer) ) {
         return new ExerciseViewer( config, eventEmitter );
     }

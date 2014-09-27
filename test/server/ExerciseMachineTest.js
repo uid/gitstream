@@ -252,7 +252,6 @@ module.exports = {
             nextState: null
         }, this.repoPaths, this.exerciseDir, this.eventBus );
 
-
         em.on( 'halt', function( haltState ) {
             test.strictEqual( haltState, 'nextState' );
             test.done();
@@ -281,7 +280,6 @@ module.exports = {
             nextState: null
         }, this.repoPaths, this.exerciseDir, this.eventBus );
 
-
         em.on( 'halt', function( haltState ) {
             test.strictEqual( haltState, 'nextState' );
             test.done();
@@ -302,7 +300,6 @@ module.exports = {
             },
             nextState: null
         }, this.repoPaths, this.exerciseDir, this.eventBus );
-
 
         em.on( 'halt', function( haltState ) {
             test.strictEqual( haltState, 'nextState' );

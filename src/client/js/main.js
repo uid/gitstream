@@ -13,8 +13,8 @@ var shoe = require('shoe'),
         return function() {
             var args = Array.prototype.slice.call( arguments );
             exerciseEvents.emit.apply( exerciseEvents, [ eventName ].concat( args ) );
-            if( helperFn ) { helperFn(); }
-        }
+            if ( helperFn ) { helperFn(); }
+        };
     },
     state = {},
     userKey,
@@ -23,14 +23,14 @@ var shoe = require('shoe'),
     createPushNewFileConf = require('../exercises/createPushNewFile'),
     editFileConf = require('../exercises/editFile'),
     mergeConflictConf = require('../exercises/mergeConflict'),
-    moment = require('moment');
+    moment = require('moment'),
+
+    timerInt;
 
 $(document.body).prepend('<pre style="color:blue;font-size:110%">git clone http://128.30.9.243:4242/repos/' + userId + '/000000-' + window.exercise + '.git ' + window.exercise + '</pre>' );
 
 events.emit('exerciseChanged', window.exercise );
 events.emit('sync', { userId: userId });
-
-var timerInt;
 
 events.on('sync', function( newState ) {
     clearInterval( timerInt );
@@ -39,9 +39,9 @@ events.on('sync', function( newState ) {
     state = _.defaults( state, newState );
     userKey = newState.key || userKey;
 
-
     var exerciseConf,
-        exerciseViewer;
+        exerciseViewer,
+        updateTimer;
 
     if ( newState.exerciseState ) {
         if ( window.exercise === 'createPushNewFile' ) {
@@ -57,16 +57,17 @@ events.on('sync', function( newState ) {
         exerciseViewer = new ExerciseViewer( exerciseConf, exerciseEvents );
         exerciseViewer.init( newState.exerciseState );
 
-        var endTime = newState.endTime;
-        var updateTimer = function() {
+        updateTimer = function() {
             var timeRemaining = moment.duration( newState.endTime - Date.now() + 1000 );
             if ( timeRemaining >= 0 ) {
                 $('#countdown').toggleClass('runningout', timeRemaining <= 6000 );
-                $('#timer').html( timeRemaining.minutes() + ':' + ( timeRemaining < 10000 ? '0' : '' ) + timeRemaining.seconds() );
+                $('#timer').html( timeRemaining.minutes() + ':' +
+                                 ( timeRemaining.seconds() < 10 ? '0' : '' ) +
+                                 timeRemaining.seconds() );
             } else {
                 clearInterval( timerInt );
             }
-        }
+        };
         updateTimer();
         timerInt = setInterval( updateTimer, 1000 );
     }

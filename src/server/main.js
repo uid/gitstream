@@ -302,7 +302,6 @@ shoe( function( stream ) {
 
     }.bind( this ));
 
-
     events.on( 'exerciseChanged', function( newExercise ) {
         if ( exerciseMachine ) { // stop the old machine
             exerciseMachine.halt();
