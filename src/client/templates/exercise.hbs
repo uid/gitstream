@@ -1,0 +1,24 @@
+<div class="exercise-view">
+  <header class="exercise-heading">
+    <h2 class="exercise-title">{{{title}}}</h2>
+    <div class="clone-blurb">
+      <code class="clone-url">git clone {{cloneUrl}}</code>
+    </div>
+  </header>
+  <div class="exercise-steps-container">
+    <ol class="exercise-steps">
+      {{#each steps}}
+      <li class="exercise-step">
+        <div class="step-number">{{{../stepIndex}}}</div>
+        <span class="step-name">{{{this.name}}}</span>
+        <p class="feedback"></p>
+      </li>
+      {{/each}}
+      <li class="exercise-step done">
+        <div class="step-number">&#10003;</div>
+        <span class="step-name">Done!</span>
+      </li>
+
+    </ol>
+  </div>
+</div>
