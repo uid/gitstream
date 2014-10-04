@@ -1,15 +1,51 @@
 @import '../../node_modules/normalize.css/normalize.css';
 
-#countdown {
-    margin: auto;
-    font-weight: bold;
-    display: inline-block;
-    padding: 20px;
-    border: 1px solid grey;
-    font-size: 150%;
-    border-radius: 10px;
+$bodyPadding: 10px;
 
-    &.runningout {
-        color: red;
+@mixin clearfix {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+body {
+    position: absolute;
+    width: calc(100% - #{2*$bodyPadding});
+    min-height: calc(100% - #{2*$bodyPadding});
+    margin: 0;
+    padding: $bodyPadding;
+}
+
+.main-header {
+    @include clearfix;
+    width: 100%;
+    .gitstream {
+        float: left;
+        clear: both;
+        cursor: pointer;
+
+        &:hover {
+            color: lighten(black, 40%);
+        }
+
+        h1 { margin: 0; } // TODO: create logo
+    }
+}
+
+.page-footer {
+    position: absolute;
+    bottom: 3px;
+    text-align: center;
+    width: calc(100% - #{2*$bodyPadding};
+    color: gray;
+    font-size: 90%;
+}
+
+.main-content {
+    width: 80%;
+    margin: auto;
+
+    &.hide {
+        display: none;
     }
 }

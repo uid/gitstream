@@ -3,6 +3,7 @@ var gulp = require('gulp'),
     buffer = require('vinyl-buffer'),
     cache,
     concatCss = require('gulp-concat-css'),
+    hbsfy = require('hbsfy'),
     jscs,
     jshint,
     livereload,
@@ -125,6 +126,9 @@ gulp.task( 'browserify', function() {
 
     var bundle = function() {
         var stream = bundler.bundle()
+            .on( 'error', function( e ) {
+                console.error( '\x1b[31;1m', 'Browserify Error', e.toString(), '\x1b[0m' );
+            })
             .pipe( source('bundle.js') );
 
         if ( production ) {
@@ -158,7 +162,7 @@ gulp.task( 'collectstatic', function() {
 
 gulp.task( 'collectserver', function() {
     var stream = gulp.src( notilde( path.src.server ) )
-                     .pipe( plumber() );
+                     .pipe( plumber({ errorHandler: function(){} }) );
 
     if( !production ) {
         stream = stream.pipe( cache('server') );
