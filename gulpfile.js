@@ -102,14 +102,9 @@ gulp.task( 'sass', function() {
     if ( !production ) {
         stream = stream
             .pipe( plumber() )
-            .pipe( cache('styles') )
     }
 
     stream = stream.pipe( sass() );
-
-    if( !production ) {
-        stream = stream.pipe( remember('styles') );
-    }
 
     stream.pipe( minifyCss({ cache: true }) )
         .pipe( concatCss('bundle.css') )

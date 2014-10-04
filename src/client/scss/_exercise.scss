@@ -1,0 +1,104 @@
+.exercise-view {
+    text-align: center;
+    width: 100%;
+
+    .exercise-title {
+        text-align: center;
+    }
+
+    .clone-blurb {
+        margin: 20px;
+        text-align: center;
+
+        .clone-url {
+            $borderColor: darken(blue, 15%);
+            border-bottom: 1px solid $borderColor;
+            border-top: 1px solid $borderColor;
+            color: blue;
+            font-size: 1.05em;
+            padding: 8px 15px;
+        }
+    }
+
+    .exercise-steps-container {
+        display: inline-block;
+        margin: 40px auto;
+        text-align: left;
+        width: 80%;
+    }
+
+    .exercise-steps {
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    $stepNumberDiam: 40px;
+    .exercise-step {
+        border-bottom: 1px solid gray;
+        font-size: 1.3em;
+        line-height: $stepNumberDiam;
+        padding: 15px 20px;
+
+        .step-number {
+            border-radius: $stepNumberDiam;
+            border: 2px solid grey;
+            display: inline-block;
+            height: $stepNumberDiam;
+            margin-right: 10px;
+            opacity: .4;
+            text-align: center;
+            width: $stepNumberDiam;
+        }
+
+        .step-name {
+            opacity: .4;
+        }
+
+        .feedback {
+            line-height: 1em;
+            margin: 0;
+        }
+
+        &.done {
+            .step-number {
+                background-color: gray;
+                color: white;
+                font-size: 1.2em;
+            }
+
+            &.focused {
+                color: green;
+
+                .step-number {
+                    background-color: green;
+                    border-color: green;
+                    color: white;
+                }
+            }
+        }
+
+        &.focused {
+            .step-number,.step-name {
+                opacity: 1;
+            }
+        }
+
+        &.issue {
+            .step-number {
+                border-color: red;
+                color: red;
+            }
+            .step-name {
+                color: red;
+            }
+            .feedback {
+                margin: 10px 0 0 0;
+            }
+        }
+
+        &:last-of-type {
+            border-bottom-width: 0;
+        }
+    }
+}

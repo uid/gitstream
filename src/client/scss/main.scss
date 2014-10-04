@@ -1,28 +1,52 @@
 @import '../../node_modules/normalize.css/normalize.css';
+@import 'exercise';
 
-$bodyPadding: 10px;
+@font-face {
+  font-family: 'Questrial';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/questrial.ttf') format('woff');
+}
+
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 600;
+  src: url('/open_sans.woff') format('woff');
+}
+
+
+$bodyPaddingSides: 20px;
+$bodyPaddingTop: 10px;
 
 @mixin clearfix {
+  clear: both;
   content: "";
   display: table;
-  clear: both;
 }
 
 body {
-    position: absolute;
-    width: calc(100% - #{2*$bodyPadding});
-    min-height: calc(100% - #{2*$bodyPadding});
+    background-color: #fcfcfc;
+    font-family: 'Questrial', sans-serif;
+    font-size: 1.2em;
     margin: 0;
-    padding: $bodyPadding;
+    min-height: calc(100% - #{2*$bodyPaddingTop});
+    padding: $bodyPaddingTop $bodyPaddingSides;
+    position: absolute;
+    width: calc(100% - #{2*$bodyPaddingSides});
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Open Sans', sans-serif;
 }
 
 .main-header {
     @include clearfix;
     width: 100%;
     .gitstream {
-        float: left;
         clear: both;
         cursor: pointer;
+        float: left;
 
         &:hover {
             color: lighten(black, 40%);
@@ -33,17 +57,17 @@ body {
 }
 
 .page-footer {
-    position: absolute;
     bottom: 3px;
-    text-align: center;
-    width: calc(100% - #{2*$bodyPadding};
     color: gray;
     font-size: 90%;
+    position: absolute;
+    text-align: center;
+    width: calc(100% - #{2*$bodyPaddingSides};
 }
 
 .main-content {
-    width: 80%;
     margin: auto;
+    width: 80%;
 
     &.hide {
         display: none;
