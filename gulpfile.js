@@ -25,7 +25,8 @@ var gulp = require('gulp'),
     path = {
         src: {
             all: 'src/**/*',
-            js: [ 'src/**/*.js', 'exercises/**/*.js' ],
+            js: [ 'src/**/*.js', '!exercises/',
+                  '!src/client/exercises/**/*', '!src/server/exercises/**/*' ],
             client: {
                 main: './src/client/js/main.js',
                 scss: 'src/client/**/*.s[ac]ss',
