@@ -35,9 +35,13 @@ events.on( 'sync', function( newState ) {
     state = _.defaults( newState, state );
     state.currentExercise = state.currentExercise === 'null' ? null : state.currentExercise;
 
-    window.location.hash = state.currentExercise;
+    window.location.hash = state.currentExercise || '';
 
-    // stop and reset timer
+    if ( state.currentExercise ) {
+        // load up exercise template and start the viewer machine
+    }
+
+    $('.main-content').removeClass('hide');
 
     // tear down and recreate exercise event emitter in preparation for a new exercise
     require('event-emitter/all-off')( exerciseEvents );
