@@ -31,7 +31,7 @@ function ExerciseViewer( config, eventEmitter ) {
     eventEmitter.on( 'step', function( newState, oldState, output, cb ) {
         var oldStateDef = this._states[ oldState ],
             newStateDef = this._states[ newState ],
-            doneCb = ( cb || output ).bind( null, newState, oldState ); // output optional
+            doneCb = ( cb || output || function() {} ).bind( null, newState, oldState );
 
         if ( propIsFn( oldStateDef, newState ) || propIsFn( newStateDef, 'onEnter' ) ) {
             if ( propIsFn( oldStateDef, newState ) ) {
@@ -48,12 +48,12 @@ function ExerciseViewer( config, eventEmitter ) {
 
     eventEmitter.on( 'halt', function( haltState, cb ) {
         onHalt.call( config, haltState );
-        cb( haltState );
+        if ( cb ) { cb( haltState ); }
     }.bind( this ) );
 
     eventEmitter.on( 'ding', function( cb ) {
         onDing.call( config, this._currentState );
-        cb( this._currentState );
+        if ( cb ) { cb( this._currentState ); }
     }.bind( this ) );
 }
 
