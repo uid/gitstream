@@ -17,6 +17,7 @@ var gulp = require('gulp'),
     sass = require('gulp-sass'),
     source = require('vinyl-source-stream'),
     stylish,
+    symlink = require('gulp-symlink'),
     uglify = require('gulp-uglify'),
     watchify,
 
@@ -36,7 +37,10 @@ var gulp = require('gulp'),
                     'src/client/*.html'
                 ]
             },
-            server: [ 'src/server/**/*', 'src/server/**/.*/**/*' ]
+            server: {
+                static: [ 'src/server/**/*' ],
+                exercises: 'src/server/exercises'
+            }
         },
         tests: 'test/**/*.js',
         dist: {
@@ -44,8 +48,11 @@ var gulp = require('gulp'),
             all: 'dist/**/*',
             client: 'dist/client/',
             server: 'dist/server/',
-            serverMain: 'dist/server/main.js'
-        }
+            serverMain: 'dist/server/main.js',
+            exercises: {
+                server: 'dist/server'
+            }
+        },
     },
 
     watching;
@@ -68,7 +75,7 @@ function notilde( path ) {
     return [].concat( path, '!**/*~' );
 }
 
-gulp.task( 'build', [ 'sass', 'browserify', 'collectstatic', 'collectserver' ] );
+gulp.task( 'build', [ 'sass', 'browserify', 'collectstatic', 'collectserver', 'linkexercises' ] );
 gulp.task( 'default', [ 'checkstyle', 'test', 'watch', 'build' ] );
 
 gulp.task( 'clean', function( cb ) {
@@ -157,7 +164,7 @@ gulp.task( 'collectstatic', function() {
 });
 
 gulp.task( 'collectserver', function() {
-    var stream = gulp.src( notilde( path.src.server ) )
+    var stream = gulp.src( notilde( path.src.server.static ) )
                      .pipe( plumber({ errorHandler: function(){} }) );
 
     if( !production ) {
@@ -167,12 +174,17 @@ gulp.task( 'collectserver', function() {
     stream.pipe( gulp.dest( path.dist.server ) );
 });
 
+gulp.task( 'linkexercises', function() {
+    gulp.src( path.src.server.exercises )
+        .pipe( symlink( path.dist.exercises.server ) );
+});
+
 gulp.task( 'watch', function() {
     livereload({ silent: true });
     watching = true;
     gulp.watch( notilde( [].concat( path.src.js, path.tests ) ), [ 'checkstyle', 'test' ] );
     gulp.watch( notilde( path.src.client.scss ), [ 'sass' ] );
     gulp.watch( notilde( path.src.client.static ), [ 'collectstatic' ] );
-    gulp.watch( notilde( path.src.server ), [ 'collectserver' ] );
+    gulp.watch( notilde( path.src.server.static ), [ 'collectserver' ] );
     gulp.watch( path.dist.all ).on( 'change', livereload.changed );
 });
