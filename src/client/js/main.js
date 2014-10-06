@@ -1,5 +1,43 @@
 'use strict';
 
+function toMSSStr( msec ) {
+    var minutesRemaining = Math.floor( msec / 60000 ),
+        secondsRemaining = Math.round( ( msec % 60000 ) / 1000 ),
+        secondsStr = ( secondsRemaining < 10 ? '0' : '' ) + secondsRemaining;
+
+    return minutesRemaining + ':' + secondsStr;
+}
+
+function Timer( timer ) {}
+
+Timer.prototype = {
+    _update: function() {
+        var secondsRemaining = Math.round( ( this.timeRemaining % 60000 ) / 1000 );
+
+        if ( secondsRemaining <= 10 ) {
+            this._timer.addClass('stress');
+        }
+
+        this._timer.html( toMSSStr( this.timeRemaining ) );
+        this.timeRemaining -= 1000;
+    },
+    start: function( endTime ) {
+        this._timer = $('.timer');
+        this.timeRemaining = endTime - Date.now();
+        this._update();
+        this._timer.addClass('active');
+        this.timerInterval = setInterval( this._update.bind( this ), 1000 );
+    },
+    stop: function() {
+        clearInterval( this.timerInterval );
+        this._timer.removeClass('active');
+    },
+    ding: function() {
+        this.stop();
+        this._timer.html('0:00').addClass('stress').addClass('dinged');
+    }
+}
+
 var EVENTS_ENDPOINT = '/events',
     shoe = require('shoe'),
     $ = require('zeptojs'),
@@ -22,7 +60,8 @@ var EVENTS_ENDPOINT = '/events',
     exerciseTmp = require('../templates/exercise.hbs'),
     indexTmp = require('../templates/index.hbs'),
 
-    state = {};
+    state = {},
+    timer = new Timer();
 
 function renderExerciseView( exerciseName, conf, user ) {
     var stepIndex = 1,
@@ -41,15 +80,15 @@ function renderExerciseView( exerciseName, conf, user ) {
             steps: steps,
             stepIndex: function() {
                 return stepIndex++;
-            }
+            },
+            initTime: toMSSStr( conf.initTime )
         };
 
     return $( exerciseTmp( templateParams ) );
 }
 
-function selectViewStep( name, scope ) {
-    var scope = scope || $('.exercise-view');
-    return scope.find( '[data-statename="' + name + '"]' );
+function selectViewStep( name ) {
+    return $('.exercise-view').find( '[data-statename="' + name + '"]' );
 }
 
 function hashChangeExercise() {
@@ -62,7 +101,7 @@ function changeHashSilent( newHash ) {
     setTimeout( function() {
         $(window).on( 'hashchange', hashChangeExercise );
     }, 0 );
- }
+}
 
 radio.on( 'exerciseChanged', function( changeTo ) {
     var exerciseViewerConf,
@@ -93,13 +132,14 @@ radio.on( 'exerciseChanged', function( changeTo ) {
         exerciseViewerConf = exercises[ newExercise ];
         exerciseView = renderExerciseView( newExercise, exerciseViewerConf.view, state.user );
 
+        $('.main-content').html( exerciseView );
+
         if ( state.exerciseState ) {
             selectViewStep( state.exerciseState, exerciseView ).addClass('focused');
+            timer.start( state.endTime );
         }
 
         ExerciseViewer( exerciseViewerConf.machine, exerciseEvents );
-
-        $('.main-content').html( exerciseView );
     } else {
         changeHashSilent('');
         $('.main-content').html( indexTmp() );
@@ -150,11 +190,13 @@ events.on( 'step', triggerExerciseEvent( 'step', function( newState, oldState, s
     }
 }) );
 events.on( 'halt', triggerExerciseEvent( 'halt', function( haltState ) {
-    // stop the timer
+    timer.stop();
 }) );
 events.on( 'ding', triggerExerciseEvent( 'ding', function() {
     var viewConf = exercises[ state.currentExercise ],
         renderedView = renderExerciseView( state.currentExercise, viewConf.view, state.user );
 
-    $('.main-content').html( renderedView );
+    timer.ding();
+
+    $('.exercise-view').find('.exercise-step').removeClass('focused');
 }) );

@@ -1,3 +1,5 @@
+$stressColor: lighten(red, 13%);
+
 .exercise-view {
     text-align: center;
     width: 100%;
@@ -9,6 +11,7 @@
     .clone-blurb {
         margin: 20px;
         text-align: center;
+        white-space: nowrap;
 
         .clone-url {
             $borderColor: darken(blue, 15%);
@@ -21,8 +24,7 @@
     }
 
     .exercise-steps-container {
-        display: inline-block;
-        margin: 40px auto;
+        margin: 15px auto auto auto;
         text-align: left;
         width: 80%;
     }
@@ -107,4 +109,40 @@
             border-bottom-width: 0;
         }
     }
+
+    .timer-wrap {
+        margin: 40px 0 0 0;
+        text-align: center;
+        width: 100%;
+
+        .timer {
+            background-color: lighten(gray, 33%);
+            border-radius: 15px;
+            color: gray;
+            display: inline-block;
+            font-size: 2.5em;
+            min-width: 160px;
+            padding: 15px;
+
+            &.active {
+                color: black;
+            }
+
+            &.stress {
+                background-color: $stressColor;
+                color: white;
+            }
+
+            &.dinged {
+                animation: blink 1s steps(1);
+                animation-direction: alternate;
+                animation-iteration-count: infinite;
+            }
+        }
+    }
+}
+
+@keyframes blink {
+    0% { color: white; }
+    50% { color: $stressColor; }
 }
