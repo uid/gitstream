@@ -1,5 +1,6 @@
 @import '../../node_modules/normalize.css/normalize.css';
 @import 'exercise';
+@import 'index';
 
 @font-face {
   font-family: 'Questrial';
@@ -78,7 +79,8 @@ h1, h2, h3, h4, h5, h6 {
 
 .main-content {
     margin: auto;
-    width: 80%;
+    max-width: 1300px;
+    width: 92%;
 
     &.hide {
         display: none;
