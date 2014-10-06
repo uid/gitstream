@@ -1,5 +1,30 @@
 'use strict';
 
+var EVENTS_ENDPOINT = '/events',
+    shoe = require('shoe'),
+    $ = require('zeptojs'),
+    _ = require('lodash'),
+    hmac = require('crypto-js/hmac-sha1'),
+    eventEmitter = require('event-emitter'),
+    exercises = require('gitstream-exercises'),
+    ExerciseViewer = require('./ExerciseViewer'),
+    events = require('duplex-emitter')( shoe( EVENTS_ENDPOINT ) ),
+    exerciseEvents = eventEmitter({}),
+    radio = eventEmitter({}),
+    triggerExerciseEvent = function( eventName, helperFn ) {
+        return function() {
+            var args = Array.prototype.slice.call( arguments );
+            exerciseEvents.emit.apply( exerciseEvents, [ eventName ].concat( args, helperFn ) );
+        };
+    },
+
+    exerciseTmp = require('../templates/exercise.hbs'),
+    indexTmp = require('../templates/index.hbs'),
+
+    state = {},
+    timer,
+    viewer;
+
 function toMSSStr( msec ) {
     var minutesRemaining = Math.floor( msec / 60000 ),
         secondsRemaining = Math.round( ( msec % 60000 ) / 1000 ),
@@ -8,7 +33,7 @@ function toMSSStr( msec ) {
     return minutesRemaining + ':' + secondsStr;
 }
 
-function Timer( timer ) {}
+function Timer() {}
 
 Timer.prototype = {
     _update: function() {
@@ -36,32 +61,7 @@ Timer.prototype = {
         this.stop();
         this._timer.html('0:00').addClass('stress').addClass('dinged');
     }
-}
-
-var EVENTS_ENDPOINT = '/events',
-    shoe = require('shoe'),
-    $ = require('zeptojs'),
-    _ = require('lodash'),
-    hmac = require('crypto-js/hmac-sha1'),
-    eventEmitter = require('event-emitter'),
-    exercises = require('gitstream-exercises'),
-    ExerciseViewer = require('./ExerciseViewer'),
-    events = require('duplex-emitter')( shoe( EVENTS_ENDPOINT ) ),
-    exerciseEvents = eventEmitter({}),
-    radio = eventEmitter({}),
-    triggerExerciseEvent = function( eventName, helperFn ) {
-        return function() {
-            var args = Array.prototype.slice.call( arguments ),
-                helper = helperFn && typeof helperFn === 'function' ? helperFn : function() {};
-            exerciseEvents.emit.apply( exerciseEvents, [ eventName ].concat( args, helperFn ) );
-        };
-    },
-
-    exerciseTmp = require('../templates/exercise.hbs'),
-    indexTmp = require('../templates/index.hbs'),
-
-    state = {},
-    timer = new Timer();
+};
 
 function renderExerciseView( exerciseName, conf, user ) {
     var stepIndex = 1,
@@ -136,10 +136,11 @@ radio.on( 'exerciseChanged', function( changeTo ) {
 
         if ( state.exerciseState ) {
             selectViewStep( state.exerciseState, exerciseView ).addClass('focused');
+            timer = new Timer();
             timer.start( state.endTime );
         }
 
-        ExerciseViewer( exerciseViewerConf.machine, exerciseEvents );
+        viewer = new ExerciseViewer( exerciseViewerConf.machine, exerciseEvents );
     } else {
         changeHashSilent('');
         $('.main-content').html( indexTmp() );
@@ -153,11 +154,7 @@ $(window).on( 'hashchange', hashChangeExercise );
 events.emit('sync');
 
 events.on( 'sync', function( newState ) {
-    var exerciseViewerConf,
-        exerciseViewer,
-        renderedView,
-        hashExercise = window.location.hash.substring(1),
-        prevExercise = state.currentExercise;
+    var hashExercise = window.location.hash.substring(1);
 
     state = _.defaults( newState, state );
     state.currentExercise = hashExercise ||
@@ -189,14 +186,10 @@ events.on( 'step', triggerExerciseEvent( 'step', function( newState, oldState, s
         }, 70 );
     }
 }) );
-events.on( 'halt', triggerExerciseEvent( 'halt', function( haltState ) {
+events.on( 'halt', triggerExerciseEvent( 'halt', function() {
     timer.stop();
 }) );
 events.on( 'ding', triggerExerciseEvent( 'ding', function() {
-    var viewConf = exercises[ state.currentExercise ],
-        renderedView = renderExerciseView( state.currentExercise, viewConf.view, state.user );
-
     timer.ding();
-
     $('.exercise-view').find('.exercise-step').removeClass('focused');
 }) );
