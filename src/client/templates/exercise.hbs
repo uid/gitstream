@@ -8,15 +8,15 @@
   <div class="exercise-steps-container">
     <ol class="exercise-steps">
       {{#each steps}}
-      <li class="exercise-step">
+      <li class="exercise-step" data-statename="{{this.name}}">
         <div class="step-number">{{{../stepIndex}}}</div>
-        <span class="step-name">{{{this.name}}}</span>
+        <span class="step-desc">{{{this.desc}}}</span>
         <p class="feedback"></p>
       </li>
       {{/each}}
-      <li class="exercise-step done">
+      <li class="exercise-step done" data-statename="done">
         <div class="step-number">&#10003;</div>
-        <span class="step-name">Done!</span>
+        <span class="step-desc">Done!</span>
       </li>
 
     </ol>

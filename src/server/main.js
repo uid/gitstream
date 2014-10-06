@@ -273,7 +273,10 @@ shoe( function( stream ) {
                     delete clientState[ FIELD_END_TIME ];
                 }
 
-                clientState.key = userKey;
+                clientState.user = {
+                    key: userKey,
+                    id: userId
+                };
                 events.emit( 'sync', clientState );
             });
         });

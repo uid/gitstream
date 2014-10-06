@@ -1,5 +1,9 @@
 'use strict';
 
+function propIsFn( thing, prop ) {
+    return thing && typeof thing[ prop ] === 'function';
+}
+
 /**
  * A Mealy machine that represents multi-step exercises as states.
  * This class is intended to be connected to an ExerciseMachine via an EventEmitter
@@ -24,25 +28,32 @@ function ExerciseViewer( config, eventEmitter ) {
         }
     }
 
-    eventEmitter.on( 'step', function( newState, oldState ) {
+    eventEmitter.on( 'step', function( newState, oldState, output, cb ) {
         var oldStateDef = this._states[ oldState ],
-            newStateDef = this._states[ newState ];
+            newStateDef = this._states[ newState ],
+            doneCb = ( cb || output ).bind( null, newState, oldState ); // output optional
 
-        if ( oldStateDef && typeof oldStateDef[ newState ] === 'function' ) {
-            oldStateDef[ newState ].call( config );
-        }
-        if ( newStateDef && typeof newStateDef.onEnter === 'function' ) {
-            newStateDef.onEnter.call( config );
+        if ( propIsFn( oldStateDef, newState ) || propIsFn( newStateDef, 'onEnter' ) ) {
+            if ( propIsFn( oldStateDef, newState ) ) {
+                oldStateDef[ newState ].call( config, output, doneCb );
+            }
+            if ( propIsFn( newStateDef, 'onEnter' ) ) {
+                newStateDef.onEnter.call( config, output, doneCb );
+            }
+        } else {
+            doneCb();
         }
         this._currentState = newState;
     }.bind( this ) );
 
-    eventEmitter.on( 'halt', function( haltState ) {
+    eventEmitter.on( 'halt', function( haltState, cb ) {
         onHalt.call( config, haltState );
+        cb( haltState );
     }.bind( this ) );
 
-    eventEmitter.on( 'ding', function() {
+    eventEmitter.on( 'ding', function( cb ) {
         onDing.call( config, this._currentState );
+        cb( this._currentState );
     }.bind( this ) );
 }
 

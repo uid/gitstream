@@ -52,17 +52,28 @@ h1, h2, h3, h4, h5, h6 {
             color: lighten(black, 40%);
         }
 
-        h1 { margin: 0; } // TODO: create logo
+        h1 {
+            margin: 0;
+
+            a {
+                text-decoration: unset;
+                color: inherit;
+            }
+        }
     }
 }
 
 .page-footer {
     bottom: 3px;
-    color: gray;
     font-size: 90%;
     position: absolute;
     text-align: center;
     width: calc(100% - #{2*$bodyPaddingSides};
+
+    * {
+        color: gray;
+        text-decoration: none;
+    }
 }
 
 .main-content {

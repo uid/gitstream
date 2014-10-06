@@ -51,7 +51,7 @@
             width: $stepNumberDiam;
         }
 
-        .step-name {
+        .step-desc {
             opacity: .4;
         }
 
@@ -79,18 +79,24 @@
         }
 
         &.focused {
-            .step-number,.step-name {
+            .step-number,.step-desc {
                 opacity: 1;
             }
         }
 
         &.issue {
             .step-number {
-                border-color: red;
-                color: red;
+                // border-color: red;
+                // color: red;
             }
-            .step-name {
-                color: red;
+            .feedback {
+                color: darken(red, 3%);
+                transition: text-shadow 0.5s;
+
+                &.flash {
+                    text-shadow: 0 0 3px lighten(red, 10%);
+                    transition: text-shadow 0s;
+                }
             }
             .feedback {
                 margin: 10px 0 0 0;
