@@ -72,12 +72,12 @@ module.exports = function( config ) {
                 if ( code !== 0 ) { return; }
 
                 utils.git( repoPath, 'add', filenameDest, function( err ) {
-                    if ( err ) { return console.err( 'ERROR: ', err ); }
+                    if ( err ) { return console.error( 'ERROR: ', err ); }
                     utils.git( repoPath, 'commit', [ '-m', commitMsg ], callback );
                 });
             });
 
-            cp.stderr.on( 'data', function( err ) { console.err( 'ERROR:', err.toString() ); });
+            cp.stderr.on( 'data', function( err ) { console.error( 'ERROR:', err.toString() ); });
         },
 
         /**

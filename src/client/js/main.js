@@ -25,7 +25,10 @@ var EVENTS_ENDPOINT = '/events',
     timer,
     viewer;
 
-function toMSSStr( msec ) {
+function toTimeStr( msec ) {
+    if ( msec === Infinity ) {
+        return '&infin;';
+    }
     var minutesRemaining = Math.floor( msec / 60000 ),
         secondsRemaining = Math.round( ( msec % 60000 ) / 1000 ),
         secondsStr = ( secondsRemaining < 10 ? '0' : '' ) + secondsRemaining;
@@ -43,12 +46,12 @@ Timer.prototype = {
             this._timer.addClass('stress');
         }
 
-        this._timer.html( toMSSStr( this.timeRemaining ) );
+        this._timer.html( toTimeStr( this.timeRemaining ) );
         this.timeRemaining -= 1000;
     },
     start: function( endTime ) {
         this._timer = $('.timer');
-        this.timeRemaining = endTime - Date.now();
+        this.timeRemaining = endTime ? endTime - Date.now() : Infinity;
         this._update();
         this._timer.addClass('active');
         this.timerInterval = setInterval( this._update.bind( this ), 1000 );
@@ -81,7 +84,7 @@ function renderExerciseView( exerciseName, conf, user ) {
             stepIndex: function() {
                 return stepIndex++;
             },
-            initTime: toMSSStr( conf.initTime )
+            initTime: toTimeStr( conf.initTime )
         };
 
     return $( exerciseTmp( templateParams ) );
