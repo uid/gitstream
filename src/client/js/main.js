@@ -85,7 +85,7 @@ function renderExerciseView( exerciseName, conf, user ) {
         }),
         mac = hmac( user.id + exerciseName, user.key ).toString().substring( 0, 6 ),
         cloneUrl = window.location.protocol + '//' + window.location.host + '/repos/' +
-            user.id + '/' + mac + '-' + exerciseName + '.git ' + exerciseName,
+            user.id + '/' + mac + '-' + exerciseName + '.git',
         templateParams = {
             title: conf.title,
             cloneUrl: cloneUrl,
@@ -93,7 +93,8 @@ function renderExerciseView( exerciseName, conf, user ) {
             stepIndex: function() {
                 return stepIndex++;
             },
-            initTime: toTimeStr( conf.initTime )
+            initTime: toTimeStr( conf.initTime ),
+            exerciseName: exerciseName
         };
 
     return $( exerciseTmp( templateParams ) );

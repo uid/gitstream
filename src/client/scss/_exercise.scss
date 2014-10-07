@@ -8,18 +8,18 @@ $stressColor: lighten(red, 13%);
         text-align: center;
     }
 
-    .clone-blurb {
+    .run-commands {
+        color: blue;
+        padding: 8px 15px;
+        $borderColor: darken(blue, 15%);
+        border-bottom: 1px solid $borderColor;
+        border-top: 1px solid $borderColor;
         margin: 20px;
-        text-align: center;
+        text-align: left;
+        margin: auto;
+        display: inline-block;
         white-space: nowrap;
 
-        .clone-url {
-            $borderColor: darken(blue, 15%);
-            border-bottom: 1px solid $borderColor;
-            border-top: 1px solid $borderColor;
-            color: blue;
-            padding: 8px 15px;
-        }
     }
 
     .exercise-steps-container {
