@@ -47,21 +47,30 @@ Timer.prototype = {
         }
 
         this._timer.html( toTimeStr( this.timeRemaining ) );
-        this.timeRemaining -= 1000;
+        this.timeRemaining = Math.max( this.timeRemaining - 1000, 0 );
     },
     start: function( endTime ) {
+        this._stopped = false;
         this._timer = $('.timer');
         this.timeRemaining = endTime ? endTime - Date.now() : Infinity;
-        this._update();
+        if ( this.timeRemaining < Infinity ) {
+            this._update();
+            this.timerInterval = setInterval( this._update.bind( this ), 1000 );
+        }
         this._timer.addClass('active');
-        this.timerInterval = setInterval( this._update.bind( this ), 1000 );
+    },
+    _stop: function() {
+        this._stopped = true;
+        clearInterval( this.timerInterval );
     },
     stop: function() {
-        clearInterval( this.timerInterval );
-        this._timer.removeClass('active');
+        if ( !this._stopped ) {
+            this._stop();
+            this._timer.removeClass('active').addClass('stopped');
+        }
     },
     ding: function() {
-        this.stop();
+        this._stop();
         this._timer.html('0:00').addClass('stress').addClass('dinged');
     }
 };

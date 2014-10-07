@@ -132,6 +132,11 @@ $stressColor: lighten(red, 13%);
                 color: white;
             }
 
+            &.stopped {
+                background-color: green;
+                color: white;
+            }
+
             &.dinged {
                 animation: blink 1s steps(1);
                 animation-direction: alternate;
