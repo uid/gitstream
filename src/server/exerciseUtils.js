@@ -66,7 +66,7 @@ module.exports = function( config ) {
         simulateCollaboration: function( filenameSrc, filenameDest, commitMsg, callback ) {
             var exerciseFilePath = path.join( exercisePath, filenameSrc ),
                 repoFilePath = path.join( repoPath, filenameDest ),
-                cp = spawn( 'cp', [ '-R', exerciseFilePath, repoFilePath ] );
+                cp = spawn( 'cp', [ '-Rf', exerciseFilePath, repoFilePath ] );
 
             cp.on( 'close', function( code ) {
                 if ( code !== 0 ) { return; }

@@ -183,12 +183,13 @@ events.on( 'sync', function( newState ) {
 // forward exercise events to exercise machine emitter
 events.on( 'step', triggerExerciseEvent( 'step', function( newState, oldState, stepOutput ) {
     var newStateStepView = selectViewStep( newState ),
-        oldStateStepView = selectViewStep( oldState ),
         newStateFeedback = newStateStepView.find('.feedback'),
-        oldStateFeedback = oldStateStepView.find('.feedback');
+        exerciseSteps = $('.exercise-view').find('.exercise-step');
 
-    selectViewStep( oldState ).removeClass('focused issue');
-    oldStateFeedback.html('');
+    if ( !newStateStepView.length ) { return; }
+
+    exerciseSteps.removeClass('focused issue').find('.feedback').html('');
+
     newStateStepView.addClass('focused');
     if ( stepOutput ) {
         newStateStepView.addClass('issue');
