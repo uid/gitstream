@@ -16,7 +16,7 @@ var angler = require('git-angler'),
     server,
     eventBus = new angler.EventBus(),
     PATH_TO_REPOS = '/srv/repos',
-    PATH_TO_EXERCISES = 'exercises/',
+    PATH_TO_EXERCISES = __dirname + '/exercises/',
     repoNameRe = /\/[a-z][a-z0-9]+\/[a-f0-9]{6,}-.+.git$/,
     backend,
     rcon = redis.createClient(),
@@ -155,6 +155,7 @@ app.use( '/go', function( req, res ) {
 
     var remoteUrl = req.headers['x-gitstream-repo'],
         repo = remoteUrl.substring( remoteUrl.indexOf( gitHTTPMount ) + gitHTTPMount.length );
+	console.log('got a go', repo);
     verifyAndGetRepoInfo( repo, function( err, repoInfo ) {
         var repoPath = path.join( PATH_TO_REPOS, repo );
         if ( !err && repoInfo ) {
@@ -180,12 +181,20 @@ app.use( '/go', function( req, res ) {
     });
 });
 
+app.use( '/user', function( req, res ) {
+    var userRe = /([a-z0-9]{0,8})@MIT.EDU/,
+        match = userRe.exec( req.headers['x-ssl-client-s-dn'] ),
+        userId = ( match ? match[1] : null ) || 'demouser' + Math.round(Math.random() * 1000);
+    res.writeHead( 200 );
+    res.end( userId ); // haxx
+});
+
 server = app.listen( PORT );
 
 shoe( function( stream ) {
     var events = duplexEmitter( stream ),
         exerciseMachine,
-        userId = 'nhynes', // TODO: should probably get this from ssl client cert
+        userId, // TODO: should probably get this from ssl client cert
         userKeyDeferred = q.defer(),// execute key and clientState fetches simultaneously
         userKey,
         rsub = redis.createClient(),
@@ -241,7 +250,9 @@ shoe( function( stream ) {
     }
 
     // on connect, sync the client with the stored client state
-    events.on( 'sync', function() {
+    events.on( 'sync', function( recvUserId ) {
+	console.log('got a sync', recvUserId);
+	userId = recvUserId;
         user.getUserKey( userId, function( err, key ) {
             if ( err ) { return events.emit( 'err', err ); }
             userKey = key;
@@ -277,14 +288,19 @@ shoe( function( stream ) {
                     key: userKey,
                     id: userId
                 };
+
+console.log('returning sync', clientState);
                 events.emit( 'sync', clientState );
             });
         });
 
         rsub.subscribe( userId + ':go' );
         rsub.on( 'message', function( channel, exerciseName ) {
+console.log('got a go2');
             rcon.hgetall( userId, function( err, state ) {
+console.log( state, userId );
                 // only start exercise if user is on the exercise page
+console.log('currentex', exerciseName, state.currentExercise);
                 if ( exerciseName !== state.currentExercise ) { return; }
 
                 var startState;
@@ -312,6 +328,7 @@ shoe( function( stream ) {
     }.bind( this ));
 
     events.on( 'exerciseChanged', function( newExercise ) {
+console.log('exch', newExercise);
         if ( exerciseMachine ) { // stop the old machine
             exerciseMachine.halt();
             exerciseMachine = null;

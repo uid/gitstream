@@ -56,6 +56,7 @@ module.exports = {
             git.stdout.on( 'data', function( data ) { output += data.toString(); });
 
             git.on( 'close', function( code ) {
+		console.log(cmd, code);
                 errOutput = errOutput || ( code !== 0 ? code.toString : '' );
                 cb( errOutput, output );
             });

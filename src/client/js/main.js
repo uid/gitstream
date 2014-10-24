@@ -25,12 +25,16 @@ var EVENTS_ENDPOINT = '/events',
     timer,
     viewer;
 
+$.get( '/user', function( userId ) {
+    events.emit( 'sync', userId );
+});
+
 function toTimeStr( msec ) {
     if ( msec === Infinity ) {
         return '&infin;';
     }
-    var minutesRemaining = Math.floor( msec / 60000 ),
-        secondsRemaining = Math.round( ( msec % 60000 ) / 1000 ),
+    var minutesRemaining = Math.floor( (Number(msec) + 300) / 60000 ),
+        secondsRemaining = Math.round( ( msec % 60000 ) / 1000 ) % 60,
         secondsStr = ( secondsRemaining < 10 ? '0' : '' ) + secondsRemaining;
 
     return minutesRemaining + ':' + secondsStr;
@@ -40,9 +44,7 @@ function Timer() {}
 
 Timer.prototype = {
     _update: function() {
-        var secondsRemaining = Math.round( ( this.timeRemaining % 60000 ) / 1000 );
-
-        if ( secondsRemaining <= 10 ) {
+        if ( this.timeRemaining <= 10 * 100 ) {
             this._timer.addClass('stress');
         }
 
@@ -53,8 +55,8 @@ Timer.prototype = {
         this._stopped = false;
         this._timer = $('.timer');
         this.timeRemaining = endTime ? endTime - Date.now() : Infinity;
+	this._update();
         if ( this.timeRemaining < Infinity ) {
-            this._update();
             this.timerInterval = setInterval( this._update.bind( this ), 1000 );
         }
         this._timer.addClass('active');
@@ -84,7 +86,7 @@ function renderExerciseView( exerciseName, conf, user ) {
             };
         }),
         mac = hmac( user.id + exerciseName, user.key ).toString().substring( 0, 6 ),
-        cloneUrl = window.location.protocol + '//' + window.location.host + '/repos/' +
+        cloneUrl = 'http://' + window.location.host + '/repos/' +
             user.id + '/' + mac + '-' + exerciseName + '.git',
         templateParams = {
             title: conf.title,
@@ -164,18 +166,20 @@ radio.on( 'exerciseChanged', function( changeTo ) {
 
 $(window).on( 'hashchange', hashChangeExercise );
 
-events.emit('sync');
-
 events.on( 'sync', function( newState ) {
     var hashExercise = window.location.hash.substring(1);
 
-    state = _.defaults( newState, state );
-    state.currentExercise = hashExercise ||
-        ( state.currentExercise === 'null' ? null : state.currentExercise );
+    _.forOwn( newState, function( v, k ) {
+        state[k] = ( v === 'null' || !v ? state[k] : v );
+	if ( k === 'endTime' ) {
+		state[k] = v;
+	}
+    });
+
 
     radio.emit( 'exerciseChanged', {
-        newExercise: state.currentExercise,
-        silent: true,
+        newExercise: hashExercise,
+        silent: state.currentExercise === hashExercise,
         setHash: true
     });
 });
@@ -201,9 +205,11 @@ events.on( 'step', triggerExerciseEvent( 'step', function( newState, oldState, s
     }
 }) );
 events.on( 'halt', triggerExerciseEvent( 'halt', function() {
-    timer.stop();
+    if( timer ) timer.stop();
+    state.endTime = undefined;
 }) );
 events.on( 'ding', triggerExerciseEvent( 'ding', function() {
-    timer.ding();
+    if ( tiemr ) timer.ding();
     $('.exercise-view').find('.exercise-step').removeClass('focused');
+    state.endTime = undefined;
 }) );
