@@ -17,7 +17,7 @@ var angler = require('git-angler'),
     eventBus = new angler.EventBus(),
     PATH_TO_REPOS = '/srv/repos',
     PATH_TO_EXERCISES = __dirname + '/exercises/',
-    repoNameRe = /\/[a-z][a-z0-9]+\/[a-f0-9]{6,}-.+.git$/,
+    repoNameRe = /\/[a-z][a-z0-9_-]+\/[a-f0-9]{6,}-.+.git$/,
     backend,
     rcon = redis.createClient(),
     gitHTTPMount = '/repos', // no trailing slash
@@ -182,7 +182,7 @@ app.use( '/go', function( req, res ) {
 });
 
 app.use( '/user', function( req, res ) {
-    var userRe = /([a-z0-9]{0,8})@MIT.EDU/,
+    var userRe = /([a-z0-9_-]{0,8})@MIT.EDU/,
         match = userRe.exec( req.headers['x-ssl-client-s-dn'] ),
         userId = ( match ? match[1] : null ) || 'demouser' + Math.round(Math.random() * 1000);
     res.writeHead( 200 );
@@ -194,7 +194,7 @@ server = app.listen( PORT );
 shoe( function( stream ) {
     var events = duplexEmitter( stream ),
         exerciseMachine,
-        userId, // TODO: should probably get this from ssl client cert
+        userId,
         userKeyDeferred = q.defer(),// execute key and clientState fetches simultaneously
         userKey,
         rsub = redis.createClient(),
