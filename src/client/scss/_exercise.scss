@@ -32,6 +32,11 @@ $stressColor: lighten(red, 13%);
         list-style-type: none;
         margin: 0;
         padding: 0;
+        opacity: 0.1;
+
+        &.focused {
+            opacity: 1;
+        }
     }
 
     $stepNumberDiam: 40px;
@@ -47,13 +52,14 @@ $stressColor: lighten(red, 13%);
             display: inline-block;
             height: $stepNumberDiam;
             margin-right: 10px;
-            opacity: .3;
             text-align: center;
             width: $stepNumberDiam;
         }
 
-        .step-desc {
-            opacity: .4;
+        .step-number, .step-desc {
+            &.blurred {
+                opacity: 0.2;
+            }
         }
 
         .feedback {

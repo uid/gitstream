@@ -69,7 +69,6 @@ module.exports = function( config ) {
                 cp = spawn( 'cp', [ '-Rf', exerciseFilePath, repoFilePath ] );
 
             cp.on( 'close', function( code ) {
-console.log('cpcode', code, exerciseFilePath, repoFilePath);
                 if ( code !== 0 ) { return; }
 
                 utils.git( repoPath, 'add', filenameDest, function( err ) {

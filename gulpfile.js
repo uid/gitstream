@@ -57,13 +57,11 @@ var gulp = require('gulp'),
 
     watching;
 
-console.log( production );
-
 if ( !production ) {
     cache = require('gulp-cached');
     jscs = require('gulp-jscs');
     jshint = require('gulp-jshint');
-    // livereload = require('gulp-livereload');
+    livereload = require('gulp-livereload');
     nodeunit = require('gulp-nodeunit');
     plumber = require('gulp-plumber');
     remember = require('gulp-remember');
@@ -167,7 +165,6 @@ gulp.task( 'collectstatic', function() {
 
 gulp.task( 'collectserver', function() {
     var stream = gulp.src( notilde( path.src.server.static ) )
-                     // .pipe( plumber({ errorHandler: function(){} }) );
 
     if( !production ) {
         stream = stream.pipe( cache('server') );
@@ -181,14 +178,12 @@ gulp.task( 'linkexercises', function() {
         .pipe( symlink( path.dist.exercises.server ) );
 });
 
-if ( !production ) {
-    gulp.task( 'watch', function() {
-        // livereload({ silent: true });
-        watching = true;
-        gulp.watch( notilde( [].concat( path.src.js, path.tests ) ), [ 'checkstyle', 'test' ] );
-        gulp.watch( notilde( path.src.client.scss ), [ 'sass' ] );
-        gulp.watch( notilde( path.src.client.static ), [ 'collectstatic' ] );
-        gulp.watch( notilde( path.src.server.static ), [ 'collectserver' ] );
-        // gulp.watch( path.dist.all ).on( 'change', livereload.changed );
-    });
-}
+gulp.task( 'watch', function() {
+    livereload({ silent: true });
+    watching = true;
+    gulp.watch( notilde( [].concat( path.src.js, path.tests ) ), [ 'checkstyle', 'test' ] );
+    gulp.watch( notilde( path.src.client.scss ), [ 'sass' ] );
+    gulp.watch( notilde( path.src.client.static ), [ 'collectstatic' ] );
+    gulp.watch( notilde( path.src.server.static ), [ 'collectserver' ] );
+    gulp.watch( path.dist.all ).on( 'change', livereload.changed );
+});

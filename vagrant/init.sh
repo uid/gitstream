@@ -3,6 +3,8 @@ echo "mysql-server-5.6 mysql-server/root_password password root" | debconf-set-s
 echo "mysql-server-5.6 mysql-server/root_password_again password root" | debconf-set-selections
 
 # install required packages
+apt-get update
+apt-get -y upgrade
 apt-get -y install git mariadb-server nginx nodejs npm redis-server
 
 # set up mysql

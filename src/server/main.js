@@ -102,6 +102,7 @@ eventBus.setHandler( '*', '404', function( repoName, _, data, clonable ) {
         pathToRepo = path.join( PATH_TO_REPOS, repoName );
         pathToStarterRepo = path.join( PATH_TO_EXERCISES, repoInfo.exerciseName, 'starting.git' );
 
+        console.log(pathToRepo, pathToStarterRepo);
         mkdir = spawn( 'mkdir', [ '-p', path.dirname( pathToRepo ) ] );
         mkdir.on( 'close', function( mkdirRet ) {
             if ( mkdirRet !== 0 ) { clonable( false ); }
@@ -155,7 +156,6 @@ app.use( '/go', function( req, res ) {
 
     var remoteUrl = req.headers['x-gitstream-repo'],
         repo = remoteUrl.substring( remoteUrl.indexOf( gitHTTPMount ) + gitHTTPMount.length );
-	console.log('got a go', repo);
     verifyAndGetRepoInfo( repo, function( err, repoInfo ) {
         var repoPath = path.join( PATH_TO_REPOS, repo );
         if ( !err && repoInfo ) {
@@ -251,8 +251,7 @@ shoe( function( stream ) {
 
     // on connect, sync the client with the stored client state
     events.on( 'sync', function( recvUserId ) {
-	console.log('got a sync', recvUserId);
-	userId = recvUserId;
+        userId = recvUserId;
         user.getUserKey( userId, function( err, key ) {
             if ( err ) { return events.emit( 'err', err ); }
             userKey = key;
@@ -289,18 +288,14 @@ shoe( function( stream ) {
                     id: userId
                 };
 
-console.log('returning sync', clientState);
                 events.emit( 'sync', clientState );
             });
         });
 
         rsub.subscribe( userId + ':go' );
         rsub.on( 'message', function( channel, exerciseName ) {
-console.log('got a go2');
             rcon.hgetall( userId, function( err, state ) {
-console.log( state, userId );
                 // only start exercise if user is on the exercise page
-console.log('currentex', exerciseName, state.currentExercise);
                 if ( exerciseName !== state.currentExercise ) { return; }
 
                 var startState;
@@ -328,7 +323,6 @@ console.log('currentex', exerciseName, state.currentExercise);
     }.bind( this ));
 
     events.on( 'exerciseChanged', function( newExercise ) {
-console.log('exch', newExercise);
         if ( exerciseMachine ) { // stop the old machine
             exerciseMachine.halt();
             exerciseMachine = null;

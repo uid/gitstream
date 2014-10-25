@@ -44,7 +44,7 @@ function Timer() {}
 
 Timer.prototype = {
     _update: function() {
-        if ( this.timeRemaining <= 10 * 100 ) {
+        if ( this.timeRemaining <= 10 * 1000 ) {
             this._timer.addClass('stress');
         }
 
@@ -55,7 +55,7 @@ Timer.prototype = {
         this._stopped = false;
         this._timer = $('.timer');
         this.timeRemaining = endTime ? endTime - Date.now() : Infinity;
-	this._update();
+        this._update();
         if ( this.timeRemaining < Infinity ) {
             this.timerInterval = setInterval( this._update.bind( this ), 1000 );
         }
@@ -153,6 +153,9 @@ radio.on( 'exerciseChanged', function( changeTo ) {
             selectViewStep( state.exerciseState, exerciseView ).addClass('focused');
             timer = new Timer();
             timer.start( state.endTime );
+            $('.exercise-steps').toggleClass( 'focused', true );
+            $('.step-number').toggleClass( 'blurred', true );
+            $('.step-desc').toggleClass( 'blurred', true );
         }
 
         viewer = new ExerciseViewer( exerciseViewerConf.machine, exerciseEvents );
@@ -171,11 +174,10 @@ events.on( 'sync', function( newState ) {
 
     _.forOwn( newState, function( v, k ) {
         state[k] = ( v === 'null' || !v ? state[k] : v );
-	if ( k === 'endTime' ) {
-		state[k] = v;
-	}
+        if ( k === 'endTime' ) {
+            state[k] = v;
+        }
     });
-
 
     radio.emit( 'exerciseChanged', {
         newExercise: hashExercise,
@@ -205,11 +207,15 @@ events.on( 'step', triggerExerciseEvent( 'step', function( newState, oldState, s
     }
 }) );
 events.on( 'halt', triggerExerciseEvent( 'halt', function() {
-    if( timer ) timer.stop();
+    if ( timer ) {
+        timer.stop();
+    }
     state.endTime = undefined;
 }) );
 events.on( 'ding', triggerExerciseEvent( 'ding', function() {
-    if ( tiemr ) timer.ding();
+    if ( timer ) {
+        timer.ding();
+    }
     $('.exercise-view').find('.exercise-step').removeClass('focused');
     state.endTime = undefined;
 }) );
