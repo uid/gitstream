@@ -6,17 +6,11 @@ var EVENTS_ENDPOINT = '/events',
     _ = require('lodash'),
     hmac = require('crypto-js/hmac-sha1'),
     eventEmitter = require('event-emitter'),
-    exercises = require('gitstream-exercises'),
+    exercises = require('gitstream-exercises/viewers'),
     ExerciseViewer = require('./ExerciseViewer'),
     events = require('duplex-emitter')( shoe( EVENTS_ENDPOINT ) ),
     exerciseEvents = eventEmitter({}),
     radio = eventEmitter({}),
-    triggerExerciseEvent = function( eventName, helperFn ) {
-        return function() {
-            var args = Array.prototype.slice.call( arguments );
-            exerciseEvents.emit.apply( exerciseEvents, [ eventName ].concat( args, helperFn ) );
-        };
-    },
 
     exerciseTmp = require('../templates/exercise.hbs'),
     indexTmp = require('../templates/index.hbs'),
@@ -29,15 +23,26 @@ $.get( '/user', function( userId ) {
     events.emit( 'sync', userId );
 });
 
+function triggerExerciseEvent( eventName, helperFn ) {
+    return function() {
+        var args = Array.prototype.slice.call( arguments );
+        exerciseEvents.emit.apply( exerciseEvents, [ eventName ].concat( args, helperFn ) );
+    };
+}
+
 function toTimeStr( msec ) {
     if ( msec === Infinity ) {
         return '&infin;';
     }
-    var minutesRemaining = Math.floor( (Number(msec) + 300) / 60000 ),
-        secondsRemaining = Math.round( ( msec % 60000 ) / 1000 ) % 60,
+
+    var LATENCY_COMPENSATION = 400,
+        MSEC_IN_MIN = 60 * 1000,
+        SEC_IN_MSEC = 1000,
+        minutesStr = Math.floor( ( msec + LATENCY_COMPENSATION ) / MSEC_IN_MIN ),
+        secondsRemaining = Math.round( ( msec + LATENCY_COMPENSATION ) % MSEC_IN_MIN / SEC_IN_MSEC ),
         secondsStr = ( secondsRemaining < 10 ? '0' : '' ) + secondsRemaining;
 
-    return minutesRemaining + ':' + secondsStr;
+    return minutesStr + ':' + secondsStr;
 }
 
 function Timer() {}
@@ -48,8 +53,12 @@ Timer.prototype = {
             this._timer.addClass('stress');
         }
 
-        this._timer.html( toTimeStr( this.timeRemaining ) );
+        this._timer.html( toTimeStr( Math.max( this.timeRemaining, 0 ) ) );
         this.timeRemaining = Math.max( this.timeRemaining - 1000, 0 );
+
+        if ( this.timeRemaining === 0 ) {
+            this.ding();
+        }
     },
     start: function( endTime ) {
         this._stopped = false;
@@ -95,7 +104,7 @@ function renderExerciseView( exerciseName, conf, user ) {
             stepIndex: function() {
                 return stepIndex++;
             },
-            initTime: toTimeStr( conf.initTime ),
+            timeLimit: toTimeStr( conf.timeLimit * 1000 ), // sec -> msec
             exerciseName: exerciseName
         };
 
@@ -145,7 +154,7 @@ radio.on( 'exerciseChanged', function( changeTo ) {
 
     if ( exercises[ newExercise ] ) {
         exerciseViewerConf = exercises[ newExercise ];
-        exerciseView = renderExerciseView( newExercise, exerciseViewerConf.view, state.user );
+        exerciseView = renderExerciseView( newExercise, exerciseViewerConf, state.user );
 
         $('.main-content').html( exerciseView );
 
@@ -158,10 +167,10 @@ radio.on( 'exerciseChanged', function( changeTo ) {
             $('.step-desc').toggleClass( 'blurred', true );
         }
 
-        viewer = new ExerciseViewer( exerciseViewerConf.machine, exerciseEvents );
+        viewer = new ExerciseViewer( exerciseViewerConf.feedback, exerciseEvents );
     } else {
         changeHashSilent('');
-        $('.main-content').html( indexTmp() );
+        $('.main-content').html( indexTmp({ exercises: exercises._titles }) );
     }
 
     $('.main-content').removeClass('hide');
