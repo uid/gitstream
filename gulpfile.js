@@ -39,7 +39,7 @@ var gulp = require('gulp'),
             },
             server: {
                 static: [ 'src/server/**/*' ],
-                exercises: 'src/server/exercises'
+                exercises: 'node_modules/gitstream-exercises/exercises'
             }
         },
         tests: 'test/**/*.js',

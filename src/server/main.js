@@ -10,6 +10,7 @@ var angler = require('git-angler'),
     user = require('./user')({
         sqlHost: 'localhost', sqlUser: 'root', sqlPass: 'root', sqlDb: 'gitstream'
     }),
+    exerciseConfs = require('gitstream-exercises/machines'),
     ExerciseMachine = require('./ExerciseMachine'),
     utils = require('./utils'),
     app = connect(),
@@ -212,8 +213,7 @@ shoe( function( stream ) {
     });
 
     function createExerciseMachine( exerciseName ) {
-        var emConfFile = path.resolve( PATH_TO_EXERCISES, exerciseName, EXERCISE_CONF_FILE ),
-            emConf = require( emConfFile )(),
+        var emConf = exerciseConfs[ exerciseName ],
             repoMac = user.createMac( userKey, userId + exerciseName ),
             exerciseRepo = createRepoShortPath({
                 userId: userId,

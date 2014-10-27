@@ -31,9 +31,7 @@ function ExerciseMachine( config, repoPaths, exerciseDir, eventBus ) {
     }
 
     this._configStartState = config.startState;
-    delete config.startState;
     this._timeLimit = config.timeLimit; // in seconds
-    delete config.timeLimit;
 
     this._repo = repoPaths.path;
     this._eventBus = eventBus;
