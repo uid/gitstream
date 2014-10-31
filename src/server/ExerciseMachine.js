@@ -60,7 +60,7 @@ _.extend( ExerciseMachine.prototype, {
 
         this._timeLimit = timeLimit || this._timeLimit;
         this.halted = false;
-        if ( this._timeLimit ) {
+        if ( this._timeLimit && this._timeLimit < Infinity ) {
             Object.defineProperty( this, 'endTimestamp', {
                 value: Date.now() + this._timeLimit * 1000,
                 writable: false
