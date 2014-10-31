@@ -106,6 +106,19 @@ module.exports = function( config ) {
         },
 
         /**
+         * Parses the commit message by filtering comments and stripping whitespace
+         * @param {String} commitMsg the commit message
+         * @return {Array} the lines of the commit msg excluding those starting with a #
+         */
+        parseCommitMsg: function( commitMsg ) {
+            return commitMsg.split( /\r?\n/ ).filter( function( line ) {
+                return line.charAt(0) !== '#' && line.length > 0;
+            }).map( function( line ) {
+                return line.trim();
+            });
+        },
+
+        /**
          * Determines whether a commit log message contains a specified string
          * @param {String|RegExp} needle the String or RegExp for which to search in the log message
          * @param {String} ref the ref to check. Default: HEAD
