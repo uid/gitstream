@@ -201,8 +201,7 @@ shoe( function( stream ) {
         rsub = redis.createClient(),
         FIELD_EXERCISE_STATE = 'exerciseState',
         FIELD_END_TIME = 'endTime',
-        FIELD_CURRENT_EXERCISE = 'currentExercise',
-        EXERCISE_CONF_FILE = 'exerciseConf.js';
+        FIELD_CURRENT_EXERCISE = 'currentExercise';
 
     stream.on( 'close', function() {
         if ( exerciseMachine ) {
@@ -213,7 +212,7 @@ shoe( function( stream ) {
     });
 
     function createExerciseMachine( exerciseName ) {
-        var emConf = exerciseConfs[ exerciseName ],
+        var emConf = exerciseConfs[ exerciseName ](),
             repoMac = user.createMac( userKey, userId + exerciseName ),
             exerciseRepo = createRepoShortPath({
                 userId: userId,

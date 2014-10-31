@@ -153,7 +153,7 @@ radio.on( 'exerciseChanged', function( changeTo ) {
     if ( setHash ) { changeHashSilent( newExercise ); }
 
     if ( exercises[ newExercise ] ) {
-        exerciseViewerConf = exercises[ newExercise ];
+        exerciseViewerConf = exercises[ newExercise ]();
         exerciseView = renderExerciseView( newExercise, exerciseViewerConf, state.user );
 
         $('.main-content').html( exerciseView );
@@ -170,7 +170,9 @@ radio.on( 'exerciseChanged', function( changeTo ) {
         viewer = new ExerciseViewer( exerciseViewerConf.feedback, exerciseEvents );
     } else {
         changeHashSilent('');
-        $('.main-content').html( indexTmp({ exercises: exercises._titles }) );
+        $('.main-content').html( indexTmp({ desc: _.map( exercises, function( exercise, name ) {
+            return { title: exercise().title, name: name };
+        }) }) );
     }
 
     $('.main-content').removeClass('hide');
