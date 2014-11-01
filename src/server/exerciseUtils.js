@@ -1,3 +1,5 @@
+// This module provides utilities that are exposed as `this` to the functions in the exercise confs
+
 var diff = require('diff'),
     fs = require('fs'),
     path = require('path'),
@@ -7,6 +9,7 @@ var diff = require('diff'),
 
 // TODO: write tests
 module.exports = function( config ) {
+    // a new one of these is made for each new ExerciseMachine
     var repoDir = config.repoDir,
         exerciseDir = config.exerciseDir,
         exercisePath = path.resolve( exerciseDir ),
@@ -78,6 +81,14 @@ module.exports = function( config ) {
             });
 
             cp.stderr.on( 'data', function( err ) { console.error( 'ERROR:', err.toString() ); });
+        },
+
+        /**
+         * Adds files to a repo and makes a commit
+         */
+        addCommit: function( params, callback ) {
+            console.log( params );
+            callback();
         },
 
         /**

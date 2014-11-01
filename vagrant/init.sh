@@ -27,7 +27,7 @@ CREATE TABLE users (
 mkdir /srv/repos
 
 # create gitstream user and give it perms
-useradd -r gitstream
+useradd -m gitstream
 chown -R gitstream:gitstream /srv/repos
 chown -R gitstream:gitstream /var/log/nginx
 
@@ -37,3 +37,7 @@ usermod -G gitstream vagrant
 # move the nginx config file into place and restart the server
 ln -fs /opt/gitstream/nginx.conf /etc/nginx/nginx.conf
 killall nginx; nginx
+
+su gitstream
+git config --global user.email "nhynes@mit.edu"
+git config --global user.name "Nick Hynes"

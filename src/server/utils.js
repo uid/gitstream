@@ -1,5 +1,6 @@
 var spawn = require('child_process').spawn,
-    fs = require('fs');
+    fs = require('fs'),
+    q = require('q');
 
 module.exports = {
     /**
@@ -26,27 +27,26 @@ module.exports = {
     /**
      * Returns the sha of the first commit made to the specified repository
      * @param {String} repoPath path to the repository in question
-     * @param {Function} callback (err, commitSHA:String)
+     * @return {Promise} a promise resolved with the sha of the initial committ
      */
-    getInitialCommit: function( repo, callback ) {
-        this.git( repo, 'log', '--pretty="%H"', function( err, data ) {
-            if ( err ) { return callback( err ); }
+    getInitialCommit: function( repo ) {
+        return this.git( repo, 'log', '--pretty="%H"' )
+        .then( function( data ) {
             var commitIds = data.trim().replace( /"/g, '' ).split('\n');
-            callback( null, commitIds[ commitIds.length - 1 ] );
+            return commitIds.pop();
         });
     },
 
     /**
      * Executes a git command in a specified repo
-     * @param {String} repoPath the path to the repository in which to execute the command
+     * @param {String} repo the path to the repository in which to execute the command
      * @param {String} cmd the git command to run
      * @param {String|Array} args the arguments to pass to the command
-     * @param {Function} callback an errback (err, data) called upon completion
+     * @return {Promise} a promise on the completion of the command
      */
-    git: function( repo, cmd, args, callback ) {
-        var cb = callback || function() {};
-        fs.stat( repo, function( err ) {
-            if ( err ) { return cb( err ); }
+    git: function( repo, cmd, args ) {
+        return q.nfcall( fs.stat, repo )
+        .then( function() {
             var cmdArgs = ( args instanceof Array ? args : args.trim().split(' ') ),
                 git = spawn( 'git', [ cmd ].concat( cmdArgs ), { cwd: repo } ),
                 output = '',

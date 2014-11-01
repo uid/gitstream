@@ -6,11 +6,10 @@ var angler = require('git-angler'),
     redis = require('redis'),
     shoe = require('shoe'),
     spawn = require('child_process').spawn,
-    q = require('q'),
     user = require('./user')({
         sqlHost: 'localhost', sqlUser: 'root', sqlPass: 'root', sqlDb: 'gitstream'
     }),
-    exerciseConfs = require('gitstream-exercises/machines'),
+    exerciseConfs = require('gitstream-exercises'),
     ExerciseMachine = require('./ExerciseMachine'),
     utils = require('./utils'),
     app = connect(),
@@ -93,24 +92,41 @@ eventBus.setHandler( '*', '404', function( repoName, _, data, clonable ) {
     if ( !repoNameRe.test( repoName ) ) { return clonable( false ); }
 
     verifyAndGetRepoInfo( repoName, function( err, repoInfo ) {
-        var pathToRepo,
-            pathToStarterRepo,
-            mkdir,
-            cp;
-
         if ( err || !repoInfo ) { return clonable( false ); }
 
-        pathToRepo = path.join( PATH_TO_REPOS, repoName );
-        pathToStarterRepo = path.join( PATH_TO_EXERCISES, repoInfo.exerciseName, 'starting.git' );
+        var pathToRepo = path.join( PATH_TO_REPOS, repoName ),
+            pathToConf = path.join( PATH_TO_EXERCISES, repoInfo.exerciseName ),
+            pathToStarterRepo = path.join( pathToConf, 'starting.git' ),
+            pathToResources = path.join( pathToConf, 'resources' );
 
-        console.log(pathToRepo, pathToStarterRepo);
-        mkdir = spawn( 'mkdir', [ '-p', path.dirname( pathToRepo ) ] );
-        mkdir.on( 'close', function( mkdirRet ) {
-            if ( mkdirRet !== 0 ) { clonable( false ); }
+        spawn( 'mkdir', [ '-p', path.dirname( pathToRepo ) ] ).on( 'close', function( mkdirRet ) {
+            if ( mkdirRet !== 0 ) { return clonable( false ); }
 
-            cp = spawn( 'cp', [ '-r', pathToStarterRepo, pathToRepo ] );
-            cp.on( 'close', function( cpRet ) {
-                clonable( cpRet === 0 );
+            spawn( 'cp', [ '-r', pathToStarterRepo, pathToRepo ] ).on( 'close', function( cpRet ) {
+                if ( cpRet !== 0 ) { return clonable( false ); }
+
+                var repoConf = exerciseConfs.repos[ repoInfo.exerciseName ]();
+
+                if ( repoConf.commits && repoConf.commits.length ) {
+                    // repoConf.commits.forEach( function( commit ) {
+                    //     utils.gitAddCommit( pathToRepo, pathToResources, commit )
+                    //     .then( function() {
+                    //     })
+                    //     .done
+                    //     utils.gitAddCommit( pathToRepo, pathToResources, commit, function( err ) {
+                    //
+                    //     });
+                    // });
+                } else {
+                    utils.git( pathToRepo, 'add', ':/' )
+                    .then( function() {
+                        return utils.git( pathToRepo, 'commit', [ '-m', 'Initial commit' ] );
+                    })
+                    .then( function() {
+                        return clonable( true );
+                    })
+                    .done();
+                }
             });
         });
     });
@@ -132,14 +148,14 @@ backend = angler.gitHttpBackend({
 // this can't be done inside of the post-receive hook, for some reason
 eventBus.setHandler( '*', 'receive', function( repo, action, updates, done ) {
     var repoPath = path.resolve( PATH_TO_REPOS, '.' + repo ),
-        gitreset = spawn( 'git', [ 'reset', '--hard' ], { cwd: repoPath }),
-        gitcheckout;
+        git = utils.git.bind( utils, repoPath );
 
-    gitreset.on( 'close', function() {
-        gitcheckout = spawn( 'git', [ 'checkout', ':/' ], { cwd: repoPath });
-        gitcheckout.on( 'close', function() {
-            done();
-        });
+    git( 'reset', '--hard' )
+    .then( function() {
+        return git( 'checkout', ':/');
+    })
+    .done( function() {
+        done();
     });
 });
 
@@ -151,8 +167,7 @@ app.use( '/hooks', githookEndpoint );
 app.use( '/go', function( req, res ) {
     if ( !req.headers['x-gitstream-repo'] ) {
         res.writeHead(400);
-        res.end();
-        return;
+        return res.end();
     }
 
     var remoteUrl = req.headers['x-gitstream-repo'],
@@ -161,18 +176,25 @@ app.use( '/go', function( req, res ) {
         var repoPath = path.join( PATH_TO_REPOS, repo );
         if ( !err && repoInfo ) {
             rcon.publish( repoInfo.userId + ':go', repoInfo.exerciseName, logErr );
-            utils.getInitialCommit( repoPath, function( err, initCommitSHA ) {
+            utils.getInitialCommit( repoPath )
+            .done( function( initCommitSHA ) {
                 if ( err ) {
                     res.writeHead( 404 );
                     res.end();
                     return;
                 }
-                utils.git( repoPath, 'checkout', initCommitSHA, function() {
-                    utils.git( repoPath, 'branch', '-f master', function() {
-                        utils.git( repoPath, 'checkout', 'master', function() {
-                            res.end();
-                        });
-                    });
+
+                var git = utils.git.bind( utils, repoPath );
+
+                return git( 'checkout', initCommitSHA )
+                .then( function() {
+                    return git( 'branch', '-f master' );
+                })
+                .then( function() {
+                    return git( 'checkout', 'master' );
+                })
+                .done( function() {
+                    res.end();
                 });
             });
         } else {
@@ -196,7 +218,6 @@ shoe( function( stream ) {
     var events = duplexEmitter( stream ),
         exerciseMachine,
         userId,
-        userKeyDeferred = q.defer(),// execute key and clientState fetches simultaneously
         userKey,
         rsub = redis.createClient(),
         FIELD_EXERCISE_STATE = 'exerciseState',
@@ -212,7 +233,7 @@ shoe( function( stream ) {
     });
 
     function createExerciseMachine( exerciseName ) {
-        var emConf = exerciseConfs[ exerciseName ](),
+        var emConf = exerciseConfs.machines[ exerciseName ](),
             repoMac = user.createMac( userKey, userId + exerciseName ),
             exerciseRepo = createRepoShortPath({
                 userId: userId,
@@ -251,11 +272,10 @@ shoe( function( stream ) {
     // on connect, sync the client with the stored client state
     events.on( 'sync', function( recvUserId ) {
         userId = recvUserId;
-        user.getUserKey( userId, function( err, key ) {
-            if ( err ) { return events.emit( 'err', err ); }
-            userKey = key;
-            userKeyDeferred.resolve( key );
-        });
+
+        var userKeyPromise = user.getUserKey( userId );
+
+        userKeyPromise.done( function( key ) { userKey = key; });
 
         rcon.hgetall( userId, function( err, clientState ) {
             if ( !clientState ) {
@@ -263,7 +283,7 @@ shoe( function( stream ) {
                 rcon.hmset( userId, clientState, logErr );
             }
 
-            userKeyDeferred.promise.done( function( userKey ) {
+            userKeyPromise.done( function( userKey ) {
                 var timeRemaining = clientState[ FIELD_END_TIME ] - Date.now(),
                     exerciseState = clientState[ FIELD_EXERCISE_STATE ],
                     currentExercise = clientState[ FIELD_CURRENT_EXERCISE ];

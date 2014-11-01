@@ -1,5 +1,6 @@
 var mysql = require('mysql'),
     crypto = require('crypto'),
+    q = require('q'),
     sql;
 
 module.exports = function( opts ) {
@@ -12,12 +13,12 @@ module.exports = function( opts ) {
     sql.connect();
 
     return {
-        getUserKey: function( userId, cb ) {
+        getUserKey: function( userId ) {
+            var done = q.defer();
             sql.query('SELECT * FROM users WHERE name=?', [ userId ], function( err, results ) {
                 var userKey;
                 if ( err ) {
-                    cb( err );
-                    return;
+                    return done.reject( new Error( err ) );
                 }
 
                 if ( results.length === 0 ) {
@@ -26,24 +27,26 @@ module.exports = function( opts ) {
                         .digest('hex');
                     sql.query( 'INSERT INTO users (name, gitkey) VALUES (?, ?)',
                         [ userId, userKey ] );
-                    cb( null, userKey );
+                    done.resolve( userKey );
                 } else {
-                    cb( null, results[0].gitkey );
+                    done.resolve( results[0].gitkey );
                 }
             });
+            return done.promise;
         },
 
-        verifyMac: function( userId, mac, macMsg, cb ) {
+        verifyMac: function( userId, mac, macMsg ) {
+            var done = q.defer();
             sql.query('SELECT * FROM users WHERE name=?', [ userId ], function( err, results ) {
                 var userInfo,
                     hmac;
 
                 if ( err ) {
-                    return cb( err );
+                    return done.reject( new Error( err ) );
                 }
 
                 if ( results.length === 0 ) {
-                    return cb( null );
+                    return done.resolve();
                 }
 
                 userInfo = results[0];
@@ -52,8 +55,9 @@ module.exports = function( opts ) {
                     .update( macMsg )
                     .digest('hex');
 
-                cb( null, mac.length >= 6 && hmac.indexOf( mac ) === 0 );
+                done.resolve( mac.length >= 6 && hmac.indexOf( mac ) === 0 );
             });
+            return done.promise;
         },
 
         createMac: function( userKey, macMsg, length ) {
