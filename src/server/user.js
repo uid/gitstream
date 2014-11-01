@@ -18,7 +18,7 @@ module.exports = function( opts ) {
             sql.query('SELECT * FROM users WHERE name=?', [ userId ], function( err, results ) {
                 var userKey;
                 if ( err ) {
-                    return done.reject( new Error( err ) );
+                    return done.reject( Error( err ) );
                 }
 
                 if ( results.length === 0 ) {
@@ -42,11 +42,11 @@ module.exports = function( opts ) {
                     hmac;
 
                 if ( err ) {
-                    return done.reject( new Error( err ) );
+                    return done.reject( Error( err ) );
                 }
 
                 if ( results.length === 0 ) {
-                    return done.resolve();
+                    return done.reject( Error('No user found') );
                 }
 
                 userInfo = results[0];
@@ -55,7 +55,11 @@ module.exports = function( opts ) {
                     .update( macMsg )
                     .digest('hex');
 
-                done.resolve( mac.length >= 6 && hmac.indexOf( mac ) === 0 );
+                if ( mac.length >= 6 && hmac.indexOf( mac ) === 0 ) {
+                    done.resolve();
+                } else {
+                    done.reject( Error('HMACs do not mach') );
+                }
             });
             return done.promise;
         },

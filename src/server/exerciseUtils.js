@@ -3,7 +3,6 @@
 var diff = require('diff'),
     fs = require('fs'),
     path = require('path'),
-    spawn = require('child_process').spawn,
     q = require('q'),
     utils = require('./utils');
 
@@ -18,30 +17,27 @@ module.exports = function( config ) {
     return {
         /**
          * Compares a file in an exercise repo with a the reference file in the exercise directory
-         * @param {String} verifyFilename the name of the file to validate
-         * @param {String} referenceFilename the name of the file against which to validate
+         * @param {String} verifyFilePath the path of the file to validate
+         *  - relative to the exercise repo
+         * @param {String} referenceFilePath the path of the file against which to validate
+         *  - relative to the exercsie directory
          * @param {Function} callback receives a diff object or null if files are identical
          */
-        compareFiles: function( verifyFilename, referenceFilename, callback ) {
-            var fileToVerify = q.defer(),
-                verifyAgainst = q.defer(),
-                resolver = function( pathBase, filename, deferred ) {
-                    fs.readFile( path.join( pathBase, filename ), function( err, data ) {
-                        if ( err ) { return deferred.reject( err ); }
-                        deferred.resolve( data.toString() );
-                    });
-                };
+        compareFiles: function( verifyFilePath, referenceFilePath, callback ) {
+            var rfc = q.nfcall.bind( fs.readFile ),
+                pathToVerified = path.join( repoDir, verifyFilePath ),
+                pathToReference = path.join( exerciseDir, referenceFilePath );
 
-            resolver( repoDir, verifyFilename, fileToVerify );
-            resolver( exerciseDir, referenceFilename, verifyAgainst );
-
-            q.all([ fileToVerify.promise, verifyAgainst.promise ])
-                .fail( function( error ) { callback( error ); })
-                .spread( function( exerciseFile, referenceExerciseFile ) {
-                    var fileDiff = diff.diffLines( exerciseFile, referenceExerciseFile ),
-                        diffp = fileDiff.length !== 1 || fileDiff[0].added || fileDiff[0].removed;
-                    callback( null, ( diffp ? fileDiff : null ) );
-                });
+            q.all([ rfc( pathToVerified ), rfc( pathToReference ) ])
+            .catch( function( err ) {
+                callback( err );
+            })
+            .spread( function( verifyFile, referenceFile ) {
+                var fileDiff = diff.diffLines( verifyFile, referenceFile ),
+                    diffp = fileDiff.length !== 1 || fileDiff[0].added || fileDiff[0].removed;
+                callback( null, ( diffp ? fileDiff : null ) );
+            })
+            .done();
         },
 
         /**
@@ -59,36 +55,27 @@ module.exports = function( config ) {
         },
 
         /**
-         * Simulates collaboration by moving a file/directory from the exercise dir into the
-         * working repo and then adding and committing.
-         * @param {String} filenameSrc the name of the file in the exercise dir to be moved
-         * @param {String} filenameDest the name of the file in the repo dir to overwrite
-         * @param {String} commitMsg the commit message to use
-         * @param {Function} callback (err)
+         * Adds the specified files (possibly templated) to the given repo and commits them
+         * @param {String} repo the path to the repository. Dest files are relative to the repo root
+         * @param {String} srcBase path to which src files paths are relative. Default: /
+         * @param {Object} spec the specification for the commit
+         *  spec: {
+         *      msg: String,
+         *      author: String,
+         *      date: Date,
+         *      files: [ 'filepath', { src: 'path', dest: 'path', template: (Object|Function) } ],
+         *      // note: template and dest are optional in long-form file specs
+         *   }
+         * @return {Promise} a promise on the completion of the commands
          */
-        simulateCollaboration: function( filenameSrc, filenameDest, commitMsg, callback ) {
-            var exerciseFilePath = path.join( exercisePath, filenameSrc ),
-                repoFilePath = path.join( repoPath, filenameDest ),
-                cp = spawn( 'cp', [ '-Rf', exerciseFilePath, repoFilePath ] );
-
-            cp.on( 'close', function( code ) {
-                if ( code !== 0 ) { return; }
-
-                utils.git( repoPath, 'add', filenameDest, function( err ) {
-                    if ( err ) { return console.error( 'ERROR: ', err ); }
-                    utils.git( repoPath, 'commit', [ '-m', commitMsg ], callback );
-                });
+        addCommit: function( spec, callback ) {
+            utils.gitAddCommit( repoPath, exercisePath, spec )
+            .catch( function( err ) {
+                callback( err );
+            })
+            .done( function() {
+                callback();
             });
-
-            cp.stderr.on( 'data', function( err ) { console.error( 'ERROR:', err.toString() ); });
-        },
-
-        /**
-         * Adds files to a repo and makes a commit
-         */
-        addCommit: function( params, callback ) {
-            console.log( params );
-            callback();
         },
 
         /**
@@ -100,19 +87,12 @@ module.exports = function( config ) {
             var cb = callback || ref,
                 realRef = callback && ref ? ref : 'HEAD';
 
-            utils.git( repoPath, 'log', [ '-n1', '--pretty="%s"', realRef ], function( err, data ) {
-                cb( err, data );
-            });
-        },
-
-        /**
-         * Parses the commit message by filtering out lines starting with a '#'
-         * @param {String} commitMsg the commit message
-         * @return {Array} the lines of the commit msg excluding those starting with a #
-         */
-        parseCommitMsg: function( commitMsg ) {
-            return commitMsg.split( /\r?\n/ ).filter( function( line ) {
-                return line.charAt(0) !== '#';
+            utils.git( repoPath, 'log', [ '-n1', '--pretty="%s"', realRef ] )
+            .catch( function( err ) {
+                cb( err );
+            })
+            .done( function( data ) {
+                cb( null, data );
             });
         },
 
