@@ -11,8 +11,6 @@ var gulp = require('gulp'),
     nodeunit,
     plumber,
     prefixer = require('gulp-autoprefixer'),
-    remember,
-    rename = require('gulp-rename'),
     rimraf,
     sass = require('gulp-sass'),
     source = require('vinyl-source-stream'),
@@ -48,7 +46,6 @@ var gulp = require('gulp'),
             all: 'dist/**/*',
             client: 'dist/client/',
             server: 'dist/server/',
-            serverMain: 'dist/server/main.js',
             exercises: {
                 server: 'dist/server'
             }
@@ -64,7 +61,6 @@ if ( !production ) {
     livereload = require('gulp-livereload');
     nodeunit = require('gulp-nodeunit');
     plumber = require('gulp-plumber');
-    remember = require('gulp-remember');
     rimraf = require('rimraf');
     stylish = require('jshint-stylish');
     watchify = require('watchify');
@@ -112,9 +108,8 @@ gulp.task( 'sass', function() {
             .pipe( plumber() )
     }
 
-    stream = stream.pipe( sass() );
-
-    stream.pipe( minifyCss({ cache: true }) )
+    stream.pipe( sass() )
+        .pipe( minifyCss({ cache: true }) )
         .pipe( concatCss('bundle.css') )
         .pipe( prefixer('> 5%') )
         .pipe( gulp.dest( path.dist.client ) );
