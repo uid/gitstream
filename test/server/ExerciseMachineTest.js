@@ -374,7 +374,7 @@ module.exports = {
         }, 111 );
 
         em.init();
-        test.ok( Math.abs( em.endTimestamp - ( Date.now() + 0.1 * 1000 ) ) <= 1 );
+        test.ok( Math.abs( em.endTime - ( Date.now() + 0.1 * 1000 ) ) <= 1 );
 
         em.on( 'ding', function() {
             clearTimeout( failTimeout );
@@ -401,7 +401,7 @@ module.exports = {
         }, 111 );
 
         em.init( 'test', 0.1 );
-        test.ok( Math.abs( em.endTimestamp - ( Date.now() + 0.1 * 1000 ) ) <= 1 );
+        test.ok( Math.abs( em.endTime - ( Date.now() + 0.1 * 1000 ) ) <= 1 );
 
         em.on( 'ding', function() {
             clearTimeout( failTimeout );

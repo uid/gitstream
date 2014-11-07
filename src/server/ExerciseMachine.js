@@ -20,7 +20,7 @@ var util = require('util'),
  * @param {String} repoPaths { String path: the repo short path, String fsPath: the fs path }
  * @param {String} exercisePath the path to the exercise directory
  * @param {EventBus} eventBus the EventBus on which to listen for repo events
- * Once initialized, if a time limit is set, the end timestamp will be available as .endTimestamp
+ * Once initialized, if a time limit is set, the end timestamp will be available as .endTime
  */
 function ExerciseMachine( config, repoPaths, exerciseDir, eventBus ) {
     if ( !config || !repoPaths || !exerciseDir || !eventBus ) {
@@ -61,7 +61,7 @@ _.extend( ExerciseMachine.prototype, {
         this._timeLimit = timeLimit || this._timeLimit;
         this.halted = false;
         if ( this._timeLimit && this._timeLimit < Infinity ) {
-            Object.defineProperty( this, 'endTimestamp', {
+            Object.defineProperty( this, 'endTime', {
                 value: Date.now() + this._timeLimit * 1000,
                 writable: false
             });

@@ -219,8 +219,8 @@ app.use( '/go', function( req, res ) {
 app.use( '/user', function( req, res ) {
     var userRe = /([a-z0-9_-]{0,8})@MIT.EDU/,
         match = userRe.exec( req.headers['x-ssl-client-s-dn'] ),
-        userId = ( match ? match[1] : null ) || 'demouser' + Math.round(Math.random() * 1000);
-    res.writeHead( 200 );
+        userId = ( match ? match[1] : null ) || 'demouser' + Math.round( Math.random() * 1000 );
+    res.writeHead( 200, { 'Content-Type': 'text/plain' } );
     res.end( userId ); // haxx
 });
 
@@ -318,6 +318,8 @@ shoe( function( stream ) {
                     key: userKey,
                     id: userId
                 };
+                clientState.timeRemaining = clientState.endTime - Date.now();
+                delete clientState[ FIELD_END_TIME ];
 
                 events.emit( 'sync', clientState );
             });
@@ -341,11 +343,12 @@ shoe( function( stream ) {
 
                 rcon.hmset( userId,
                        FIELD_EXERCISE_STATE, startState,
-                       FIELD_END_TIME, exerciseMachine.endTimestamp,
+                       FIELD_END_TIME, exerciseMachine.endTime,
                        logErr );
 
                 state[ FIELD_EXERCISE_STATE ] = startState;
-                state[ FIELD_END_TIME ] = exerciseMachine.endTimestamp;
+                state.timeRemaining = exerciseMachine.endTime - Date.now();
+                delete state[ FIELD_END_TIME ];
 
                 events.emit( 'sync', state );
             });

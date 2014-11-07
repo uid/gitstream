@@ -60,10 +60,10 @@ Timer.prototype = {
             this.ding();
         }
     },
-    start: function( endTime ) {
+    start: function( timeRemaining ) {
         this._stopped = false;
         this._timer = $('.timer');
-        this.timeRemaining = endTime ? endTime - Date.now() : Infinity;
+        this.timeRemaining = timeRemaining || Infinity;
         this._update();
         if ( this.timeRemaining < Infinity ) {
             this.timerInterval = setInterval( this._update.bind( this ), 1000 );
@@ -161,7 +161,7 @@ radio.on( 'exerciseChanged', function( changeTo ) {
         if ( state.exerciseState ) {
             selectViewStep( state.exerciseState, exerciseView ).addClass('focused');
             timer = new Timer();
-            timer.start( state.endTime );
+            timer.start( state.timeRemaining );
             $('.exercise-steps').toggleClass( 'focused', true );
             $('.step-number').toggleClass( 'blurred', true );
             $('.step-desc').toggleClass( 'blurred', true );
