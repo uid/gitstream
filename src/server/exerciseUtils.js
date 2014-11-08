@@ -1,5 +1,8 @@
 // This module provides utilities that are exposed as `this` to the functions in the exercise confs
 
+/* The ShadowBranch tracks (shadows) the tree of the local repository just
+before andafter a commit. It is not valid after any other operation. */
+
 var diff = require('diff'),
     fs = require('fs'),
     path = require('path'),
@@ -12,7 +15,24 @@ module.exports = function( config ) {
     var repoDir = config.repoDir,
         exerciseDir = config.exerciseDir,
         exercisePath = path.resolve( exerciseDir ),
-        repoPath = path.resolve( repoDir );
+        repoPath = path.resolve( repoDir ),
+        git = utils.git.bind( null, repoPath );
+
+    function shadowFn( fn, args ) {
+        var callback = args.pop(),
+            result;
+
+        git( 'checkout', [ 'shadowbranch' ] )
+        .then( q.nfapply.bind( null, fn, args ) )
+        .then( function() {
+            result = Array.prototype.slice.call( arguments );
+            return git( 'checkout', [ 'master' ] );
+        })
+        .catch( callback )
+        .done( function() {
+            callback.apply( null, [ null ].concat( result ) );
+        });
+    }
 
     return {
         /**
@@ -29,15 +49,22 @@ module.exports = function( config ) {
                 pathToReference = path.join( exerciseDir, referenceFilePath );
 
             q.all([ rfc( pathToVerified ), rfc( pathToReference ) ])
-            .catch( function( err ) {
-                callback( err );
-            })
+            .catch( callback )
             .spread( function( verifyFile, referenceFile ) {
                 var fileDiff = diff.diffLines( verifyFile, referenceFile ),
                     diffp = fileDiff.length !== 1 || fileDiff[0].added || fileDiff[0].removed;
                 callback( null, ( diffp ? fileDiff : null ) );
             })
             .done();
+        },
+
+        /**
+         * Compares a file in an exercise repo's shadowbranch
+         * with a the reference file in the exercise directory
+         * @see compareFiles and the description of the shadowbranch
+         */
+        compareFilesShadow: function() {
+            shadowFn( this.compareFiles, Array.prototype.slice.call( arguments ) );
         },
 
         /**
@@ -52,6 +79,14 @@ module.exports = function( config ) {
                 if ( err ) { return callback( err ); }
                 callback( null, needleRegExp.test( data.toString() ) );
             });
+        },
+
+        /**
+         * Determines whether a shadowed file contains a specified string
+         * @see fileContains and the description of shadow branch, above
+         */
+        shadowFileContains: function() {
+            shadowFn( this.fileContains, Array.prototype.slice.call( arguments ) );
         },
 
         /**
@@ -70,9 +105,7 @@ module.exports = function( config ) {
          */
         addCommit: function( spec, callback ) {
             utils.gitAddCommit( repoPath, exercisePath, spec )
-            .catch( function( err ) {
-                callback( err );
-            })
+            .catch( callback )
             .done( function() {
                 callback();
             });
@@ -87,10 +120,8 @@ module.exports = function( config ) {
             var cb = callback || ref,
                 realRef = callback && ref ? ref : 'HEAD';
 
-            utils.git( repoPath, 'log', [ '-n1', '--pretty="%s"', realRef ] )
-            .catch( function( err ) {
-                cb( err );
-            })
+            git( 'log', [ '-n1', '--pretty="%s"', realRef ] )
+            .catch( cb )
             .done( function( data ) {
                 cb( null, data );
             });
@@ -129,12 +160,24 @@ module.exports = function( config ) {
         /**
          * Checks for the existence of a file in the repo
          * @param {String} filename the path to the file
-         * @param {Function} callback a function that receives Boolean true iff file is accessible
+         * @param {Function} callback (err, Boolean)
          */
         fileExists: function( filename, callback ) {
             fs.stat( path.join( repoDir, filename ), function( err ) {
-                callback( !err );
+                if ( err && err.code !== 'ENOENT' ) {
+                    callback( err );
+                } else {
+                    callback( null, !err );
+                }
             });
+        },
+
+        /**
+         * Checks for the existence of a file in the repo's shadowbranch
+         * @see fileExists and the description of the shadowbranch
+         */
+        shadowFileExists: function() {
+            shadowFn( this.fileExists, Array.prototype.slice.call( arguments ) );
         }
     };
 };
