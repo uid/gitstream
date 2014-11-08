@@ -18,7 +18,7 @@ var angler = require('git-angler'),
     eventBus = new angler.EventBus(),
     PATH_TO_REPOS = '/srv/repos',
     PATH_TO_EXERCISES = __dirname + '/exercises/',
-    repoNameRe = /\/[a-z][a-z0-9_-]+\/[a-f0-9]{6,}-.+.git$/,
+    repoNameRe = /\/[a-z][a-z0-9_-]+\/[a-f0-9]{6,}\/.+.git$/,
     backend,
     rcon = redis.createClient(),
     gitHTTPMount = '/repos', // no trailing slash
@@ -38,34 +38,34 @@ var angler = require('git-angler'),
  *  { userId: String, exerciseName: String, mac: String, macMsg: String }
  */
 function extractRepoInfoFromPath( repoPath ) {
+    // slice(1) to remove the '' from splitting '/something'
     var splitRepoPath = repoPath instanceof Array ? repoPath : repoPath.split('/').slice(1),
-        repoNameInfo,
         userId,
         repoMac,
         exerciseName,
         macMsg;
 
-    if ( splitRepoPath.length < 2) {
+    if ( splitRepoPath.length < 3) {
         return null;
     }
 
-    repoNameInfo = splitRepoPath[ splitRepoPath.length - 1 ].split('-');
-    exerciseName = repoNameInfo.slice( 1 ).join('').replace( /\.git$/, '' );
-    userId = splitRepoPath[ splitRepoPath.length - 2 ]; // e.g. /nhynes/repo.git - gets nhynes
-    repoMac = repoNameInfo[0]; // e.g. /nhynes/12345-repo.git - gets 12345
-    macMsg = userId + exerciseName; // e.g. nhynesexercise2
+    // e.g. /nhynes/12345/exercisename.git
+    userId = splitRepoPath[0];
+    repoMac = splitRepoPath[1];
+    exerciseName = splitRepoPath[2].replace( /\.git$/, '' ),
+    macMsg = userId + exerciseName;
 
     return {
         userId: userId,
-        exerciseName: exerciseName,
         mac: repoMac,
+        exerciseName: exerciseName,
         macMsg: macMsg
     };
 }
 
 /** Does the inverse of @see extractRepoInfoFromPath. macMsg is not required */
 function createRepoShortPath( info ) {
-    return path.join( '/', info.userId, info.mac + '-' + info.exerciseName + '.git' );
+    return path.join( '/', info.userId, info.mac, info.exerciseName + '.git' );
 }
 
 /**
