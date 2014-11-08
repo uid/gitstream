@@ -105,7 +105,17 @@ function createRepo( repoName ) {
         return q.nfcall( rimraf, pathToRepoDir );
     })
     .then( function() {
-        var done = q.defer();
+        var done = q.defer(),
+            commits = q.promise( function( resolve ) {
+                var commitsConf = exerciseConfs.repos[ repoInfo.exerciseName ]().commits;
+                if ( Array.isArray( commitsConf ) && commitsConf.length ) {
+                    resolve( commitsConf );
+                } else if ( typeof commitsConf === 'function' ) {
+                    commitsConf( resolve );
+                } else {
+                    resolve();
+                }
+            }).catch( function( err ) { done.reject( err ); });
 
         spawn( 'mkdir', [ '-p', path.dirname( pathToRepo ) ] ).on( 'close', function( mkdirRet ) {
             if ( mkdirRet !== 0 ) { return done.reject( Error('Making repo dir failed') ); }
@@ -113,30 +123,18 @@ function createRepo( repoName ) {
             spawn( 'cp', [ '-r', pathToStarterRepo, pathToRepo ] ).on( 'close', function( cpRet ) {
                 if ( cpRet !== 0 ) { return done.reject( Error('Copying exercise repo failed') ); }
 
-                var repoConf = exerciseConfs.repos[ repoInfo.exerciseName ]();
-
-                if ( repoConf.commits && repoConf.commits.length ) {
-                    q.all( repoConf.commits.map( function( commit ) {
-                        return utils.gitAddCommit( pathToRepo, pathToExercise, commit );
-                    }) )
-                    .catch( function( err ) {
-                        done.reject( err );
-                    })
-                    .done( function() {
-                        done.resolve( repoInfo );
-                    });
-                } else {
-                    utils.git( pathToRepo, 'add', ':/' )
-                    .then( function() {
+                commits.then( function( commits ) {
+                    if ( commits ) {
+                        return q.all( commits.map( function( commit ) {
+                            return utils.gitAddCommit( pathToRepo, pathToExercise, commit );
+                        }) );
+                    } else {
                         return utils.git( pathToRepo, 'commit', [ '-m', 'Initial commit' ] );
-                    })
-                    .catch( function( err ) {
-                        done.reject( err );
-                    })
-                    .done( function() {
-                        done.resolve( repoInfo );
-                    });
-                }
+                    }
+                })
+                .done( function() {
+                    done.resolve( repoInfo );
+                })
             });
         });
 
@@ -151,7 +149,7 @@ eventBus.setHandler( '*', '404', function( repoName, _, data, clonable ) {
     createRepo( repoName )
     .catch( function( err ) {
         clonable( false );
-        console.err( err );
+        console.error( err );
     })
     .done( function() {
         clonable( true );
@@ -220,9 +218,10 @@ app.use( '/go', function( req, res ) {
         repo = remoteUrl.substring( remoteUrl.indexOf( gitHTTPMount ) + gitHTTPMount.length );
 
     createRepo( repo )
-    .catch( function() {
+    .catch( function( err ) {
         res.writeHead( 403 );
         res.end();
+        console.error( err );
     })
     .done( function( repoInfo )  {
         var repoPath = path.join( PATH_TO_REPOS, repo );
