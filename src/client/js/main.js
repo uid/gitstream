@@ -49,16 +49,16 @@ function Timer() {}
 
 Timer.prototype = {
     _update: function() {
+        if ( this.timeRemaining === 0 ) {
+            return this.ding();
+        }
+
         if ( this.timeRemaining <= 10 * 1000 ) {
             this._timer.addClass('stress');
         }
 
         this._timer.html( toTimeStr( Math.max( this.timeRemaining, 0 ) ) );
         this.timeRemaining = Math.max( this.timeRemaining - 1000, 0 );
-
-        if ( this.timeRemaining === 0 ) {
-            this.ding();
-        }
     },
     start: function( timeRemaining ) {
         this._stopped = false;
