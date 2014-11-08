@@ -153,13 +153,27 @@ backend = angler.gitHttpBackend({
 // this can't be done inside of the post-receive hook, for some reason
 eventBus.setHandler( '*', 'receive', function( repo, action, updates, done ) {
     var repoPath = path.resolve( PATH_TO_REPOS, '.' + repo ),
-        git = utils.git.bind( utils, repoPath );
+        git = utils.git.bind( utils, repoPath ),
+        isPushingShadowBranch = updates.reduce( function( isbr, update ) {
+            return isbr || update.name === 'refs/heads/shadowbranch';
+        }, false ),
+        chain;
 
-    git( 'reset', '--hard' )
+    chain = git( 'reset', '--hard' )
     .then( function() {
         return git( 'checkout', ':/');
-    })
-    .catch( function( err ) {
+    });
+
+    if ( isPushingShadowBranch ) {
+        chain.then( function() {
+            return git( 'update-ref', 'refs/gitstream/shadowbranch refs/heads/shadowbranch' );
+        })
+        .then( function() {
+            return git( 'update-ref', '-d refs/heads/shadowbranch' );
+        });
+    }
+
+    chain.catch( function( err ) {
         console.error( err );
     })
     .done( function() {

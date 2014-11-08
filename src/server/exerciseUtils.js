@@ -22,7 +22,7 @@ module.exports = function( config ) {
         var callback = args.pop(),
             result;
 
-        git( 'checkout', [ 'shadowbranch' ] )
+        git( 'checkout', [ 'refs/gitstream/shadowbranch' ] )
         .then( q.nfapply.bind( null, fn, args ) )
         .then( function() {
             result = Array.prototype.slice.call( arguments );
