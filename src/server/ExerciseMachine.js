@@ -87,6 +87,8 @@ _.extend( ExerciseMachine.prototype, {
      * @param {String} state the state into which to step
      */
     _step: function( newState, incomingData ) {
+        if ( newState === undefined ) { return; }
+
         var oldState = this._state,
             newStateConf = this._states[ newState ],
             entryPoint,
