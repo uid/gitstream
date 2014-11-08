@@ -5,6 +5,7 @@ var angler = require('git-angler'),
     path = require('path'),
     q = require('q'),
     redis = require('redis'),
+    rimraf = require('rimraf'),
     shoe = require('shoe'),
     spawn = require('child_process').spawn,
     user = require('./user')({
@@ -84,24 +85,33 @@ function verifyAndGetRepoInfo( repoPath ) {
     });
 }
 
-// transparently initialize exercise repos right before user clones it
-eventBus.setHandler( '*', '404', function( repoName, _, data, clonable ) {
-    if ( !repoNameRe.test( repoName ) ) { return clonable( false ); }
+/**
+ * Creates a new exercise repo.
+ * @param {String} repoName the full repo name. e.g. /nhynes/12345/exercise1.git
+ * @return {Promise} a promise resolved with the repo info as returned by verifyAndGetRepoInfo
+ */
+function createRepo( repoName ) {
+    var repoInfo,
+        pathToRepo = path.join( PATH_TO_REPOS, repoName ),
+        pathToRepoDir = path.dirname( pathToRepo ),
+        pathToExercise,
+        pathToStarterRepo;
 
-    verifyAndGetRepoInfo( repoName )
-    .catch( function() {
-        clonable( false );
+    return verifyAndGetRepoInfo( repoName )
+    .then( function( info ) {
+        repoInfo = info;
+        pathToExercise = path.join( PATH_TO_EXERCISES, repoInfo.exerciseName );
+        pathToStarterRepo = path.join( pathToExercise, 'starting.git' );
+        return q.nfcall( rimraf, pathToRepoDir );
     })
-    .done( function( repoInfo ) {
-        var pathToRepo = path.join( PATH_TO_REPOS, repoName ),
-            pathToExercise = path.join( PATH_TO_EXERCISES, repoInfo.exerciseName ),
-            pathToStarterRepo = path.join( pathToExercise, 'starting.git' );
+    .then( function() {
+        var done = q.defer();
 
         spawn( 'mkdir', [ '-p', path.dirname( pathToRepo ) ] ).on( 'close', function( mkdirRet ) {
-            if ( mkdirRet !== 0 ) { return clonable( false ); }
+            if ( mkdirRet !== 0 ) { return done.reject( Error('Making repo dir failed') ); }
 
             spawn( 'cp', [ '-r', pathToStarterRepo, pathToRepo ] ).on( 'close', function( cpRet ) {
-                if ( cpRet !== 0 ) { return clonable( false ); }
+                if ( cpRet !== 0 ) { return done.reject( Error('Copying exercise repo failed') ); }
 
                 var repoConf = exerciseConfs.repos[ repoInfo.exerciseName ]();
 
@@ -110,11 +120,10 @@ eventBus.setHandler( '*', '404', function( repoName, _, data, clonable ) {
                         return utils.gitAddCommit( pathToRepo, pathToExercise, commit );
                     }) )
                     .catch( function( err ) {
-                        clonable( false );
-                        console.error( err );
+                        done.reject( err );
                     })
                     .done( function() {
-                        clonable( true );
+                        done.resolve( repoInfo );
                     });
                 } else {
                     utils.git( pathToRepo, 'add', ':/' )
@@ -122,15 +131,30 @@ eventBus.setHandler( '*', '404', function( repoName, _, data, clonable ) {
                         return utils.git( pathToRepo, 'commit', [ '-m', 'Initial commit' ] );
                     })
                     .catch( function( err ) {
-                        clonable( false );
-                        console.error( err );
+                        done.reject( err );
                     })
                     .done( function() {
-                        return clonable( true );
+                        done.resolve( repoInfo );
                     });
                 }
             });
         });
+
+        return done.promise;
+    });
+}
+
+// transparently initialize exercise repos right before user clones it
+eventBus.setHandler( '*', '404', function( repoName, _, data, clonable ) {
+    if ( !repoNameRe.test( repoName ) ) { return clonable( false ); }
+
+    createRepo( repoName )
+    .catch( function( err ) {
+        clonable( false );
+        console.err( err );
+    })
+    .done( function() {
+        clonable( true );
     });
 });
 
@@ -194,39 +218,17 @@ app.use( '/go', function( req, res ) {
 
     var remoteUrl = req.headers['x-gitstream-repo'],
         repo = remoteUrl.substring( remoteUrl.indexOf( gitHTTPMount ) + gitHTTPMount.length );
-    verifyAndGetRepoInfo( repo )
+
+    createRepo( repo )
     .catch( function() {
         res.writeHead( 403 );
         res.end();
     })
     .done( function( repoInfo )  {
         var repoPath = path.join( PATH_TO_REPOS, repo );
-
         rcon.publish( repoInfo.userId + ':go', repoInfo.exerciseName, logErr );
-
-        utils.getInitialCommit( repoPath )
-        .catch( function() {
-            res.writeHead( 404 );
-            res.end();
-        })
-        .done( function( initCommitSHA ) {
-            var git = utils.git.bind( utils, repoPath );
-
-            return git( 'checkout', initCommitSHA )
-            .then( function() {
-                return git( 'branch', '-f master' );
-            })
-            .then( function() {
-                return git( 'checkout', 'master' );
-            })
-            .catch( function( err ) {
-                res.writeHead( 500 );
-                console.error( err );
-            })
-            .done( function() {
-                res.end();
-            });
-        });
+        res.writeHead( 200 );
+        res.end();
     });
 });
 

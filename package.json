@@ -39,6 +39,7 @@
     "normalize.css": "^3.0.1",
     "q": "^1.0.1",
     "redis": "^0.12.1",
+    "rimraf": "^2.2.8",
     "shoe": "0.0.15",
     "sockjs": "^0.3.9",
     "vinyl-buffer": "^1.0.0",
@@ -55,7 +56,6 @@
     "gulp-remember": "^0.2.1",
     "gulp-watch": "^0.7.0",
     "jshint-stylish": "^0.4.0",
-    "rimraf": "^2.2.8",
     "watchify": "^1.0.2"
   }
 }
