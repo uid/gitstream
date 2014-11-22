@@ -8,9 +8,8 @@ var angler = require('git-angler'),
     rimraf = require('rimraf'),
     shoe = require('shoe'),
     spawn = require('child_process').spawn,
-    user = require('./user')({
-        sqlHost: 'localhost', sqlUser: 'root', sqlPass: 'root', sqlDb: 'gitstream'
-    }),
+    mongodb = q.nfcall( require('mongodb').MongoClient.connect, 'mongodb://localhost/gitstream' ),
+    user = require('./user')({ dbcon: mongodb }),
     exerciseConfs = require('gitstream-exercises'),
     ExerciseMachine = require('./ExerciseMachine'),
     utils = require('./utils'),
@@ -134,7 +133,7 @@ function createRepo( repoName ) {
                 })
                 .done( function() {
                     done.resolve( repoInfo );
-                })
+                });
             });
         });
 
@@ -147,12 +146,11 @@ eventBus.setHandler( '*', '404', function( repoName, _, data, clonable ) {
     if ( !repoNameRe.test( repoName ) ) { return clonable( false ); }
 
     createRepo( repoName )
-    .catch( function( err ) {
-        clonable( false );
-        console.error( err );
-    })
     .done( function() {
         clonable( true );
+    }, function( err ) {
+        clonable( false );
+        console.error( err );
     });
 });
 
@@ -161,12 +159,11 @@ backend = angler.gitHttpBackend({
     eventBus: eventBus,
     authenticator: function( params, cb ) {
         verifyAndGetRepoInfo( params.repoPath )
-        .catch( function( err ) {
-            cb({ ok: false, status: 404 });
-            console.error( err );
-        })
         .done( function() {
             cb({ ok: true });
+        }, function( err ) {
+            cb({ ok: false, status: 404 });
+            console.error( err );
         });
     }
 });
@@ -218,16 +215,14 @@ app.use( '/go', function( req, res ) {
         repo = remoteUrl.substring( remoteUrl.indexOf( gitHTTPMount ) + gitHTTPMount.length );
 
     createRepo( repo )
-    .catch( function( err ) {
-        res.writeHead( 403 );
-        res.end();
-        console.error( err );
-    })
     .done( function( repoInfo )  {
-        var repoPath = path.join( PATH_TO_REPOS, repo );
         rcon.publish( repoInfo.userId + ':go', repoInfo.exerciseName, logErr );
         res.writeHead( 200 );
         res.end();
+    }, function( err ) {
+        res.writeHead( 403 );
+        res.end();
+        console.error( err );
     });
 });
 

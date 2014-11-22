@@ -1,27 +1,15 @@
-# set mysql password for happy, non-interactive installation
-echo "mysql-server-5.6 mysql-server/root_password password root" | debconf-set-selections
-echo "mysql-server-5.6 mysql-server/root_password_again password root" | debconf-set-selections
-
 # install required packages
 apt-get update
-# apt-get -y upgrade
-apt-get -y install git mariadb-server nginx nodejs npm redis-server
+apt-get -y install git mongodb nginx nodejs npm redis-server
 
 # link nodejs to node
 ln -s /usr/bin/nodejs /usr/bin/node
 
-# set up mysql
-mysql -proot -e "
-CREATE DATABASE gitstream CHARACTER SET utf8;
-USE gitstream;
-CREATE TABLE users (
-    name                VARCHAR(12) NOT NULL PRIMARY KEY,
-    gitkey              CHAR(40)
-);
-"
-
 # make the repos directory
 mkdir /srv/repos
+
+# make the mongodb db directory
+mkdir /opt/mongo
 
 # create gitstream user and give it perms
 useradd -m gitstream

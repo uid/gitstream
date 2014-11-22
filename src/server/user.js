@@ -1,72 +1,55 @@
-var mysql = require('mysql'),
-    crypto = require('crypto'),
-    q = require('q'),
-    sql;
+var crypto = require('crypto'),
+    q = require('q');
 
 module.exports = function( opts ) {
-    sql = mysql.createConnection({
-        host: opts.sqlHost,
-        user: opts.sqlUser,
-        password: opts.sqlPass,
-        database: opts.sqlDb
-    });
-    sql.connect();
+    var dbcon = opts.dbcon;
 
     return {
         getUserKey: function( userId ) {
-            var done = q.defer();
-            sql.query('SELECT * FROM users WHERE name=?', [ userId ], function( err, results ) {
-                var userKey;
-                if ( err ) {
-                    return done.reject( Error( err ) );
-                }
+            return dbcon.then( function( db ) {
+                var users = db.collection('users');
+                return q.nfcall( users.findOne.bind( users ), { id: userId }, { key: true } )
+                .then( function( user ) {
+                    var userKey;
 
-                if ( results.length === 0 ) {
-                    userKey = crypto.createHash('sha1')
-                        .update( crypto.pseudoRandomBytes(40) )
-                        .digest('hex');
-                    sql.query( 'INSERT INTO users (name, gitkey) VALUES (?, ?)',
-                        [ userId, userKey ] );
-                    done.resolve( userKey );
-                } else {
-                    done.resolve( results[0].gitkey );
-                }
+                    if ( user ) {
+                        return user.key;
+                    } else {
+                        userKey = crypto.createHash('sha1')
+                            .update( crypto.pseudoRandomBytes(40) )
+                            .digest('hex');
+                        q.nfcall( users.insert.bind( users ) , { id: userId, key: userKey } );
+                        return userKey;
+                    }
+                });
             });
-            return done.promise;
         },
 
         verifyMac: function( userId, mac, macMsg ) {
-            var done = q.defer();
-            sql.query('SELECT * FROM users WHERE name=?', [ userId ], function( err, results ) {
-                var userInfo,
-                    hmac;
+            return dbcon.then( function( db ) {
+                var users = db.collection('users');
+                return q.nfcall( users.findOne.bind( users ), { id: userId }, { key: true } );
+            })
+            .then( function( user ) {
+                var hmac;
 
-                if ( err ) {
-                    return done.reject( Error( err ) );
+                if ( !user ) {
+                    throw Error('No user with id ' + userId);
                 }
 
-                if ( results.length === 0 ) {
-                    return done.reject( Error('No user found') );
-                }
-
-                userInfo = results[0];
-
-                hmac = crypto.createHmac( 'sha1', userInfo.gitkey )
+                hmac = crypto.createHmac( 'sha1', user.key )
                     .update( macMsg )
                     .digest('hex');
 
-                if ( mac.length >= 6 && hmac.indexOf( mac ) === 0 ) {
-                    done.resolve();
-                } else {
-                    done.reject( Error('HMACs do not mach') );
+                if ( mac.length < 6 || hmac.indexOf( mac ) !== 0 ) {
+                    throw Error('HMACs do not match');
                 }
             });
-            return done.promise;
         },
 
-        createMac: function( userKey, macMsg, length ) {
+        createMac: function( key, macMsg, length ) {
             length = length || 6; // default for repos
-            return crypto.createHmac( 'sha1', userKey )
+            return crypto.createHmac( 'sha1', key )
                 .update( macMsg )
                 .digest('hex')
                 .substring( 0, length );
