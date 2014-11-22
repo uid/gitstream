@@ -244,11 +244,12 @@ app.use( '/go', function( req, res ) {
 });
 
 app.use( '/user', function( req, res ) {
-    var userRe = /([a-z0-9_-]{0,8})@MIT.EDU/,
-        match = userRe.exec( req.headers['x-ssl-client-s-dn'] ),
-        userId = ( match ? match[1] : null ) || 'demouser' + Math.round( Math.random() * 1000 );
+    // var userRe = /([a-z0-9_-]{0,8})@MIT.EDU/,
+    //     match = userRe.exec( req.headers['x-ssl-client-s-dn'] ),
+    //     userId = ( match ? match[1] : null ) || 'demouser' + Math.round( Math.random() * 1000 );
+    userId = user.createStudyId();
     res.writeHead( 200, { 'Content-Type': 'text/plain' } );
-    res.end( userId ); // haxx
+    res.end( userId );
 });
 
 server = app.listen( PORT );

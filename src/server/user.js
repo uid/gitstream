@@ -57,6 +57,13 @@ module.exports = function( opts ) {
                 .update( macMsg )
                 .digest('hex')
                 .substring( 0, length );
+        },
+
+        createStudyId: function() {
+            return crypto.createHash('sha1')
+                .update( crypto.pseudoRandomBytes(20) )
+                .digest('hex')
+                .substring(0, 5);
         }
     };
 };

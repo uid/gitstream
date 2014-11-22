@@ -20,7 +20,15 @@ var EVENTS_ENDPOINT = '/events',
     viewer;
 
 $.get( '/user', function( userId ) {
-    events.emit( 'sync', userId );
+    var storedId = localStorage['userId'],
+        syncId;
+    if ( storedId ) {
+        syncId = storedId;
+    } else {
+        syncId = userId;
+        localStorage['userId'] = userId;
+    }
+    events.emit( 'sync', syncId );
 });
 
 function triggerExerciseEvent( eventName, helperFn ) {
@@ -230,3 +238,8 @@ events.on( 'ding', triggerExerciseEvent( 'ding', function() {
     $('.exercise-view').find('.exercise-step').removeClass('focused');
     state.endTime = undefined;
 }) );
+
+window.resetId = function() {
+    localStorage.clear('userId');
+    window.location.reload();
+};
