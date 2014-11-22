@@ -9,7 +9,8 @@ var angler = require('git-angler'),
     shoe = require('shoe'),
     spawn = require('child_process').spawn,
     mongodb = q.nfcall( require('mongodb').MongoClient.connect, 'mongodb://localhost/gitstream' ),
-    user = require('./user')({ dbcon: mongodb }),
+    logger = require('./logger')({ dbcon: mongodb }), // LOGGING
+    user = require('./user')({ dbcon: mongodb, logger: logger }),
     exerciseConfs = require('gitstream-exercises'),
     ExerciseMachine = require('./ExerciseMachine'),
     utils = require('./utils'),
@@ -145,6 +146,10 @@ function createRepo( repoName ) {
 eventBus.setHandler( '*', '404', function( repoName, _, data, clonable ) {
     if ( !repoNameRe.test( repoName ) ) { return clonable( false ); }
 
+    // LOGGING
+    var repoInfo = extractRepoInfoFromPath( repoName );
+    logger.log( repoInfo.userId, logger.EVENT.REPO_404, repoInfo.userId, repoInfo.exerciseName );
+
     createRepo( repoName )
     .done( function() {
         clonable( true );
@@ -200,6 +205,18 @@ eventBus.setHandler( '*', 'receive', function( repo, action, updates, done ) {
     });
 });
 
+// LOGGING
+eventBus.addListener( '*', '*', function( repo, action ) {
+    var args = Array.prototype.slice.call( arguments ).slice(2),
+        repoInfo = extractRepoInfoFromPath( repo ),
+        data = {
+            exercise: repo.exerciseName,
+            action: action,
+            data: args
+        };
+    logger.log( repoInfo.userId, logger.EVENT.GIT, data );
+});
+
 app.use( compression() );
 app.use( '/repos', backend );
 app.use( '/hooks', githookEndpoint );
@@ -252,6 +269,9 @@ shoe( function( stream ) {
             exerciseMachine.halt();
         }
         rsub.quit();
+
+        // LOGGING
+        logger.log( userId, logger.EVENT.QUIT );
     });
 
     function createExerciseMachine( exerciseName ) {
@@ -276,18 +296,27 @@ shoe( function( stream ) {
             var args = [ 'ding' ].concat( Array.prototype.slice.call( arguments ) );
             events.emit.apply( events, args );
             rcon.hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME );
+
+            // LOGGING
+            logger.log( userId, logger.EVENT.EM, { type: 'ding', info: args.slice(1) });
         });
 
         exerciseMachine.on( 'step', function( newState ) {
             var args = [ 'step' ].concat( Array.prototype.slice.call( arguments ) );
             events.emit.apply( events, args );
             rcon.hset( userId, FIELD_EXERCISE_STATE, newState, logErr );
+
+            // LOGGING
+            logger.log( userId, logger.EVENT.EM, { type: 'step', info: args.slice(1) });
         });
 
         exerciseMachine.on( 'halt', function() {
             var args = [ 'halt' ].concat( Array.prototype.slice.call( arguments ) );
             events.emit.apply( events, args );
             rcon.hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME );
+
+            // LOGGING
+            logger.log( userId, logger.EVENT.EM, { type: 'halt', info: args.slice(1) });
         });
     }
 
@@ -309,6 +338,13 @@ shoe( function( stream ) {
                 var timeRemaining = clientState[ FIELD_END_TIME ] - Date.now(),
                     exerciseState = clientState[ FIELD_EXERCISE_STATE ],
                     currentExercise = clientState[ FIELD_CURRENT_EXERCISE ];
+
+                // LOGGING
+                logger.log( userId, logger.EVENT.SYNC, {
+                    timeRemaining: timeRemaining,
+                    exercieState: exerciseState,
+                    exerciseName: currentExercise
+                });
 
                 if ( err ) { return events.emit( 'err', err ); }
 
@@ -337,6 +373,9 @@ shoe( function( stream ) {
 
         rsub.subscribe( userId + ':go' );
         rsub.on( 'message', function( channel, exerciseName ) {
+            // LOGGING
+            logger.log( userId, logger.EVENT.GO, exerciseName );
+
             rcon.hgetall( userId, function( err, state ) {
                 // only start exercise if user is on the exercise page
                 if ( exerciseName !== state.currentExercise ) { return; }
@@ -367,6 +406,9 @@ shoe( function( stream ) {
     }.bind( this ) );
 
     events.on( 'exerciseChanged', function( newExercise ) {
+        // LOGGING
+        logger.log( userId, logger.EVENT.CHANGE_EXERCISE, newExercise );
+
         if ( exerciseMachine ) { // stop the old machine
             exerciseMachine.halt();
             exerciseMachine = null;

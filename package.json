@@ -33,7 +33,7 @@
     "hbsfy": "^2.2.0",
     "hiredis": "^0.1.17",
     "lodash": "^2.4.1",
-    "mongodb": "^1.4.22",
+    "mongodb": "^2.0",
     "mustache": "^0.8.2",
     "node-uuid": "^1.4.1",
     "normalize.css": "^3.0.1",

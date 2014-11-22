@@ -2,7 +2,8 @@ var crypto = require('crypto'),
     q = require('q');
 
 module.exports = function( opts ) {
-    var dbcon = opts.dbcon;
+    var dbcon = opts.dbcon,
+        logger = opts.logger;
 
     return {
         getUserKey: function( userId ) {
@@ -15,6 +16,9 @@ module.exports = function( opts ) {
                     if ( user ) {
                         return user.key;
                     } else {
+                        // LOGGING
+                        logger.createLog( userId );
+
                         userKey = crypto.createHash('sha1')
                             .update( crypto.pseudoRandomBytes(40) )
                             .digest('hex');
