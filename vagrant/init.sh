@@ -1,6 +1,6 @@
 # install required packages
 apt-get update
-apt-get -y install git mongodb nginx nodejs npm redis-server
+apt-get -y install git mongodb nginx nodejs npm redis-server wamerican
 
 # link nodejs to node
 ln -s /usr/bin/nodejs /usr/bin/node

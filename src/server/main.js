@@ -206,11 +206,11 @@ eventBus.setHandler( '*', 'receive', function( repo, action, updates, done ) {
 });
 
 // LOGGING
-eventBus.addListener( '*', '*', function( repo, action ) {
+eventBus.addListener( 'logger', '*', '*', function( repo, action ) {
     var args = Array.prototype.slice.call( arguments ).slice(2),
         repoInfo = extractRepoInfoFromPath( repo ),
         data = {
-            exercise: repo.exerciseName,
+            exercise: repoInfo.exerciseName,
             action: action,
             data: args
         };
