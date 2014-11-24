@@ -125,9 +125,11 @@ function createRepo( repoName ) {
 
                 commits.then( function( commits ) {
                     if ( commits ) {
-                        return q.all( commits.map( function( commit ) {
-                            return utils.gitAddCommit( pathToRepo, pathToExercise, commit );
-                        }) );
+                        return commits.reduce( function( commitChain, commit ) {
+                            return commitChain.then( function() {
+                                return utils.gitAddCommit( pathToRepo, pathToExercise, commit );
+                            });
+                        }, q.fulfill() );
                     } else {
                         return utils.git( pathToRepo, 'commit', [ '-m', 'Initial commit' ] );
                     }
@@ -207,6 +209,7 @@ eventBus.setHandler( '*', 'receive', function( repo, action, updates, done ) {
 
 // LOGGING
 eventBus.addListener( 'logger', '*', '*', function( repo, action ) {
+    if ( action !== 'clone' || action !== 'push' ) { return; }
     var args = Array.prototype.slice.call( arguments ).slice(2),
         repoInfo = extractRepoInfoFromPath( repo ),
         data = {
@@ -233,6 +236,9 @@ app.use( '/go', function( req, res ) {
 
     createRepo( repo )
     .done( function( repoInfo )  {
+        // LOGGING
+        logger.log( repoInfo.userId, logger.EVENT.GO, repoInfo.exerciseName );
+
         rcon.publish( repoInfo.userId + ':go', repoInfo.exerciseName, logErr );
         res.writeHead( 200 );
         res.end();
