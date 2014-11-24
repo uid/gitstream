@@ -20,13 +20,13 @@ var EVENTS_ENDPOINT = '/events',
     viewer;
 
 $.get( '/user', function( userId ) {
-    var storedId = localStorage['userId'],
+    var storedId = localStorage.userId,
         syncId;
     if ( storedId ) {
         syncId = storedId;
     } else {
         syncId = userId;
-        localStorage['userId'] = userId;
+        localStorage.userId = userId;
     }
     events.emit( 'sync', syncId );
 });

@@ -22,7 +22,7 @@ module.exports = function( opts ) {
                         userKey = crypto.createHash('sha1')
                             .update( crypto.pseudoRandomBytes(40) )
                             .digest('hex');
-                        q.nfcall( users.insert.bind( users ) , { id: userId, key: userKey } );
+                        q.nfcall( users.insert.bind( users ), { id: userId, key: userKey } );
                         return userKey;
                     }
                 });
