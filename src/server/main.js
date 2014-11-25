@@ -19,7 +19,7 @@ var angler = require('git-angler'),
     eventBus = new angler.EventBus(),
     PATH_TO_REPOS = '/srv/repos',
     PATH_TO_EXERCISES = __dirname + '/exercises/',
-    repoNameRe = /\/[a-z][a-z0-9_-]+\/[a-f0-9]{6,}\/.+.git$/,
+    repoNameRe = /\/[a-z0-9_-]+\/[a-f0-9]{6,}\/.+.git$/,
     backend,
     rcon = redis.createClient(),
     gitHTTPMount = '/repos', // no trailing slash
