@@ -111,7 +111,7 @@ function createRepo( repoName ) {
                 if ( Array.isArray( commitsConf ) && commitsConf.length ) {
                     resolve( commitsConf );
                 } else if ( typeof commitsConf === 'function' ) {
-                    commitsConf( resolve );
+                    commitsConf( pathToExercise, resolve );
                 } else {
                     resolve();
                 }
