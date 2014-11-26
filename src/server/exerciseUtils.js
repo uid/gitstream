@@ -19,19 +19,22 @@ module.exports = function( config ) {
         git = utils.git.bind( null, repoPath );
 
     function shadowFn( fn, args ) {
-        var callback = args.pop(),
+        var callback,
             result;
+        if ( typeof args[ args.length - 1 ] === 'function' ) {
+            callback = args.pop();
+        }
 
-        git( 'checkout', [ 'refs/gitstream/shadowbranch' ] )
-        .then( q.nfapply.bind( null, fn, args ) )
-        .then( function() {
-            result = Array.prototype.slice.call( arguments );
+        return git( 'checkout', [ 'refs/gitstream/shadowbranch' ] )
+        .then( fn.apply.bind( fn, null, args ) )
+        .then( function( output ) {
+            result = output;
             return git( 'checkout', [ 'master' ] );
         })
-        .catch( callback )
-        .done( function() {
-            callback.apply( null, [ null ].concat( result ) );
-        });
+        .then( function() {
+            return result;
+        })
+        .nodeify( callback );
     }
 
     return {
@@ -41,21 +44,21 @@ module.exports = function( config ) {
          *  - relative to the exercise repo
          * @param {String} referenceFilePath the path of the file against which to validate
          *  - relative to the exercsie directory
-         * @param {Function} callback receives a diff object or null if files are identical
+         * @param {Function} callback Optional. err, diff or null if files identical
+         * @return {Promise} if no callback is given
          */
         compareFiles: function( verifyFilePath, referenceFilePath, callback ) {
             var rfc = q.nfcall.bind( fs.readFile ),
                 pathToVerified = path.join( repoDir, verifyFilePath ),
                 pathToReference = path.join( exerciseDir, referenceFilePath );
 
-            q.all([ rfc( pathToVerified ), rfc( pathToReference ) ])
-            .catch( callback )
+            return q.all([ rfc( pathToVerified ), rfc( pathToReference ) ])
             .spread( function( verifyFile, referenceFile ) {
                 var fileDiff = diff.diffLines( verifyFile, referenceFile ),
                     diffp = fileDiff.length !== 1 || fileDiff[0].added || fileDiff[0].removed;
-                callback( null, ( diffp ? fileDiff : null ) );
+                return diffp ? fileDiff : null;
             })
-            .done();
+            .nodeify( callback );
         },
 
         /**
@@ -64,21 +67,45 @@ module.exports = function( config ) {
          * @see compareFiles and the description of the shadowbranch
          */
         compareFilesShadow: function() {
-            shadowFn( this.compareFiles, Array.prototype.slice.call( arguments ) );
+            return shadowFn( this.compareFiles, Array.prototype.slice.call( arguments ) );
+        },
+
+        /**
+         * Diffs two refs.
+         * @param {String} from the ref to be compared against
+         * @param {String} to the compared ref
+         * @param {Function} callback (err, diff). Optional.
+         * @return {Promise} if no callback is given
+         * If `to` is undefined, `from` will be compared to its parent(s).
+         * If both `from` and `to` are undefined, `from` will default to HEAD
+         */
+        diff: function( from, to ) {
+            var diffArgs = [ '-p' ],
+                callback = arguments[ arguments.length - 1 ],
+                cbfnp = typeof callback === 'function' ? 1 : 0;
+
+            diffArgs.push( arguments.length < 1 + cbfnp ? 'HEAD' : from );
+            if ( arguments.length >= 2 + cbfnp ) {
+                diffArgs.push(to);
+            }
+
+            return git( 'diff-tree', diffArgs ).nodeify( cbfnp ? callback : null );
         },
 
         /**
          * Determines whether a file contains a specified string
          * @param {String} filename the path to the searched file
          * @param {String|RegExp} needle the String or RegExp for which to search
-         * @param {Function} callback (err, Boolean containsString)
+         * @param {Function} callback (err, Boolean containsString). Optional.
+         * @return {Promise} if no callback is given
          */
         fileContains: function( filename, needle, callback ) {
             var needleRegExp = needle instanceof RegExp ? needle : new RegExp( needle );
-            fs.readFile( path.join( repoPath, filename ), function( err, data ) {
-                if ( err ) { return callback( err ); }
-                callback( null, needleRegExp.test( data.toString() ) );
-            });
+            return q.nfcall( fs.readFile, path.join( repoPath, filename ) )
+            .then( function( data ) {
+                return needleRegExp.test( data.toString() );
+            })
+            .nodeify( callback );
         },
 
         /**
@@ -86,7 +113,7 @@ module.exports = function( config ) {
          * @see fileContains and the description of shadow branch, above
          */
         shadowFileContains: function() {
-            shadowFn( this.fileContains, Array.prototype.slice.call( arguments ) );
+            return shadowFn( this.fileContains, Array.prototype.slice.call( arguments ) );
         },
 
         /**
@@ -101,30 +128,30 @@ module.exports = function( config ) {
          *      files: [ 'filepath', { src: 'path', dest: 'path', template: (Object|Function) } ],
          *      // note: template and dest are optional in long-form file specs
          *   }
-         * @return {Promise} a promise on the completion of the commands
+         * @param {Function} callback err. Optional.
+         * @return {Promise} if no callback is given
          */
         addCommit: function( spec, callback ) {
-            utils.gitAddCommit( repoPath, exercisePath, spec )
-            .catch( callback )
-            .done( function() {
-                callback();
-            });
+            return utils.gitAddCommit( repoPath, exercisePath, spec )
+            .nodeify( callback );
         },
 
         /**
          * Returns the log message for a specified commit
          * @param {String} ref the ref to check. Default: HEAD
-         * @param {Function} callback (err, String logMsg)
+         * @param {Function} callback (err, String logMsg). Optional.
+         * @return {Promise} if no callback is given
          */
-        getCommitMsg: function( ref, callback ) {
-            var cb = callback || ref,
-                realRef = callback && ref ? ref : 'HEAD';
+        getCommitMsg: function() {
+            var callback = arguments[ arguments.length - 1 ],
+                cbfnp = typeof callback === 'function' ? 1 : 0,
+                ref = arguments[ arguments.length - 1 - cbfnp ] || 'HEAD';
 
-            git( 'log', [ '-n1', '--pretty="%s"', realRef ] )
-            .catch( cb )
-            .done( function( data ) {
-                cb( null, data );
-            });
+            return git( 'log', [ '-n1', '--pretty="%s"', ref ] )
+            .then( function( msg ) {
+                return /"(.*)"\s*/.exec( msg )[1];
+            })
+            .nodeify( cbfnp ? callback : null );
         },
 
         /**
@@ -144,32 +171,40 @@ module.exports = function( config ) {
          * Determines whether a commit log message contains a specified string
          * @param {String|RegExp} needle the String or RegExp for which to search in the log message
          * @param {String} ref the ref to check. Default: HEAD
-         * @param {Function} callback (err, Boolean containsString)
+         * @param {Function} callback (err, Boolean containsString). Optional.
+         * @return {Promise} if no callback is given
          */
-        commitMsgContains: function( needle, ref, callback ) {
-            var cb = callback || ref,
-                realRef = callback ? ref : undefined,
+        commitMsgContains: function( needle ) {
+            var callback = arguments[ arguments.length - 1 ],
+                cbfnp = typeof callback === 'function' ? 1 : 0,
+                ref = arguments.length >= 2 + cbfnp ? arguments[1] : 'HEAD',
                 needleRegExp = needle instanceof RegExp ? needle : new RegExp( needle );
 
-            this.getCommitMsg( realRef, function( err, logMsg ) {
-                if ( err ) { return cb( err ); }
-                cb( null, needleRegExp.test( logMsg ) );
-            });
+            return this.getCommitMsg( ref )
+            .then( function( msg ) {
+                return needleRegExp.test( msg );
+            })
+            .nodeify( cbfnp ? callback : null );
         },
 
         /**
          * Checks for the existence of a file in the repo
          * @param {String} filename the path to the file
-         * @param {Function} callback (err, Boolean)
+         * @param {Function} callback (err, Boolean fileExists). Optional
+         * @return {Promise} if no callback is given
          */
         fileExists: function( filename, callback ) {
-            fs.stat( path.join( repoDir, filename ), function( err ) {
+            return q.nfcall( fs.stat, path.join( repoDir, filename ) )
+            .then( function() {
+                return true;
+            }, function( err ) {
                 if ( err && err.code !== 'ENOENT' ) {
-                    callback( err );
+                    throw Error( err );
                 } else {
-                    callback( null, !err );
+                    return false;
                 }
-            });
+            })
+            .nodeify( callback );
         },
 
         /**
@@ -177,7 +212,7 @@ module.exports = function( config ) {
          * @see fileExists and the description of the shadowbranch
          */
         shadowFileExists: function() {
-            shadowFn( this.fileExists, Array.prototype.slice.call( arguments ) );
+            return shadowFn( this.fileExists, Array.prototype.slice.call( arguments ) );
         }
     };
 };
