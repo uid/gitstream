@@ -178,8 +178,8 @@ radio.on( 'exerciseChanged', function( changeTo ) {
         viewer = new ExerciseViewer( exerciseViewerConf.feedback, exerciseEvents );
     } else {
         changeHashSilent('');
-        $('.main-content').html( indexTmp({ desc: _.map( exercises, function( exercise, name ) {
-            return { title: exercise().title, name: name };
+        $('.main-content').html( indexTmp({ desc: exercises._order.map( function( exercise ) {
+            return { title: exercises[ exercise ]().title, name: exercise };
         }) }) );
     }
 
