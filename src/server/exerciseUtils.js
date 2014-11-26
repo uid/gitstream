@@ -7,7 +7,9 @@ var diff = require('diff'),
     fs = require('fs'),
     path = require('path'),
     q = require('q'),
-    utils = require('./utils');
+    utils = require('./utils'),
+
+    SHADOWBRANCH = 'refs/gitstream/shadowbranch';
 
 // TODO: write tests
 module.exports = function( config ) {
@@ -25,7 +27,7 @@ module.exports = function( config ) {
             callback = args.pop();
         }
 
-        return git( 'checkout', [ 'refs/gitstream/shadowbranch' ] )
+        return git( 'checkout', [ SHADOWBRANCH ] )
         .then( fn.apply.bind( fn, null, args ) )
         .then( function( output ) {
             result = output;
@@ -90,6 +92,21 @@ module.exports = function( config ) {
             }
 
             return git( 'diff-tree', diffArgs ).nodeify( cbfnp ? callback : null );
+        },
+
+        /**
+         * diff ref shadowbranch
+         * @param {String} ref the real ref. Default: HEAD
+         * @param {Function} callback (err, diff). Optional.
+         * @return {Promise} if no callback is given
+         */
+        diffShadow: function() {
+            var callback = arguments[ arguments.length - 1 ],
+                cbfnp = typeof callback === 'function' ? 1 : 0,
+                ref = arguments.length < 1 + cbfnp ? 'HEAD' : arguments[0];
+
+            return git( 'diff-tree', [ '-p', ref, SHADOWBRANCH ] )
+            .nodeify( cbfnp ? callback : null );
         },
 
         /**
