@@ -4,12 +4,16 @@ $stressColor: lighten(red, 13%);
     text-align: center;
     width: 100%;
 
+    .exercise-heading {
+        margin-bottom: 20px;
+    }
+
     .exercise-title {
         text-align: center;
     }
 
     .run-commands {
-        color: blue;
+        color: darken(blue,10%);
         padding: 8px 15px;
         $borderColor: darken(blue, 15%);
         border-bottom: 1px solid $borderColor;
@@ -56,6 +60,10 @@ $stressColor: lighten(red, 13%);
             width: $stepNumberDiam;
         }
 
+        .step-desc code {
+            word-spacing: -2px;
+        }
+
         .step-number, .step-desc {
             &.blurred {
                 opacity: 0.2;
@@ -92,10 +100,6 @@ $stressColor: lighten(red, 13%);
         }
 
         &.issue {
-            .step-number {
-                // border-color: red;
-                // color: red;
-            }
             .feedback {
                 color: darken(red, 3%);
                 transition: text-shadow 0.5s;

@@ -41,6 +41,23 @@ h1, h2, h3, h4, h5, h6 {
     font-family: 'Open Sans', sans-serif;
 }
 
+a {
+    $linkColor: blue;
+    $linkVisitedColor: purple;
+    &:link {
+        color: $linkColor;
+        &:active {
+            color: $linkColor;
+        }
+    }
+    &:visited {
+        color: $linkVisitedColor;
+        &:active {
+            color: $linkVisitedColor;
+        }
+    }
+}
+
 .main-header {
     @include clearfix;
     width: 100%;
@@ -72,7 +89,7 @@ h1, h2, h3, h4, h5, h6 {
     width: calc(100% - #{2*$bodyPaddingSides};
 
     * {
-        color: gray;
+        color: gray !important;
         text-decoration: none;
     }
 }
