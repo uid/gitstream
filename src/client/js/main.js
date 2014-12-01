@@ -31,10 +31,14 @@ $.get( '/user', function( userId ) {
     events.emit( 'sync', syncId );
 });
 
-function triggerExerciseEvent( eventName, helperFn ) {
+/**
+ * @param {String} eventType the type of event (step, halt, ding)
+ * @param {Function} done the function to call when the transition has completed
+ */
+function triggerExerciseEvent( eventType, done ) {
     return function() {
         var args = Array.prototype.slice.call( arguments );
-        exerciseEvents.emit.apply( exerciseEvents, [ eventName ].concat( args, helperFn ) );
+        exerciseEvents.emit.apply( exerciseEvents, [ eventType ].concat( args, done ) );
     };
 }
 
@@ -78,10 +82,12 @@ Timer.prototype = {
         }
         this._timer.addClass('active');
     },
+    /** actually stops the timer */
     _stop: function() {
         this._stopped = true;
         clearInterval( this.timerInterval );
     },
+    /** these two stop the timer and add the appropriate styles */
     stop: function() {
         if ( !this._stopped ) {
             this._stop();
@@ -191,6 +197,8 @@ $(window).on( 'hashchange', hashChangeExercise );
 events.on( 'sync', function( newState ) {
     var hashExercise = window.location.hash.substring(1);
 
+    /* merge the server's state with the client state
+       only overwriting if new (non-null) value or endTime is received */
     _.forOwn( newState, function( v, k ) {
         state[k] = ( v === 'null' || !v ? state[k] : v );
         if ( k === 'endTime' ) {
