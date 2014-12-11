@@ -311,7 +311,10 @@ shoe( function( stream ) {
         exerciseMachine.on( 'step', function( newState ) {
             var args = [ 'step' ].concat( Array.prototype.slice.call( arguments ) );
             events.emit.apply( events, args );
-            rcon.hset( userId, FIELD_EXERCISE_STATE, newState, logErr );
+            rcon.multi()
+                .expire( userId, CLIENT_IDLE_TIMEOUT )
+                .hset( userId, FIELD_EXERCISE_STATE, newState )
+                .exec( logErr );
 
             // LOGGING
             logger.log( userId, logger.EVENT.EM, { type: 'step', info: args.slice(1) });
@@ -342,7 +345,7 @@ shoe( function( stream ) {
             }
 
             userKeyPromise.done( function( userKey ) {
-                var timeRemaining = clientState[ FIELD_END_TIME ] - Date.now(),
+                var timeRemaining = clientState[ FIELD_END_TIME ] - Date.now() || undefined,
                     exerciseState = clientState[ FIELD_EXERCISE_STATE ],
                     currentExercise = clientState[ FIELD_CURRENT_EXERCISE ];
 
@@ -355,7 +358,7 @@ shoe( function( stream ) {
 
                 if ( err ) { return events.emit( 'err', err ); }
 
-                if ( exerciseState && timeRemaining > 0 ) {
+                if ( exerciseState && ( timeRemaining === undefined || timeRemaining > 0 ) ) {
                     // there's already an excercise running. reconnect to it
                     exerciseMachine = createExerciseMachine( currentExercise );
                     exerciseMachine.init( exerciseState, timeRemaining / 1000 );
