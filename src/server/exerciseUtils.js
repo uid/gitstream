@@ -16,8 +16,8 @@ module.exports = function( config ) {
     // a new one of these is made for each new ExerciseMachine
     var repoDir = config.repoDir,
         exerciseDir = config.exerciseDir,
-        exercisePath = path.resolve( exerciseDir ),
-        repoPath = path.resolve( repoDir ),
+        exercisePath = path.resolve( exerciseDir ), // the path to the exercise source dir
+        repoPath = path.resolve( repoDir ), // the path to the real repo
         git = utils.git.bind( null, repoPath );
 
     function shadowFn( fn, args ) {
@@ -27,11 +27,11 @@ module.exports = function( config ) {
             callback = args.pop();
         }
 
-        return git( 'checkout', [ SHADOWBRANCH ] )
+        return git( 'checkout', SHADOWBRANCH )
         .then( fn.apply.bind( fn, null, args ) )
         .then( function( output ) {
             result = output;
-            return git( 'checkout', [ 'master' ] );
+            return git( 'checkout', 'master' );
         })
         .then( function() {
             return result;
@@ -149,8 +149,7 @@ module.exports = function( config ) {
          * @return {Promise} if no callback is given
          */
         addCommit: function( spec, callback ) {
-            return utils.gitAddCommit( repoPath, exercisePath, spec )
-            .nodeify( callback );
+            return utils.gitAddCommit( repoPath, exercisePath, spec ).nodeify( callback );
         },
 
         /**

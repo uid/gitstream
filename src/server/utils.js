@@ -27,19 +27,6 @@ module.exports = {
     },
 
     /**
-     * Returns the sha of the first commit made to the specified repository
-     * @param {String} repoPath path to the repository in question
-     * @return {Promise} a promise resolved with the sha of the initial committ
-     */
-    getInitialCommit: function( repo ) {
-        return this.git( repo, 'log', '--pretty="%H"' )
-        .then( function( data ) {
-            var commitIds = data.trim().replace( /"/g, '' ).split('\n');
-            return commitIds.pop();
-        });
-    },
-
-    /**
      * Executes a git command in a specified repo
      * @param {String} repo the path to the repository in which to execute the command
      * @param {String} cmd the git command to run

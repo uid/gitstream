@@ -397,10 +397,12 @@ shoe( function( stream ) {
 
                 initExerciseMachineListeners( exerciseMachine );
 
-                rcon.hmset( userId,
+                rcon.multi()
+                    .expire( userId, CLIENT_IDLE_TIMEOUT )
+                    .hmset( userId,
                        FIELD_EXERCISE_STATE, startState,
-                       FIELD_END_TIME, exerciseMachine.endTime,
-                       logErr );
+                       FIELD_END_TIME, exerciseMachine.endTime )
+                    .exec( logErr );
 
                 state[ FIELD_EXERCISE_STATE ] = startState;
                 state.timeRemaining = exerciseMachine.endTime - Date.now();
