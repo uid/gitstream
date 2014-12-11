@@ -41,6 +41,19 @@ module.exports = function( config ) {
 
     return {
         /**
+         * Executes a git command
+         * @param {String} cmd the git command to run
+         * @param {String|Array} args the arguments to pass to the command
+         * @param {Function} callback (err, data)
+         * @return {Promise} if no callback is given
+         */
+        git: function() {
+            var args = Array.prototype.slice.call( arguments ),
+                callback = args.length >= 3 ? args.pop() : undefined;
+            return git.apply( null, arguments ).nodeify( callback );
+        },
+
+        /**
          * Compares a file in an exercise repo with a the reference file in the exercise directory
          * @param {String} verifyFilePath the path of the file to validate
          *  - relative to the exercise repo
