@@ -250,10 +250,9 @@ app.use( '/go', function( req, res ) {
 });
 
 app.use( '/user', function( req, res ) {
-    // var userRe = /([a-z0-9_-]{0,8})@MIT.EDU/,
-    //     match = userRe.exec( req.headers['x-ssl-client-s-dn'] ),
-    //     userId = ( match ? match[1] : null ) || 'demouser' + Math.round( Math.random() * 1000 );
-    var userId = user.createStudyId();
+    var userRe = /([a-z0-9_-]{0,8})@MIT.EDU/,
+        match = userRe.exec( req.headers['x-ssl-client-s-dn'] ),
+        userId = ( match ? match[1] : null ) || user.createRandomId();
     res.writeHead( 200, { 'Content-Type': 'text/plain' } );
     res.end( userId );
 });
@@ -261,14 +260,65 @@ app.use( '/user', function( req, res ) {
 server = app.listen( PORT );
 
 shoe( function( stream ) {
-    var events = duplexEmitter( stream ),
+    var clientEvents = duplexEmitter( stream ),
         exerciseMachine,
         userId,
         userKey,
         rsub = redis.createClient(),
         FIELD_EXERCISE_STATE = 'exerciseState',
         FIELD_END_TIME = 'endTime',
-        FIELD_CURRENT_EXERCISE = 'currentExercise';
+        FIELD_CURRENT_EXERCISE = 'currentExercise',
+
+        createExerciseMachine = function( exerciseName ) {
+            var emConf = exerciseConfs.machines[ exerciseName ](),
+                repoMac = user.createMac( userKey, userId + exerciseName ),
+                exerciseRepo = createRepoShortPath({
+                    userId: userId,
+                    exerciseName: exerciseName,
+                    mac: repoMac
+                }),
+                repoPaths = {
+                    fsPath: path.join( PATH_TO_REPOS, exerciseRepo ), // repo fs path
+                    path: exerciseRepo // repo short path
+                },
+                exerciseDir = path.join( PATH_TO_EXERCISES, exerciseName ),
+                exerciseMachine = new ExerciseMachine( emConf, repoPaths, exerciseDir, eventBus ),
+
+                makeListenerFn = function( listenerDef ) {
+                    // called when a step happens and sends the event to the browser
+                    return function() {
+                        var args = Array.prototype.slice.call( arguments ),
+                            eventArgs = [ listenerDef.event ].concat( args );
+                        clientEvents.emit.apply( clientEvents, eventArgs );
+
+                        listenerDef.helper.apply( null, args );
+
+                        // LOGGING
+                        logger.log( userId, logger.EVENT.EM,
+                                   { type: listenerDef.event, info: args.slice(1) });
+                    };
+                },
+                unsetExercise = function() {
+                    rcon.hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME );
+                },
+                listeners = [
+                    { event: 'ding', helper: unsetExercise },
+                    { event: 'halt', helper: unsetExercise },
+                    { event: 'step', helper: function( newState ) {
+                        rcon.multi()
+                        .expire( userId, CLIENT_IDLE_TIMEOUT )
+                        .hset( userId, FIELD_EXERCISE_STATE, newState )
+                        .exec( logErr );
+                    } }
+                ];
+
+            // set up listeners to send events to browser and update saved exercise state
+            listeners.forEach( function( listener ) {
+                exerciseMachine.on( listener.event, makeListenerFn( listener ) );
+            });
+
+            return exerciseMachine;
+        };
 
     stream.on( 'close', function() {
         if ( exerciseMachine ) {
@@ -281,57 +331,8 @@ shoe( function( stream ) {
         logger.log( userId, logger.EVENT.QUIT );
     });
 
-    function createExerciseMachine( exerciseName ) {
-        var emConf = exerciseConfs.machines[ exerciseName ](),
-            repoMac = user.createMac( userKey, userId + exerciseName ),
-            exerciseRepo = createRepoShortPath({
-                userId: userId,
-                exerciseName: exerciseName,
-                mac: repoMac
-            }),
-            repoPaths = {
-                fsPath: path.join( PATH_TO_REPOS, exerciseRepo ), // repo fs path
-                path: exerciseRepo // repo short path
-            },
-            exerciseDir = path.join( PATH_TO_EXERCISES, exerciseName );
-        return new ExerciseMachine( emConf, repoPaths, exerciseDir, eventBus );
-    }
-
-    /** Forward events from the exerciseMachine to the client */
-    function initExerciseMachineListeners( exerciseMachine ) {
-        exerciseMachine.on( 'ding', function() {
-            var args = [ 'ding' ].concat( Array.prototype.slice.call( arguments ) );
-            events.emit.apply( events, args );
-            rcon.hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME );
-
-            // LOGGING
-            logger.log( userId, logger.EVENT.EM, { type: 'ding', info: args.slice(1) });
-        });
-
-        exerciseMachine.on( 'step', function( newState ) {
-            var args = [ 'step' ].concat( Array.prototype.slice.call( arguments ) );
-            events.emit.apply( events, args );
-            rcon.multi()
-                .expire( userId, CLIENT_IDLE_TIMEOUT )
-                .hset( userId, FIELD_EXERCISE_STATE, newState )
-                .exec( logErr );
-
-            // LOGGING
-            logger.log( userId, logger.EVENT.EM, { type: 'step', info: args.slice(1) });
-        });
-
-        exerciseMachine.on( 'halt', function() {
-            var args = [ 'halt' ].concat( Array.prototype.slice.call( arguments ) );
-            events.emit.apply( events, args );
-            rcon.hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME );
-
-            // LOGGING
-            logger.log( userId, logger.EVENT.EM, { type: 'halt', info: args.slice(1) });
-        });
-    }
-
     // on connect, sync the client with the stored client state
-    events.on( 'sync', function( recvUserId ) {
+    clientEvents.on( 'sync', function( recvUserId ) {
         userId = recvUserId;
 
         var userKeyPromise = user.getUserKey( userId );
@@ -356,14 +357,13 @@ shoe( function( stream ) {
                     exerciseName: currentExercise
                 });
 
-                if ( err ) { return events.emit( 'err', err ); }
+                if ( err ) { return clientEvents.emit( 'err', err ); }
 
                 if ( exerciseState && ( timeRemaining === undefined || timeRemaining > 0 ) ) {
                     // there's already an excercise running. reconnect to it
                     exerciseMachine = createExerciseMachine( currentExercise );
                     exerciseMachine.init( exerciseState, timeRemaining / 1000 );
 
-                    initExerciseMachineListeners( exerciseMachine );
                 } else if ( exerciseState ) { // last exercise has expired
                     rcon.hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME );
                     delete clientState[ FIELD_EXERCISE_STATE ];
@@ -377,7 +377,7 @@ shoe( function( stream ) {
                 clientState.timeRemaining = clientState.endTime - Date.now();
                 delete clientState[ FIELD_END_TIME ];
 
-                events.emit( 'sync', clientState );
+                clientEvents.emit( 'sync', clientState );
             });
         });
 
@@ -398,8 +398,6 @@ shoe( function( stream ) {
 
                 startState = exerciseMachine._state;
 
-                initExerciseMachineListeners( exerciseMachine );
-
                 rcon.multi()
                     .expire( userId, CLIENT_IDLE_TIMEOUT )
                     .hmset( userId,
@@ -411,16 +409,13 @@ shoe( function( stream ) {
                 state.timeRemaining = exerciseMachine.endTime - Date.now();
                 delete state[ FIELD_END_TIME ];
 
-                events.emit( 'sync', state );
+                clientEvents.emit( 'sync', state );
             });
         });
 
     }.bind( this ) );
 
-    events.on( 'exerciseChanged', function( newExercise ) {
-        // LOGGING
-        logger.log( userId, logger.EVENT.CHANGE_EXERCISE, newExercise );
-
+    clientEvents.on( 'exerciseChanged', function( newExercise ) {
         if ( exerciseMachine ) { // stop the old machine
             exerciseMachine.halt();
             exerciseMachine = null;
@@ -431,5 +426,9 @@ shoe( function( stream ) {
             .hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME )
             .hset( userId, FIELD_CURRENT_EXERCISE, newExercise )
             .exec( logErr );
+
+        // LOGGING
+        logger.log( userId, logger.EVENT.CHANGE_EXERCISE, newExercise );
+
     });
 }).install( server, '/events' );

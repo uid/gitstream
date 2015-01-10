@@ -59,8 +59,8 @@ module.exports = function( opts ) {
                 .substring( 0, length );
         },
 
-        createStudyId: function() {
-            return crypto.createHash('sha1')
+        createRandomId: function() {
+            return 'user' + crypto.createHash('sha1')
                 .update( crypto.pseudoRandomBytes(20) )
                 .digest('hex')
                 .substring(0, 5);

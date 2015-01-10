@@ -18,39 +18,47 @@ module.exports = function( config ) {
         exerciseDir = config.exerciseDir,
         exercisePath = path.resolve( exerciseDir ), // the path to the exercise source dir
         repoPath = path.resolve( repoDir ), // the path to the real repo
-        git = utils.git.bind( null, repoPath );
+        git = utils.git.bind( null, repoPath ),
+        shadowFn = function( fn, args ) {
+            var callback,
+                result;
+            if ( typeof args[ args.length - 1 ] === 'function' ) {
+                callback = args.pop();
+            }
 
-    function shadowFn( fn, args ) {
-        var callback,
-            result;
-        if ( typeof args[ args.length - 1 ] === 'function' ) {
-            callback = args.pop();
-        }
-
-        return git( 'checkout', SHADOWBRANCH )
-        .then( fn.apply.bind( fn, null, args ) )
-        .then( function( output ) {
-            result = output;
-            return git( 'checkout', 'master' );
-        })
-        .then( function() {
-            return result;
-        })
-        .nodeify( callback );
-    }
+            return git( 'checkout', SHADOWBRANCH )
+            .then( fn.apply.bind( fn, null, args ) )
+            .then( function( output ) {
+                result = output;
+                return git( 'checkout', 'master' );
+            })
+            .then( function() {
+                return result;
+            })
+            .nodeify( callback );
+        };
 
     return {
         /**
          * Executes a git command
          * @param {String} cmd the git command to run
          * @param {String|Array} args the arguments to pass to the command
-         * @param {Function} callback (err, data)
+         * @param {Function} callback Optional. (err, data)
          * @return {Promise} if no callback is given
          */
         git: function() {
             var args = Array.prototype.slice.call( arguments ),
                 callback = args.length >= 3 ? args.pop() : undefined;
             return git.apply( null, arguments ).nodeify( callback );
+        },
+
+        /**
+         * Returns a path to a given file relative to the exercise resources directory
+         * @param {String} filePath the relative path to the file
+         * @return {String} the path to the requested file
+         */
+        resourceFilePath: function( filePath ) {
+            return path.join( exercisePath, filePath );
         },
 
         /**
@@ -89,7 +97,7 @@ module.exports = function( config ) {
          * Diffs two refs.
          * @param {String} from the ref to be compared against
          * @param {String} to the compared ref
-         * @param {Function} callback (err, diff). Optional.
+         * @param {Function} callback Optional. (err, diff)
          * @return {Promise} if no callback is given
          * If `to` is undefined, `from` will be compared to its parent(s).
          * If both `from` and `to` are undefined, `from` will default to HEAD
@@ -110,7 +118,7 @@ module.exports = function( config ) {
         /**
          * diff ref shadowbranch
          * @param {String} ref the real ref. Default: HEAD
-         * @param {Function} callback (err, diff). Optional.
+         * @param {Function} callback Optional. (err, diff)
          * @return {Promise} if no callback is given
          */
         diffShadow: function() {
@@ -126,7 +134,7 @@ module.exports = function( config ) {
          * Determines whether a file contains a specified string
          * @param {String} filename the path to the searched file
          * @param {String|RegExp} needle the String or RegExp for which to search
-         * @param {Function} callback (err, Boolean containsString). Optional.
+         * @param {Function} callback Optional. (err, Boolean containsString)
          * @return {Promise} if no callback is given
          */
         fileContains: function( filename, needle, callback ) {
@@ -158,7 +166,7 @@ module.exports = function( config ) {
          *      files: [ 'filepath', { src: 'path', dest: 'path', template: (Object|Function) } ],
          *      // note: template and dest are optional in long-form file specs
          *   }
-         * @param {Function} callback err. Optional.
+         * @param {Function} callback Optional. err
          * @return {Promise} if no callback is given
          */
         addCommit: function( spec, callback ) {
@@ -168,7 +176,7 @@ module.exports = function( config ) {
         /**
          * Returns the log message for a specified commit
          * @param {String} ref the ref to check. Default: HEAD
-         * @param {Function} callback (err, String logMsg). Optional.
+         * @param {Function} callback Optional. (err, String logMsg)
          * @return {Promise} if no callback is given
          */
         getCommitMsg: function() {
@@ -200,7 +208,7 @@ module.exports = function( config ) {
          * Determines whether a commit log message contains a specified string
          * @param {String|RegExp} needle the String or RegExp for which to search in the log message
          * @param {String} ref the ref to check. Default: HEAD
-         * @param {Function} callback (err, Boolean containsString). Optional.
+         * @param {Function} callback Optional. (err, Boolean containsString)
          * @return {Promise} if no callback is given
          */
         commitMsgContains: function( needle ) {
@@ -219,7 +227,7 @@ module.exports = function( config ) {
         /**
          * Checks for the existence of a file in the repo
          * @param {String} filename the path to the file
-         * @param {Function} callback (err, Boolean fileExists). Optional
+         * @param {Function} callback Optional. (err, Boolean fileExists)
          * @return {Promise} if no callback is given
          */
         fileExists: function( filename, callback ) {

@@ -15,7 +15,6 @@ module.exports = function( opts ) {
         },
 
         log: function( userId, eventType, data ) {
-            console.log('LOGGING:', userId, eventType, data);
             if ( !this.EVENT[ eventType ] ) {
                 throw Error('Attempted to log invalid event: ' + eventType);
             }
@@ -45,9 +44,7 @@ module.exports = function( opts ) {
                 var logs = db.collection('logs');
                 return q.nfcall( logs.insert.bind( logs ), userLog );
             })
-            .done(function() {
-                console.log('CREATED LOG:', userId);
-            });
+            .done();
         }
     };
 };

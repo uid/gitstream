@@ -92,7 +92,7 @@ _.extend( ExerciseMachine.prototype, {
         var oldState = this._state,
             newStateConf = this._states[ newState ],
             entryPoint,
-            doneFn = function( stepTo, stepData ) {
+            stepDone = function( stepTo, stepData ) {
                 var emitData = { prev: incomingData, new: stepData };
                 this.emit( 'step', newState, oldState, emitData );
                 if ( stepTo !== undefined ) { this._step( stepTo ); }
@@ -119,9 +119,9 @@ _.extend( ExerciseMachine.prototype, {
             ( newStateConf.onEnter ? newStateConf.onEnter : function( done ) { done(); } );
 
         if ( typeof entryPoint === 'function' ) {
-            entryPoint.call( this._exerciseUtils, doneFn );
+            entryPoint.call( this._exerciseUtils, stepDone );
         } else {
-            doneFn( entryPoint );
+            stepDone( entryPoint );
         }
     },
 
@@ -130,32 +130,32 @@ _.extend( ExerciseMachine.prototype, {
      */
     _setUp: function() {
         var stateConfig = this._states[ this._state ],
-            doneFn = function( stepTo, data ) {
+            transitionDone = function( stepTo, data ) {
                 this._step( stepTo, data );
             }.bind( this );
 
-        _.map( stateConfig, function( stateValue, stateProp) {
-            var repoAction = GIT_EVENTS[ stateProp ],
+        _.map( stateConfig, function( transition, transitionEvent ) {
+            var gitEventName = GIT_EVENTS[ transitionEvent ],
                 uniqName,
                 registerFn;
-            if ( !repoAction ) { return; }
+            if ( !gitEventName ) { return; }
 
-            if ( stateProp.indexOf('handle') === 0 ) {
+            if ( transitionEvent.indexOf('handle') === 0 ) {
                 registerFn = this._eventBus.setHandler.bind( this._eventBus );
-                this._currentHandlers.push({ action: repoAction });
+                this._currentHandlers.push({ action: gitEventName });
             } else {
                 uniqName = uuid.v1();
                 registerFn = this._eventBus.addListener.bind( this._eventBus, uniqName );
-                this._currentListeners.push({ name: uniqName, action: repoAction });
+                this._currentListeners.push({ name: uniqName, action: gitEventName });
             }
 
-            registerFn( this._repo, repoAction, function() {
+            registerFn( this._repo, gitEventName, function() {
                 var listenerArgs = Array.prototype.slice.call( arguments );
-                // stateValue is the transition function
-                if ( typeof stateValue === 'function' ) {
-                    stateValue.apply( this._exerciseUtils, listenerArgs.concat( doneFn ) );
+                if ( typeof transition === 'function' ) {
+                    transition.apply( this._exerciseUtils, listenerArgs.concat( transitionDone ) );
                 } else {
-                    doneFn( stateValue );
+                    // transition contains the name of the next state
+                    transitionDone( transition );
                 }
             }.bind( this ) );
         }.bind( this ) );
