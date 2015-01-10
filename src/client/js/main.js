@@ -1,4 +1,4 @@
-'use strict';
+'use strict'
 
 var EVENTS_ENDPOINT = '/events',
     shoe = require('shoe'),
@@ -17,19 +17,19 @@ var EVENTS_ENDPOINT = '/events',
 
     state = {},
     timer,
-    viewer;
+    viewer
 
 $.get( '/user', function( userId ) {
     var storedId = localStorage.userId,
-        syncId;
+        syncId
     if ( storedId ) {
-        syncId = storedId;
+        syncId = storedId
     } else {
-        syncId = userId;
-        localStorage.userId = userId;
+        syncId = userId
+        localStorage.userId = userId
     }
-    events.emit( 'sync', syncId );
-});
+    events.emit( 'sync', syncId )
+})
 
 /**
  * @param {String} eventType the type of event (step, halt, ding)
@@ -37,14 +37,14 @@ $.get( '/user', function( userId ) {
  */
 function triggerExerciseEvent( eventType, done ) {
     return function() {
-        var args = Array.prototype.slice.call( arguments );
-        exerciseEvents.emit.apply( exerciseEvents, [ eventType ].concat( args, done ) );
-    };
+        var args = Array.prototype.slice.call( arguments )
+        exerciseEvents.emit.apply( exerciseEvents, [ eventType ].concat( args, done ) )
+    }
 }
 
 function toTimeStr( msec ) {
     if ( msec === Infinity ) {
-        return '&infin;';
+        return '&infin'
     }
 
     var LATENCY_COMPENSATION = 400,
@@ -52,9 +52,9 @@ function toTimeStr( msec ) {
         SEC_IN_MSEC = 1000,
         minutesStr = Math.floor( ( msec + LATENCY_COMPENSATION ) / MSEC_IN_MIN ),
         secondsRemaining = Math.round( ( msec + LATENCY_COMPENSATION ) % MSEC_IN_MIN / SEC_IN_MSEC ),
-        secondsStr = ( secondsRemaining < 10 ? '0' : '' ) + secondsRemaining;
+        secondsStr = ( secondsRemaining < 10 ? '0' : '' ) + secondsRemaining
 
-    return minutesStr + ':' + secondsStr;
+    return minutesStr + ':' + secondsStr
 }
 
 function Timer() {}
@@ -62,43 +62,43 @@ function Timer() {}
 Timer.prototype = {
     _update: function() {
         if ( this.timeRemaining === 0 ) {
-            return this.ding();
+            return this.ding()
         }
 
         if ( this.timeRemaining <= 10 * 1000 ) {
-            this._timer.addClass('stress');
+            this._timer.addClass('stress')
         }
 
-        this._timer.html( toTimeStr( Math.max( this.timeRemaining, 0 ) ) );
-        this.timeRemaining = Math.max( this.timeRemaining - 1000, 0 );
+        this._timer.html( toTimeStr( Math.max( this.timeRemaining, 0 ) ) )
+        this.timeRemaining = Math.max( this.timeRemaining - 1000, 0 )
     },
     start: function( timeRemaining ) {
-        this._stopped = false;
-        this._timer = $('.timer');
-        this.timeRemaining = timeRemaining || Infinity;
-        this._update();
+        this._stopped = false
+        this._timer = $('.timer')
+        this.timeRemaining = timeRemaining || Infinity
+        this._update()
         if ( this.timeRemaining < Infinity ) {
-            this.timerInterval = setInterval( this._update.bind( this ), 1000 );
+            this.timerInterval = setInterval( this._update.bind( this ), 1000 )
         }
-        this._timer.addClass('active');
+        this._timer.addClass('active')
     },
     /** actually stops the timer */
     _stop: function() {
-        this._stopped = true;
-        clearInterval( this.timerInterval );
+        this._stopped = true
+        clearInterval( this.timerInterval )
     },
     /** these two stop the timer and add the appropriate styles */
     stop: function() {
         if ( !this._stopped ) {
-            this._stop();
-            this._timer.removeClass('active').addClass('stopped');
+            this._stop()
+            this._timer.removeClass('active').addClass('stopped')
         }
     },
     ding: function() {
-        this._stop();
-        this._timer.html('0:00').addClass('stress').addClass('dinged');
+        this._stop()
+        this._timer.html('0:00').addClass('stress').addClass('dinged')
     }
-};
+}
 
 function renderExerciseView( exerciseName, conf, user ) {
     var stepIndex = 1,
@@ -106,7 +106,7 @@ function renderExerciseView( exerciseName, conf, user ) {
             return {
                 name: stateName,
                 desc: stateDesc
-            };
+            }
         }),
         mac = hmac( user.id + exerciseName, user.key ).toString().substring( 0, 6 ),
         cloneUrl = 'http://' + window.location.host + '/repos/' +
@@ -116,29 +116,29 @@ function renderExerciseView( exerciseName, conf, user ) {
             cloneUrl: cloneUrl,
             steps: steps,
             stepIndex: function() {
-                return stepIndex++;
+                return stepIndex++
             },
             timeLimit: toTimeStr( conf.timeLimit * 1000 ), // sec -> msec
             exerciseName: exerciseName
-        };
+        }
 
-    return $( exerciseTmp( templateParams ) );
+    return $( exerciseTmp( templateParams ) )
 }
 
 function selectViewStep( name ) {
-    return $('.exercise-view').find( '[data-statename="' + name + '"]' );
+    return $('.exercise-view').find( '[data-statename="' + name + '"]' )
 }
 
 function hashChangeExercise() {
-    radio.emit( 'exerciseChanged', window.location.hash.substring(1) );
+    radio.emit( 'exerciseChanged', window.location.hash.substring(1) )
 }
 
 function changeHashSilent( newHash ) {
-    $(window).off( 'hashchange', hashChangeExercise );
-    window.location.hash = newHash;
+    $(window).off( 'hashchange', hashChangeExercise )
+    window.location.hash = newHash
     setTimeout( function() {
-        $(window).on( 'hashchange', hashChangeExercise );
-    }, 0 );
+        $(window).on( 'hashchange', hashChangeExercise )
+    }, 0 )
 }
 
 radio.on( 'exerciseChanged', function( changeTo ) {
@@ -146,108 +146,108 @@ radio.on( 'exerciseChanged', function( changeTo ) {
         exerciseView,
         newExercise,
         silent,
-        setHash;
+        setHash
 
     if ( changeTo.newExercise ) {
-        newExercise = changeTo.newExercise;
-        silent = changeTo.silent;
-        setHash = changeTo.setHash;
+        newExercise = changeTo.newExercise
+        silent = changeTo.silent
+        setHash = changeTo.setHash
     } else {
-        newExercise = changeTo;
+        newExercise = changeTo
     }
 
-    require('event-emitter/all-off')( exerciseEvents );
-    exerciseEvents = eventEmitter({});
+    require('event-emitter/all-off')( exerciseEvents )
+    exerciseEvents = eventEmitter({})
 
     if ( !silent ) {
-        events.emit( 'exerciseChanged', newExercise );
-        delete state.exerciseState;
+        events.emit( 'exerciseChanged', newExercise )
+        delete state.exerciseState
     }
 
-    if ( setHash ) { changeHashSilent( newExercise ); }
+    if ( setHash ) { changeHashSilent( newExercise ) }
 
     if ( exercises[ newExercise ] ) {
-        exerciseViewerConf = exercises[ newExercise ]();
-        exerciseView = renderExerciseView( newExercise, exerciseViewerConf, state.user );
+        exerciseViewerConf = exercises[ newExercise ]()
+        exerciseView = renderExerciseView( newExercise, exerciseViewerConf, state.user )
 
-        $('.main-content').html( exerciseView );
+        $('.main-content').html( exerciseView )
 
         if ( state.exerciseState ) {
-            selectViewStep( state.exerciseState, exerciseView ).addClass('focused');
-            timer = new Timer();
-            timer.start( state.timeRemaining );
-            $('.exercise-steps').toggleClass( 'focused', true );
-            $('.step-number').toggleClass( 'blurred', true );
-            $('.step-desc').toggleClass( 'blurred', true );
+            selectViewStep( state.exerciseState, exerciseView ).addClass('focused')
+            timer = new Timer()
+            timer.start( state.timeRemaining )
+            $('.exercise-steps').toggleClass( 'focused', true )
+            $('.step-number').toggleClass( 'blurred', true )
+            $('.step-desc').toggleClass( 'blurred', true )
         }
 
-        viewer = new ExerciseViewer( exerciseViewerConf.feedback, exerciseEvents );
+        viewer = new ExerciseViewer( exerciseViewerConf.feedback, exerciseEvents )
     } else {
-        changeHashSilent('');
+        changeHashSilent('')
         $('.main-content').html( indexTmp({ desc: exercises._order.map( function( exercise ) {
-            return { title: exercises[ exercise ]().title, name: exercise };
-        }) }) );
+            return { title: exercises[ exercise ]().title, name: exercise }
+        }) }) )
     }
 
-    $('.main-content').removeClass('hide');
-});
+    $('.main-content').removeClass('hide')
+})
 
-$(window).on( 'hashchange', hashChangeExercise );
+$(window).on( 'hashchange', hashChangeExercise )
 
 events.on( 'sync', function( newState ) {
-    var hashExercise = window.location.hash.substring(1);
+    var hashExercise = window.location.hash.substring(1)
 
     /* merge the server's state with the client state
        only overwriting if new (non-null) value or endTime is received */
     _.forOwn( newState, function( v, k ) {
-        state[k] = ( v === 'null' || !v ? state[k] : v );
+        state[k] = ( v === 'null' || !v ? state[k] : v )
         if ( k === 'endTime' ) {
-            state[k] = v;
+            state[k] = v
         }
-    });
+    })
 
     radio.emit( 'exerciseChanged', {
         newExercise: hashExercise,
         silent: state.currentExercise === hashExercise,
         setHash: true
-    });
-});
+    })
+})
 
 // forward exercise events to exercise machine emitter
 events.on( 'step', triggerExerciseEvent( 'step', function( newState, oldState, stepOutput ) {
     var newStateStepView = selectViewStep( newState ),
         newStateFeedback = newStateStepView.find('.feedback'),
-        exerciseSteps = $('.exercise-view').find('.exercise-step');
+        exerciseSteps = $('.exercise-view').find('.exercise-step')
 
-    if ( !newStateStepView.length ) { return; }
+    if ( !newStateStepView.length ) { return }
 
-    exerciseSteps.removeClass('focused issue').find('.feedback').html('');
+    exerciseSteps.removeClass('focused issue').find('.feedback').html('')
 
-    newStateStepView.addClass('focused');
+    newStateStepView.addClass('focused')
     if ( stepOutput ) {
-        newStateStepView.addClass('issue');
-        newStateFeedback.html( stepOutput );
-        newStateFeedback.addClass('flash');
+        newStateStepView.addClass('issue')
+        newStateFeedback.html( stepOutput )
+        newStateFeedback.addClass('flash')
         setTimeout( function() {
-            newStateFeedback.removeClass('flash');
-        }, 70 );
+            newStateFeedback.removeClass('flash')
+        }, 70 )
     }
-}) );
+}) )
 events.on( 'halt', triggerExerciseEvent( 'halt', function() {
     if ( timer ) {
-        timer.stop();
+        timer.stop()
     }
-    state.endTime = undefined;
-}) );
+    state.endTime = undefined
+}) )
 events.on( 'ding', triggerExerciseEvent( 'ding', function() {
     if ( timer ) {
-        timer.ding();
+        timer.ding()
     }
-    $('.exercise-view').find('.exercise-step').removeClass('focused');
-    state.endTime = undefined;
-}) );
+    $('.exercise-view').find('.exercise-step').removeClass('focused')
+    state.endTime = undefined
+}) )
 
 window.resetId = function() {
-    localStorage.clear('userId');
-    window.location.reload();
-};
+    localStorage.clear('userId')
+    window.location.reload()
+}

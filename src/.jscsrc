@@ -31,6 +31,7 @@
     "requireSpacesInsideArrayBrackets": "all",
     "disallowQuotedKeysInObjects": true,
     "disallowSpaceAfterObjectKeys": true,
+    "disallowSemicolons": true,
     "requireCommaBeforeLineBreak": true,
     "disallowSpaceAfterPrefixUnaryOperators": true,
     "disallowSpaceBeforePostfixUnaryOperators": true,

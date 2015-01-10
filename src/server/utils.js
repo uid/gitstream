@@ -2,7 +2,7 @@ var spawn = require('child_process').spawn,
     path = require('path'),
     fs = require('fs'),
     q = require('q'),
-    mustache = require('mustache');
+    mustache = require('mustache')
 
 module.exports = {
     /**
@@ -13,17 +13,17 @@ module.exports = {
      */
     events2Props: function( prefixesArg, eventsArg ) {
         var prefixes = eventsArg ? prefixesArg : [ 'on' ],
-            events = eventsArg ? eventsArg : prefixesArg;
+            events = eventsArg ? eventsArg : prefixesArg
         return events.reduce( function( propHash, event ) {
             var eventPropSuffix = event.split('-').map( function( eventIdentifier ) {
-                    return eventIdentifier.slice( 0, 1 ).toUpperCase() + eventIdentifier.slice( 1 );
-                }).join('') ;
+                    return eventIdentifier.slice( 0, 1 ).toUpperCase() + eventIdentifier.slice( 1 )
+                }).join('')
             prefixes.map( function( prefix ) {
-                var eventProp = prefix + eventPropSuffix;
-                propHash[ eventProp ] = event;
-            });
-            return propHash;
-        }, {} );
+                var eventProp = prefix + eventPropSuffix
+                propHash[ eventProp ] = event
+            })
+            return propHash
+        }, {} )
     },
 
     /**
@@ -40,21 +40,21 @@ module.exports = {
                 cmdArgs = ( args instanceof Array ? args : args.trim().split(' ') ),
                 git = spawn( 'git', [ cmd ].concat( cmdArgs ), { cwd: repo } ),
                 output = '',
-                errOutput = '';
+                errOutput = ''
 
-            git.stderr.on( 'data', function( data ) { errOutput += data.toString(); });
-            git.stdout.on( 'data', function( data ) { output += data.toString(); });
+            git.stderr.on( 'data', function( data ) { errOutput += data.toString() })
+            git.stdout.on( 'data', function( data ) { output += data.toString() })
 
             git.on( 'close', function( code ) {
                 if ( code !== 0 ) {
-                    done.reject( Error( errOutput ) );
+                    done.reject( Error( errOutput ) )
                 } else {
-                    done.resolve( output );
+                    done.resolve( output )
                 }
-            });
+            })
 
-            return done.promise;
-        });
+            return done.promise
+        })
     },
 
     /**
@@ -67,28 +67,28 @@ module.exports = {
     writeTemplated: function( src, dest, template ) {
         var self = this,
             srcPath = path.join.bind( null, src ),
-            destPath = path.join.bind( null, dest );
+            destPath = path.join.bind( null, dest )
         return q.nfcall( fs.stat, src )
         .then( function( stats ) {
             if ( stats.isDirectory() ) { // recursiely template and write out directory
                 return q.nfcall( fs.mkdir, dest ) // make the dest directory
                 .then( function() {
-                    return q.nfcall( fs.readdir, src ); // recurse into the src dir
+                    return q.nfcall( fs.readdir, src ) // recurse into the src dir
                 })
                 .then( function( dirContents ) {
                     return q.all( dirContents.map( function( file ) {
-                        return self.writeTemplated( srcPath( file ), destPath( file ), template );
-                    }) );
-                });
+                        return self.writeTemplated( srcPath( file ), destPath( file ), template )
+                    }) )
+                })
             } else {
                 return q.nfcall( fs.readFile, src, { encoding: 'utf8' } )
                 .then( function( file ) {
                     var fileTemplate = typeof template === 'function' ? template( src ) : template,
-                        templated = mustache.render( file, fileTemplate );
-                    return q.nfcall( fs.writeFile, dest, templated );
-                });
+                        templated = mustache.render( file, fileTemplate )
+                    return q.nfcall( fs.writeFile, dest, templated )
+                })
             }
-        });
+        })
     },
 
     /**
@@ -111,23 +111,23 @@ module.exports = {
             destPath = path.join.bind( null, repo ),
             commitAuthor = spec.author || 'Nick Hynes <nhynes@mit.edu>',
             commitDate = ( spec.date || new Date() ).toISOString(),
-            filesToStage = [];
+            filesToStage = []
 
         return q.all( spec.files.map( function( fileSpec ) {
             var src = srcPath( typeof fileSpec === 'string' ? fileSpec : fileSpec.src ),
                 dest = typeof fileSpec === 'string' ? fileSpec : fileSpec.dest || fileSpec.src,
-                template = typeof fileSpec === 'string' ? {} : fileSpec.template;
+                template = typeof fileSpec === 'string' ? {} : fileSpec.template
 
-            filesToStage.push( dest );
+            filesToStage.push( dest )
 
-            return self.writeTemplated( src, destPath( dest ), template );
+            return self.writeTemplated( src, destPath( dest ), template )
         }) )
         .then( function() {
-            return self.git( repo, 'add', filesToStage.join(' ') );
+            return self.git( repo, 'add', filesToStage.join(' ') )
         })
         .then( function() {
             return self.git( repo, 'commit',
-                [ '-m', spec.msg, '--author="' + commitAuthor + '"', '--date=' + commitDate ]);
-        });
+                [ '-m', spec.msg, '--author="' + commitAuthor + '"', '--date=' + commitDate ])
+        })
     }
-};
+}

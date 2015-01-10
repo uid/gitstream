@@ -9,7 +9,7 @@ var diff = require('diff'),
     q = require('q'),
     utils = require('./utils'),
 
-    SHADOWBRANCH = 'refs/gitstream/shadowbranch';
+    SHADOWBRANCH = 'refs/gitstream/shadowbranch'
 
 // TODO: write tests
 module.exports = function( config ) {
@@ -21,22 +21,22 @@ module.exports = function( config ) {
         git = utils.git.bind( null, repoPath ),
         shadowFn = function( fn, args ) {
             var callback,
-                result;
+                result
             if ( typeof args[ args.length - 1 ] === 'function' ) {
-                callback = args.pop();
+                callback = args.pop()
             }
 
             return git( 'checkout', SHADOWBRANCH )
             .then( fn.apply.bind( fn, null, args ) )
             .then( function( output ) {
-                result = output;
-                return git( 'checkout', 'master' );
+                result = output
+                return git( 'checkout', 'master' )
             })
             .then( function() {
-                return result;
+                return result
             })
-            .nodeify( callback );
-        };
+            .nodeify( callback )
+        }
 
     return {
         /**
@@ -48,8 +48,8 @@ module.exports = function( config ) {
          */
         git: function() {
             var args = Array.prototype.slice.call( arguments ),
-                callback = args.length >= 3 ? args.pop() : undefined;
-            return git.apply( null, arguments ).nodeify( callback );
+                callback = args.length >= 3 ? args.pop() : undefined
+            return git.apply( null, arguments ).nodeify( callback )
         },
 
         /**
@@ -58,7 +58,7 @@ module.exports = function( config ) {
          * @return {String} the path to the requested file
          */
         resourceFilePath: function( filePath ) {
-            return path.join( exercisePath, filePath );
+            return path.join( exercisePath, filePath )
         },
 
         /**
@@ -73,15 +73,15 @@ module.exports = function( config ) {
         compareFiles: function( verifyFilePath, referenceFilePath, callback ) {
             var rfc = q.nfcall.bind( fs.readFile ),
                 pathToVerified = path.join( repoDir, verifyFilePath ),
-                pathToReference = path.join( exerciseDir, referenceFilePath );
+                pathToReference = path.join( exerciseDir, referenceFilePath )
 
             return q.all([ rfc( pathToVerified ), rfc( pathToReference ) ])
             .spread( function( verifyFile, referenceFile ) {
                 var fileDiff = diff.diffLines( verifyFile, referenceFile ),
-                    diffp = fileDiff.length !== 1 || fileDiff[0].added || fileDiff[0].removed;
-                return diffp ? fileDiff : null;
+                    diffp = fileDiff.length !== 1 || fileDiff[0].added || fileDiff[0].removed
+                return diffp ? fileDiff : null
             })
-            .nodeify( callback );
+            .nodeify( callback )
         },
 
         /**
@@ -90,7 +90,7 @@ module.exports = function( config ) {
          * @see compareFiles and the description of the shadowbranch
          */
         compareFilesShadow: function() {
-            return shadowFn( this.compareFiles, Array.prototype.slice.call( arguments ) );
+            return shadowFn( this.compareFiles, Array.prototype.slice.call( arguments ) )
         },
 
         /**
@@ -105,14 +105,14 @@ module.exports = function( config ) {
         diff: function( from, to ) {
             var diffArgs = [ '-p' ],
                 callback = arguments[ arguments.length - 1 ],
-                cbfnp = typeof callback === 'function' ? 1 : 0;
+                cbfnp = typeof callback === 'function' ? 1 : 0
 
-            diffArgs.push( arguments.length < 1 + cbfnp ? 'HEAD' : from );
+            diffArgs.push( arguments.length < 1 + cbfnp ? 'HEAD' : from )
             if ( arguments.length >= 2 + cbfnp ) {
-                diffArgs.push(to);
+                diffArgs.push(to)
             }
 
-            return git( 'diff-tree', diffArgs ).nodeify( cbfnp ? callback : null );
+            return git( 'diff-tree', diffArgs ).nodeify( cbfnp ? callback : null )
         },
 
         /**
@@ -124,10 +124,10 @@ module.exports = function( config ) {
         diffShadow: function() {
             var callback = arguments[ arguments.length - 1 ],
                 cbfnp = typeof callback === 'function' ? 1 : 0,
-                ref = arguments.length < 1 + cbfnp ? 'HEAD' : arguments[0];
+                ref = arguments.length < 1 + cbfnp ? 'HEAD' : arguments[0]
 
             return git( 'diff-tree', [ '-p', ref, SHADOWBRANCH ] )
-            .nodeify( cbfnp ? callback : null );
+            .nodeify( cbfnp ? callback : null )
         },
 
         /**
@@ -138,12 +138,12 @@ module.exports = function( config ) {
          * @return {Promise} if no callback is given
          */
         fileContains: function( filename, needle, callback ) {
-            var needleRegExp = needle instanceof RegExp ? needle : new RegExp( needle );
+            var needleRegExp = needle instanceof RegExp ? needle : new RegExp( needle )
             return q.nfcall( fs.readFile, path.join( repoPath, filename ) )
             .then( function( data ) {
-                return needleRegExp.test( data.toString() );
+                return needleRegExp.test( data.toString() )
             })
-            .nodeify( callback );
+            .nodeify( callback )
         },
 
         /**
@@ -151,7 +151,7 @@ module.exports = function( config ) {
          * @see fileContains and the description of shadow branch, above
          */
         shadowFileContains: function() {
-            return shadowFn( this.fileContains, Array.prototype.slice.call( arguments ) );
+            return shadowFn( this.fileContains, Array.prototype.slice.call( arguments ) )
         },
 
         /**
@@ -170,7 +170,7 @@ module.exports = function( config ) {
          * @return {Promise} if no callback is given
          */
         addCommit: function( spec, callback ) {
-            return utils.gitAddCommit( repoPath, exercisePath, spec ).nodeify( callback );
+            return utils.gitAddCommit( repoPath, exercisePath, spec ).nodeify( callback )
         },
 
         /**
@@ -182,13 +182,13 @@ module.exports = function( config ) {
         getCommitMsg: function() {
             var callback = arguments[ arguments.length - 1 ],
                 cbfnp = typeof callback === 'function' ? 1 : 0,
-                ref = arguments[ arguments.length - 1 - cbfnp ] || 'HEAD';
+                ref = arguments[ arguments.length - 1 - cbfnp ] || 'HEAD'
 
             return git( 'log', [ '-n1', '--pretty="%s"', ref ] )
             .then( function( msg ) {
-                return /"(.*)"\s*/.exec( msg )[1];
+                return /"(.*)"\s*/.exec( msg )[1]
             })
-            .nodeify( cbfnp ? callback : null );
+            .nodeify( cbfnp ? callback : null )
         },
 
         /**
@@ -198,10 +198,10 @@ module.exports = function( config ) {
          */
         parseCommitMsg: function( commitMsg ) {
             return commitMsg.split( /\r?\n/ ).filter( function( line ) {
-                return line.charAt(0) !== '#' && line.length > 0;
+                return line.charAt(0) !== '#' && line.length > 0
             }).map( function( line ) {
-                return line.trim();
-            });
+                return line.trim()
+            })
         },
 
         /**
@@ -215,13 +215,13 @@ module.exports = function( config ) {
             var callback = arguments[ arguments.length - 1 ],
                 cbfnp = typeof callback === 'function' ? 1 : 0,
                 ref = arguments.length >= 2 + cbfnp ? arguments[1] : 'HEAD',
-                needleRegExp = needle instanceof RegExp ? needle : new RegExp( needle );
+                needleRegExp = needle instanceof RegExp ? needle : new RegExp( needle )
 
             return this.getCommitMsg( ref )
             .then( function( msg ) {
-                return needleRegExp.test( msg );
+                return needleRegExp.test( msg )
             })
-            .nodeify( cbfnp ? callback : null );
+            .nodeify( cbfnp ? callback : null )
         },
 
         /**
@@ -233,15 +233,15 @@ module.exports = function( config ) {
         fileExists: function( filename, callback ) {
             return q.nfcall( fs.stat, path.join( repoDir, filename ) )
             .then( function() {
-                return true;
+                return true
             }, function( err ) {
                 if ( err && err.code !== 'ENOENT' ) {
-                    throw Error( err );
+                    throw Error( err )
                 } else {
-                    return false;
+                    return false
                 }
             })
-            .nodeify( callback );
+            .nodeify( callback )
         },
 
         /**
@@ -249,7 +249,7 @@ module.exports = function( config ) {
          * @see fileExists and the description of the shadowbranch
          */
         shadowFileExists: function() {
-            return shadowFn( this.fileExists, Array.prototype.slice.call( arguments ) );
+            return shadowFn( this.fileExists, Array.prototype.slice.call( arguments ) )
         }
-    };
-};
+    }
+}
