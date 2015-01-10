@@ -31,6 +31,7 @@ $.get( '/user', function( userId ) {
     events.emit( 'sync', syncId )
 })
 
+
 /**
  * @param {String} eventType the type of event (step, halt, ding)
  * @param {Function} done the function to call when the transition has completed
@@ -47,11 +48,11 @@ function toTimeStr( msec ) {
         return '&infin'
     }
 
-    var LATENCY_COMPENSATION = 400,
+    var LAG_COMPENSATION = 400,
         MSEC_IN_MIN = 60 * 1000,
         SEC_IN_MSEC = 1000,
-        minutesStr = Math.floor( ( msec + LATENCY_COMPENSATION ) / MSEC_IN_MIN ),
-        secondsRemaining = Math.round( ( msec + LATENCY_COMPENSATION ) % MSEC_IN_MIN / SEC_IN_MSEC ),
+        minutesStr = Math.floor( ( msec + LAG_COMPENSATION ) / MSEC_IN_MIN ),
+        secondsRemaining = Math.round( ( msec + LAG_COMPENSATION ) % MSEC_IN_MIN / SEC_IN_MSEC ),
         secondsStr = ( secondsRemaining < 10 ? '0' : '' ) + secondsRemaining
 
     return minutesStr + ':' + secondsStr

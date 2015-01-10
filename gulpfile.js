@@ -23,22 +23,22 @@ var gulp = require('gulp'),
 
     path = {
         src: {
-            all: 'src/**/*',
-            js: [ 'src/**/*.js', '!exercises/',
-                  '!src/client/exercises/**/*', '!src/server/exercises/**/*' ],
-            client: {
-                main: './src/client/js/main.js',
-                scss: 'src/client/**/*.s[ac]ss',
-                static: [
-                    'src/client/resources/**/*',
-                    'src/client/exercises/**/*',
-                    'src/client/*.html'
-                ]
+                all: 'src/**/*',
+                js: [ 'src/**/*.js', '!exercises/',
+                      '!src/client/exercises/**/*', '!src/server/exercises/**/*' ],
+                client: {
+                    main: './src/client/js/main.js',
+                    scss: 'src/client/**/*.s[ac]ss',
+                    static: [
+                        'src/client/resources/**/*',
+                        'src/client/exercises/**/*',
+                        'src/client/*.html'
+                    ]
             },
             server: {
                 static: [ 'src/server/**/*' ],
-                exercises: 'node_modules/gitstream-exercises/exercises'
-            }
+            },
+            exercises: 'node_modules/gitstream-exercises/exercises'
         },
         tests: 'test/**/*.js',
         dist: {
@@ -46,9 +46,7 @@ var gulp = require('gulp'),
             all: 'dist/**/*',
             client: 'dist/client/',
             server: 'dist/server/',
-            exercises: {
-                server: 'dist/server'
-            }
+            exercises: 'dist/server'
         },
     },
 
@@ -169,8 +167,8 @@ gulp.task( 'collectserver', function() {
 });
 
 gulp.task( 'linkexercises', function() {
-    gulp.src( path.src.server.exercises )
-        .pipe( symlink( path.dist.exercises.server ) );
+    gulp.src( path.src.exercises )
+        .pipe( symlink( path.dist.exercises ) );
 });
 
 gulp.task( 'watch', function() {
