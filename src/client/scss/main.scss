@@ -1,4 +1,4 @@
-@import '../../node_modules/normalize.css/normalize.css';
+@import '../../../node_modules/normalize.css/normalize.css';
 @import 'exercise';
 @import 'index';
 
@@ -29,12 +29,15 @@ $bodyPaddingTop: 10px;
 body {
     background-color: #fcfcfc;
     font-family: 'Questrial', sans-serif;
-    font-size: 1.2em;
     margin: 0;
     min-height: calc(100% - #{2*$bodyPaddingTop});
     padding: $bodyPaddingTop $bodyPaddingSides;
     position: absolute;
     width: calc(100% - #{2*$bodyPaddingSides});
+}
+
+code {
+    font-family: monospace;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -102,4 +105,8 @@ a {
     &.hide {
         display: none;
     }
+}
+
+.mainpage {
+    font-size: 1.1em;
 }

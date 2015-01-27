@@ -10,9 +10,11 @@ $stressColor: lighten(red, 13%);
 
     .exercise-title {
         text-align: center;
+        margin-top: 0;
     }
 
     .run-commands {
+        font-size: 112%;
         color: darken(blue,10%);
         padding: 8px 15px;
         $borderColor: darken(blue, 15%);
@@ -50,7 +52,7 @@ $stressColor: lighten(red, 13%);
     $stepNumberDiam: 40px;
     .exercise-step {
         border-bottom: 1px solid gray;
-        font-size: 1.3em;
+        font-size: 1.5em;
         line-height: $stepNumberDiam;
         padding: 15px 20px;
 
