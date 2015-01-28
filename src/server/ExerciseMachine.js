@@ -30,7 +30,6 @@ function ExerciseMachine( config, repoPaths, exerciseDir, eventBus ) {
         return new ExerciseMachine( config, repoPaths, exerciseDir, eventBus )
     }
 
-    this._configStartState = config.startState
     this._timeLimit = config.timeLimit // in seconds
 
     this._repo = repoPaths.path
@@ -72,7 +71,7 @@ _.extend( ExerciseMachine.prototype, {
                 }
             }.bind( this ), this._timeLimit * 1000 )
         }
-        this._step( startState || this._configStartState )
+        this._step( startState || this._states.startState )
         return this
     },
 

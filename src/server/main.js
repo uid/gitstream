@@ -387,16 +387,14 @@ shoe( function( stream ) {
             logger.log( userId, logger.EVENT.GO, exerciseName )
 
             rcon.hgetall( userId, function( err, state ) {
+                var startState
+
                 // only start exercise if user is on the exercise page
                 if ( exerciseName !== state.currentExercise ) { return }
 
-                var startState
-
                 if ( exerciseMachine ) { exerciseMachine.halt() }
                 exerciseMachine = createExerciseMachine( exerciseName )
-                exerciseMachine.init()
-
-                startState = exerciseMachine._state
+                startState = exerciseMachine._states.startState
 
                 rcon.multi()
                     .expire( userId, CLIENT_IDLE_TIMEOUT )
@@ -410,6 +408,8 @@ shoe( function( stream ) {
                 delete state[ FIELD_END_TIME ]
 
                 clientEvents.emit( 'sync', state )
+
+                exerciseMachine.init()
             })
         })
 
