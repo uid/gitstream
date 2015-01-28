@@ -23,22 +23,19 @@ var gulp = require('gulp'),
 
     path = {
         src: {
-                all: 'src/**/*',
-                js: [ 'src/**/*.js', '!exercises/',
-                      '!src/client/exercises/**/*', '!src/server/exercises/**/*' ],
-                client: {
-                    main: './src/client/js/main.js',
-                    scss: 'src/client/**/*.s[ac]ss',
-                    static: [
-                        'src/client/resources/**/*',
-                        'src/client/exercises/**/*',
-                        'src/client/*.html'
-                    ]
+            all: 'src/**/*',
+            js: 'src/**/*.js',
+            client: {
+                main: './src/client/js/main.js',
+                scss: 'src/client/**/*.s[ac]ss',
+                static: [
+                    'src/client/resources/**/*',
+                    'src/client/exercises/**/*',
+                    'src/client/*.html'
+                ]
             },
-            server: {
-                static: [ 'src/server/**/*' ],
-            },
-            exercises: 'node_modules/gitstream-exercises/exercises'
+            exercises: 'node_modules/gitstream-exercises/exercises',
+            server: 'src/server/**/*'
         },
         tests: 'test/**/*.js',
         dist: {
@@ -157,7 +154,7 @@ gulp.task( 'collectstatic', function() {
 });
 
 gulp.task( 'collectserver', function() {
-    var stream = gulp.src( notilde( path.src.server.static ) )
+    var stream = gulp.src( notilde( path.src.server ) )
 
     if( !production ) {
         stream = stream.pipe( cache('server') );
@@ -177,6 +174,6 @@ gulp.task( 'watch', function() {
     gulp.watch( notilde( [].concat( path.src.js, path.tests ) ), [ 'checkstyle', 'test' ] );
     gulp.watch( notilde( path.src.client.scss ), [ 'sass' ] );
     gulp.watch( notilde( path.src.client.static ), [ 'collectstatic' ] );
-    gulp.watch( notilde( path.src.server.static ), [ 'collectserver' ] );
+    gulp.watch( notilde( path.src.server ), [ 'collectserver' ] );
     gulp.watch( path.dist.all ).on( 'change', livereload.changed );
 });

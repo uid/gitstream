@@ -45,7 +45,7 @@ function triggerExerciseEvent( eventType, done ) {
 
 function toTimeStr( msec ) {
     if ( msec === Infinity ) {
-        return '&infin'
+        return '&infin;'
     }
 
     var LAG_COMPENSATION = 400,

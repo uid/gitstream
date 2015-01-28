@@ -235,7 +235,7 @@ app.use( '/go', function( req, res ) {
         repo = remoteUrl.substring( remoteUrl.indexOf( gitHTTPMount ) + gitHTTPMount.length )
 
     createRepo( repo )
-    .done( function( repoInfo )  {
+    .done( function( repoInfo ) {
         // LOGGING
         logger.log( repoInfo.userId, logger.EVENT.GO, repoInfo.exerciseName )
 
