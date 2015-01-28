@@ -7,7 +7,9 @@ GSLOGS = $(NGINXLOGS)/gitstream_access.log $(NGINXLOGS)/gitstream_error.log
 GITSTREAM_USER := $(shell grep gitstream /etc/passwd; echo $$?)
 
 build:
+ifeq ($(PACKAGING),)
 	npm install
+endif
 	NODE_ENV=production node node_modules/gulp/bin/gulp.js build
 
 install:
@@ -33,6 +35,9 @@ uninstall:
 	-userdel -r gitstream > /dev/null
 
 clean:
-	rm -rf dist node_modules
+ifeq ($(PACKAGING),)
+	rm -rf node_modules
+endif
+	rm -rf dist
 
 distclean: clean;
