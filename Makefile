@@ -32,7 +32,8 @@ endif
 
 uninstall:
 	rm -rf $(GSDIRS) $(GSLOGS) $(DESTDIR)/var/opt/gitstream
-	-userdel -r gitstream > /dev/null
+	sudo su -lc 'kill -15 -1'
+	-userdel -r gitstream > /dev/null 2>&1
 
 clean:
 ifeq ($(PACKAGING),)
