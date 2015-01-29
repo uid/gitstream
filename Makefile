@@ -13,6 +13,7 @@ endif
 	NODE_ENV=production node node_modules/gulp/bin/gulp.js build
 
 install:
+	npm prune --production
 	mkdir -p $(GSDIRS) $(NGINXLOGS)
 	cp -R dist $(DEST)
 	cp -R node_modules $(DEST)
@@ -32,7 +33,7 @@ endif
 
 uninstall:
 	rm -rf $(GSDIRS) $(GSLOGS) $(DESTDIR)/var/opt/gitstream
-	sudo su -lc 'kill -15 -1'
+	sudo su gitstream -lc 'kill -15 -1'
 	-userdel -r gitstream > /dev/null 2>&1
 
 clean:
