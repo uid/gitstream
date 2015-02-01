@@ -112,7 +112,8 @@ utils = module.exports = {
                 .then( function( file ) {
                     var fileTemplate = typeof template === 'function' ? template( src ) : template,
                         templated = mustache.render( file, fileTemplate )
-                    return q.nfcall( fs.writeFile, dest, templated )
+                    return utils.mkdirp( path.dirname( dest ) )
+                    .then( q.nfcall.bind( null, fs.writeFile, dest, templated ) )
                 })
             }
         })
