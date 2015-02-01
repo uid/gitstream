@@ -2,9 +2,10 @@ var spawn = require('child_process').spawn,
     path = require('path'),
     fs = require('fs'),
     q = require('q'),
-    mustache = require('mustache')
+    mustache = require('mustache'),
+    utils
 
-module.exports = {
+utils = module.exports = {
     /**
      * Converts events in dash-delimited format to properties of the form onEventName
      * @param {Array} prefix the prefix of the propified events. Default: on
@@ -58,18 +59,61 @@ module.exports = {
     },
 
     /**
+     * Recursively makes directories, a la `mkdir -p`
+     * @param {String} dirPath the path to the directory to make
+     * @param {String} base the directory in which to create the tree. Default: /
+     * @return {Promise}
+     */
+    mkdirp: function( dirPath, base ) {
+        var rel = base || '/',
+            dirs = Array.isArray( dirPath ) ? dirPath : dirPath.split( path.sep ),
+            theDir = path.join( rel, dirs.shift() || '' ),
+            mkChildDir = dirs.length === 0 ? function() {} :
+                q.nfcall.bind( null, this.mkdirp.bind( this ), dirs, theDir )
+
+        return q.nfcall( fs.stat, theDir )
+        .then( mkChildDir, function( e ) {
+            if ( e.code === 'ENOENT' ) {
+                return q.nfcall( fs.mkdir, theDir ).then( mkChildDir )
+            }
+            throw e
+        })
+    },
+
+    cpr: function( src, dest ) {
+        return q.nfcall( fs.stat, dest )
+        .then( function( stats ) {
+            if ( !stats.isDirectory() ) {
+                throw 'cannot overwrite non-directory \'' + dest '\' with \'' + src + '\''
+            }
+            return q.nfcall( fs.readdir, dest )
+            .then( function( listing ) {
+                
+            })
+
+            return utils.cpr( src, path.join( dest, path.basename( src ) ) )
+        })
+        .fail( )
+    },
+
+    /**
      * Templates a file and writes it out
-     * @param {String} src the path to the source file
-     * @param {String} dest the path to the output file
+     * @param {String} src the path to the source file/dir. Leave blank to create new file.
+     * @param {String} dest the path to the output file/dir (only file if `src` is unspecified)
      * @param {Object} template a template object a la mustache
      * @return {Promise}
      */
-    writeTemplated: function( src, dest, template ) {
-        var self = this,
-            srcPath = path.join.bind( null, src ),
-            destPath = path.join.bind( null, dest )
+    writeOut: function( src, dest, template ) {
+        if ( !src ) {
+            return utils.mkdirp( path.dirname( dest ) )
+            .then( q.nfcall.bind( null, fs.writeFile, dest ) )
+        }
+
         return q.nfcall( fs.stat, src )
         .then( function( stats ) {
+            var srcPath = path.join.bind( null, src ),
+                destPath = path.join.bind( null, dest )
+
             if ( stats.isDirectory() ) { // recursiely template and write out directory
                 return q.nfcall( fs.mkdir, dest ) // make the dest directory
                 .then( function() {
@@ -77,7 +121,7 @@ module.exports = {
                 })
                 .then( function( dirContents ) {
                     return q.all( dirContents.map( function( file ) {
-                        return self.writeTemplated( srcPath( file ), destPath( file ), template )
+                        return utils.writeOut( srcPath( file ), destPath( file ), template )
                     }) )
                 })
             } else {
@@ -97,20 +141,29 @@ module.exports = {
      * @param {String} srcBase path to which src files paths are relative. Default: /
      * @param {Object} spec the specification for the commit
      *  spec: {
-     *      msg: String,
-     *      author: String,
-     *      date: Date,
-     *      files: [ 'filepath', { src: 'path', dest: 'path', template: (Object|Function) } ],
-     *      // note: template and dest are optional in long-form file specs
-     *   }
+     *    msg: String,
+     *    author: String, // Default: GitStream <gitstream@csail.mit.edu>
+     *    date: Date, // Default: current Date
+     *    files: Array[String|Object]
+     *      // if String, copies from src to dest. Assumes same directory structure
+     *      // if Object, refers to a fileSpec, as described below
+     *  }
+     *
+     *  fileSpec: {
+     *    src: String, // path to file relative to `srcBase`. Leave blank when creating new files.
+     *      // can be a directory. will be recursively templated/written out
+     *    dest: String, // path to destination relative to `repo`. Will recursively create dirs.
+     *    template: Object|Function, // a Mustache template object or object-generating function
+     *      // the object-generating function receives the source path. noop if src is undefined
+     *  }
      * @return {Promise} a promise on the completion of the commands
      */
-    gitAddCommit: function( repo, srcBase, spec ) {
-        var self = this,
-            srcPath = path.join.bind( null, srcBase || '/' ),
+    addCommit: function( repo, srcBase, spec ) {
+        var srcPath = path.join.bind( null, arguments.length < 3 ? '/' : srcBase ),
             destPath = path.join.bind( null, repo ),
-            commitAuthor = spec.author || 'Nick Hynes <nhynes@mit.edu>',
+            commitAuthor = spec.author || 'GitStream <gitstream@csail.mit.edu>',
             commitDate = ( spec.date || new Date() ).toISOString(),
+            commitMsg = spec.msg.replace( /'/g, '\\"' ),
             filesToStage = []
 
         return q.all( spec.files.map( function( fileSpec ) {
@@ -118,16 +171,16 @@ module.exports = {
                 dest = typeof fileSpec === 'string' ? fileSpec : fileSpec.dest || fileSpec.src,
                 template = typeof fileSpec === 'string' ? {} : fileSpec.template
 
-            filesToStage.push( dest )
+            filesToStage.push( ':' + dest )
 
-            return self.writeTemplated( src, destPath( dest ), template )
+            return utils.writeOut( src, destPath( dest ), template )
         }) )
         .then( function() {
-            return self.git( repo, 'add', filesToStage.join(' ') )
+            return utils.git( repo, 'add', filesToStage.join(' ') )
         })
         .then( function() {
-            return self.git( repo, 'commit',
-                [ '-m', spec.msg, '--author="' + commitAuthor + '"', '--date=' + commitDate ])
+            return utils.git( repo, 'commit',
+                [ '-m "', spec.msg, '"', '--author="' + commitAuthor + '"', '--date=' + commitDate ] )
         })
     }
 }

@@ -105,8 +105,7 @@ function createRepo( repoName ) {
         return q.nfcall( rimraf, pathToRepoDir )
     })
     .then( function() {
-        var done = q.defer(),
-            commits = q.promise( function( resolve ) {
+        var commits = q.promise( function( resolve ) {
                 var commitsConf = exerciseConfs.repos[ repoInfo.exerciseName ]().commits
                 if ( Array.isArray( commitsConf ) && commitsConf.length ) {
                     resolve( commitsConf )
@@ -117,30 +116,21 @@ function createRepo( repoName ) {
                 }
             }).catch( function( err ) { done.reject( err ) })
 
-        spawn( 'mkdir', [ '-p', path.dirname( pathToRepo ) ] ).on( 'close', function( mkdirRet ) {
-            if ( mkdirRet !== 0 ) { return done.reject( Error('Making repo dir failed') ) }
-
-            spawn( 'cp', [ '-r', pathToStarterRepo, pathToRepo ] ).on( 'close', function( cpRet ) {
-                if ( cpRet !== 0 ) { return done.reject( Error('Copying exercise repo failed') ) }
-
-                commits.then( function( commits ) {
-                    if ( commits ) {
-                        return commits.reduce( function( commitChain, commit ) {
-                            return commitChain.then( function() {
-                                return utils.gitAddCommit( pathToRepo, pathToExercise, commit )
-                            })
-                        }, q.fulfill() )
-                    } else {
-                        return utils.git( pathToRepo, 'commit', [ '-m', 'Initial commit' ] )
-                    }
-                })
-                .done( function() {
-                    done.resolve( repoInfo )
-                })
+        return utils.mkdirp( path.dirname( pathToRepo ) )
+        .then( utils.cpr.bind( null, pathToStarterRepo, pathToRepo ) )
+        .then( function() {
+            return commits.then( function( commits ) {
+                if ( commits ) {
+                    return commits
+                    .map( function( commit ) {
+                        return utils.addCommit.bind( null, pathToRepo, pathToExercises, commit )
+                    })
+                    .reduce( q.when, q.filfill() )
+                } else {
+                    return utils.git( pathToRepo, 'commit', [ '-m', 'Initial commit' ] )
+                }
             })
         })
-
-        return done.promise
     })
 }
 

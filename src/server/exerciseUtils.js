@@ -170,7 +170,7 @@ module.exports = function( config ) {
          * @return {Promise} if no callback is given
          */
         addCommit: function( spec, callback ) {
-            return utils.gitAddCommit( repoPath, exercisePath, spec ).nodeify( callback )
+            return utils.addCommit( repoPath, exercisePath, spec ).nodeify( callback )
         },
 
         /**
