@@ -19,6 +19,7 @@
     "forever": "^0.13.0",
     "git-angler": "^1.0.1",
     "gitstream-exercises": "uid/gitstream-exercises",
+    "glob": "^4.3.5",
     "hiredis": "^0.1.17",
     "lodash": "^2.4.1",
     "mongodb": "^2.0.13",

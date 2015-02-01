@@ -37,9 +37,10 @@ module.exports = function( config ) {
                 return result
             })
             .nodeify( callback )
-        }
+        },
+        exUtils
 
-    return {
+    exUtils = {
         /**
          * Executes a git command
          * @param {String} cmd the git command to run
@@ -91,7 +92,7 @@ module.exports = function( config ) {
          * @see compareFiles and the description of the shadowbranch
          */
         compareFilesShadow: function() {
-            return shadowFn( this.compareFiles, Array.prototype.slice.call( arguments ) )
+            return shadowFn( exUtils.compareFiles, Array.prototype.slice.call( arguments ) )
         },
 
         /**
@@ -152,7 +153,7 @@ module.exports = function( config ) {
          * @see fileContains and the description of shadow branch, above
          */
         shadowFileContains: function() {
-            return shadowFn( this.fileContains, Array.prototype.slice.call( arguments ) )
+            return shadowFn( exUtils.fileContains, Array.prototype.slice.call( arguments ) )
         },
 
         /**
@@ -218,11 +219,26 @@ module.exports = function( config ) {
                 ref = arguments.length >= 2 + cbfnp ? arguments[1] : 'HEAD',
                 needleRegExp = needle instanceof RegExp ? needle : new RegExp( needle )
 
-            return this.getCommitMsg( ref )
+            return exUtils.getCommitMsg( ref )
             .then( function( msg ) {
                 return needleRegExp.test( msg )
             })
             .nodeify( cbfnp ? callback : null )
+        },
+
+        /**
+         * Performs a glob match in the repo directory
+         * @param {String} fileGlob the glob to match against
+         * @param {Function} callback Optional. (err, [String]: matching filenames)
+         * @return {Promise} if no callback is given
+         */
+        filesMatching: function( fileGlob, callback ) {
+            return q.nfcall( glob, fileGlob, { cwd: repoDir, root: repoDir, silent: true } )
+            .nodeify( callback )
+        },
+
+        shadowFilesMatching: function() {
+            return shadowFn( exUtils.filesMatching, Array.prototype.slice.call( arguments ) )
         },
 
         /**
@@ -232,10 +248,8 @@ module.exports = function( config ) {
          * @return {Promise} if no callback is given
          */
         fileExists: function( fileGlob, callback ) {
-            return q.nfcall( glob, fileGlob, { cwd: repoDir, root: repoDir, silent: true } )
-            .then( function( files ) {
-                return files.length !== 0
-            })
+            return exUtils.filesMatching( fileGlob )
+            .then( function( files ) { return files.length !== 0 })
             .nodeify( callback )
         },
 
@@ -244,7 +258,9 @@ module.exports = function( config ) {
          * @see fileExists and the description of the shadowbranch
          */
         shadowFileExists: function() {
-            return shadowFn( this.fileExists, Array.prototype.slice.call( arguments ) )
+            return shadowFn( exUtils.fileExists, Array.prototype.slice.call( arguments ) )
         }
     }
+
+    return exUtils
 }
