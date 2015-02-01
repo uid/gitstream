@@ -7,6 +7,7 @@ var diff = require('diff'),
     fs = require('fs'),
     path = require('path'),
     q = require('q'),
+    glob = require('glob'),
     utils = require('./utils'),
 
     SHADOWBRANCH = 'refs/gitstream/shadowbranch'
@@ -226,20 +227,14 @@ module.exports = function( config ) {
 
         /**
          * Checks for the existence of a file in the repo
-         * @param {String} filename the path to the file
+         * @param {String} fileGlob a glob describing the the file
          * @param {Function} callback Optional. (err, Boolean fileExists)
          * @return {Promise} if no callback is given
          */
-        fileExists: function( filename, callback ) {
-            return q.nfcall( fs.stat, path.join( repoDir, filename ) )
-            .then( function() {
-                return true
-            }, function( err ) {
-                if ( err && err.code !== 'ENOENT' ) {
-                    throw Error( err )
-                } else {
-                    return false
-                }
+        fileExists: function( fileGlob, callback ) {
+            return q.nfcall( glob, fileGlob, { cwd: repoDir, root: repoDir, silent: true } )
+            .then( function( files ) {
+                return files.length !== 0
             })
             .nodeify( callback )
         },
