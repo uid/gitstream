@@ -139,6 +139,7 @@ function createRepo( repoName ) {
                 })
             })
         })
+        .done() // TODO: make promises impl of cp-r
 
         return done.promise
     })
