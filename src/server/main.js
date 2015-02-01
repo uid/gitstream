@@ -388,7 +388,8 @@ shoe( function( stream ) {
             logger.log( userId, logger.EVENT.GO, exerciseName )
 
             rcon.hgetall( userId, function( err, state ) {
-                var startState
+                var startState,
+                    endTime
 
                 // only start exercise if user is on the exercise page
                 if ( exerciseName !== state.currentExercise ) { return }
@@ -396,16 +397,18 @@ shoe( function( stream ) {
                 if ( exerciseMachine ) { exerciseMachine.halt() }
                 exerciseMachine = createExerciseMachine( exerciseName )
                 startState = exerciseMachine._states.startState
+                // set by EM during init, but init sends events. TODO: should probably be fixed
+                endTime = Date.now() + exerciseMachine._timeLimit * 1000
 
                 rcon.multi()
                     .expire( userId, CLIENT_IDLE_TIMEOUT )
                     .hmset( userId,
                        FIELD_EXERCISE_STATE, startState,
-                       FIELD_END_TIME, exerciseMachine.endTime )
+                       FIELD_END_TIME, endTime )
                     .exec( logErr )
 
                 state[ FIELD_EXERCISE_STATE ] = startState
-                state.timeRemaining = exerciseMachine.endTime - Date.now()
+                state.timeRemaining = exerciseMachine._timeLimit * 1000
                 delete state[ FIELD_END_TIME ]
 
                 clientEvents.emit( 'sync', state )
