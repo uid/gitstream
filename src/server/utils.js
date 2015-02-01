@@ -68,8 +68,7 @@ utils = module.exports = {
         var rel = base || '/',
             dirs = Array.isArray( dirPath ) ? dirPath : dirPath.split( path.sep ),
             theDir = path.join( rel, dirs.shift() || '' ),
-            mkChildDir = dirs.length === 0 ? function() {} :
-                q.nfcall.bind( null, this.mkdirp.bind( this ), dirs, theDir )
+            mkChildDir = dirs.length === 0 ? function() {} : utils.mkdirp.bind( null, dirs, theDir )
 
         return q.nfcall( fs.stat, theDir )
         .then( mkChildDir, function( e ) {
