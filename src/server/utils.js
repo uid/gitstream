@@ -74,6 +74,7 @@ utils = module.exports = {
         .then( mkChildDir, function( e ) {
             if ( e.code === 'ENOENT' ) {
                 return q.nfcall( fs.mkdir, theDir ).then( mkChildDir )
+                .catch( function( e ) { if ( e.code !== 'EEXIST' ) { throw e } } )
             }
             throw e
         })
@@ -165,7 +166,7 @@ utils = module.exports = {
         })
         .then( function() {
             return utils.git( repo, 'commit', [
-                '-m', '"' + commitMsg + '"',
+                '-m', commitMsg,
                 '--author="' + commitAuthor + '"',
                 '--date=' + commitDate
             ])
