@@ -106,12 +106,16 @@ function createRepo( repoName ) {
     })
     .then( function() {
         var done = q.defer(),
+            repoUtils = {
+                _: require('lodash'),
+                resourcesPath: pathToExercise
+            },
             commits = q.promise( function( resolve ) {
                 var commitsConf = exerciseConfs.repos[ repoInfo.exerciseName ]().commits
                 if ( Array.isArray( commitsConf ) && commitsConf.length ) {
                     resolve( commitsConf )
                 } else if ( typeof commitsConf === 'function' ) {
-                    commitsConf( pathToExercise, resolve )
+                    commitsConf.call( repoUtils, resolve )
                 } else {
                     resolve()
                 }
