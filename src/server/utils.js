@@ -89,7 +89,7 @@ utils = module.exports = {
     writeOut: function( src, dest, template ) {
         if ( !src ) {
             return utils.mkdirp( path.dirname( dest ) )
-            .then( q.nfcall.bind( null, fs.writeFile, dest ) )
+            .then( q.nfcall.bind( null, fs.writeFile, dest, '' ) )
         }
 
         return q.nfcall( fs.stat, src )
@@ -150,7 +150,8 @@ utils = module.exports = {
             filesToStage = []
 
         return q.all( spec.files.map( function( fileSpec ) {
-            var src = srcPath( typeof fileSpec === 'string' ? fileSpec : fileSpec.src ),
+            var srcArg = typeof fileSpec === 'string' ? fileSpec : fileSpec.src,
+                src = srcArg ? srcPath( srcArg ) : '',
                 dest = typeof fileSpec === 'string' ? fileSpec : fileSpec.dest || fileSpec.src,
                 template = typeof fileSpec === 'string' ? {} : fileSpec.template
 
