@@ -80,22 +80,6 @@ utils = module.exports = {
         })
     },
 
-    cpr: function( src, dest ) {
-        return q.nfcall( fs.stat, dest )
-        .then( function( stats ) {
-            if ( !stats.isDirectory() ) {
-                throw 'cannot overwrite non-directory \'' + dest '\' with \'' + src + '\''
-            }
-            return q.nfcall( fs.readdir, dest )
-            .then( function( listing ) {
-                
-            })
-
-            return utils.cpr( src, path.join( dest, path.basename( src ) ) )
-        })
-        .fail( )
-    },
-
     /**
      * Templates a file and writes it out
      * @param {String} src the path to the source file/dir. Leave blank to create new file.
@@ -179,8 +163,11 @@ utils = module.exports = {
             return utils.git( repo, 'add', filesToStage.join(' ') )
         })
         .then( function() {
-            return utils.git( repo, 'commit',
-                [ '-m "', spec.msg, '"', '--author="' + commitAuthor + '"', '--date=' + commitDate ] )
+            return utils.git( repo, 'commit', [
+                '-m', '"' + commitMsg + '"',
+                '--author="' + commitAuthor + '"',
+                '--date=' + commitDate
+            ])
         })
     }
 }

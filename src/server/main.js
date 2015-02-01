@@ -105,7 +105,8 @@ function createRepo( repoName ) {
         return q.nfcall( rimraf, pathToRepoDir )
     })
     .then( function() {
-        var commits = q.promise( function( resolve ) {
+        var done = q.defer(),
+            commits = q.promise( function( resolve ) {
                 var commitsConf = exerciseConfs.repos[ repoInfo.exerciseName ]().commits
                 if ( Array.isArray( commitsConf ) && commitsConf.length ) {
                     resolve( commitsConf )
@@ -116,21 +117,30 @@ function createRepo( repoName ) {
                 }
             }).catch( function( err ) { done.reject( err ) })
 
-        return utils.mkdirp( path.dirname( pathToRepo ) )
-        .then( utils.cpr.bind( null, pathToStarterRepo, pathToRepo ) )
+        utils.mkdirp( path.dirname( pathToRepo ) )
         .then( function() {
-            return commits.then( function( commits ) {
-                if ( commits ) {
-                    return commits
-                    .map( function( commit ) {
-                        return utils.addCommit.bind( null, pathToRepo, pathToExercises, commit )
-                    })
-                    .reduce( q.when, q.filfill() )
-                } else {
-                    return utils.git( pathToRepo, 'commit', [ '-m', 'Initial commit' ] )
-                }
+            spawn( 'cp', [ '-r', pathToStarterRepo, pathToRepo ] ).on( 'close', function( cpRet ) {
+                if ( cpRet !== 0 ) { return done.reject( Error('Copying exercise repo failed') ) }
+
+                commits.then( function( commits ) {
+                    var addCommit = function( spec ) {
+                        return utils.addCommit.bind( null, pathToRepo, pathToExercise, spec )
+                    }
+                    if ( commits ) {
+                        return commits.map( function( commit ) {
+                            return addCommit( commit )
+                        }).reduce( q.when, q.fulfill() )
+                    } else {
+                        return utils.git( pathToRepo, 'commit', [ '-m', 'Initial commit' ] )
+                    }
+                })
+                .done( function() {
+                    done.resolve( repoInfo )
+                })
             })
         })
+
+        return done.promise
     })
 }
 
