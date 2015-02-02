@@ -199,10 +199,11 @@ events.on( 'sync', function( newState ) {
     var hashExercise = window.location.hash.substring(1)
 
     /* merge the server's state with the client state
-       only overwriting if new (non-null) value or endTime is received */
+       only overwriting if new (non-null) value, endTime,
+       or timeRemaining is received */
     _.forOwn( newState, function( v, k ) {
         state[k] = ( v === 'null' || !v ? state[k] : v )
-        if ( k === 'endTime' ) {
+        if ( k === 'endTime' || k === 'timeRemaining' ) {
             state[k] = v
         }
     })
