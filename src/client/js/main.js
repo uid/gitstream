@@ -121,9 +121,14 @@ function renderExerciseView( exerciseName, conf, user ) {
             },
             timeLimit: toTimeStr( conf.timeLimit * 1000 ), // sec -> msec
             exerciseName: exerciseName
-        }
+        },
+        $rendered = $( exerciseTmp( templateParams ) )
 
-    return $( exerciseTmp( templateParams ) )
+    if ( conf.timeLimit === undefined || conf.timeLimit === Infinity ) {
+        $rendered.find('.timer-wrap').css('display', 'none')
+    }
+
+    return $rendered
 }
 
 function selectViewStep( name ) {
