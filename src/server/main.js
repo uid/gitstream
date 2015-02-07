@@ -241,9 +241,6 @@ app.use( '/go', function( req, res ) {
 
     createRepo( repo )
     .done( function( repoInfo ) {
-        // LOGGING
-        logger.log( repoInfo.userId, logger.EVENT.GO, repoInfo.exerciseName )
-
         rcon.publish( repoInfo.userId + ':go', repoInfo.exerciseName, logErr )
         res.writeHead( 200 )
         res.end()
