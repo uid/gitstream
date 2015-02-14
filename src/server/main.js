@@ -197,6 +197,7 @@ backend = angler.gitHttpBackend({
 
 // hard resets and checks out the updated HEAD after a push to a non-bare remote repo
 // this can't be done inside of the post-receive hook, for some reason
+// NOTE: when Git >= 2.3.0 is in APT, look into `receive.denyCurrentBranch updateInstead`
 eventBus.setHandler( '*', 'receive', function( repo, action, updates, done ) {
     var repoPath = path.resolve( PATH_TO_REPOS, '.' + repo ),
         git = utils.git.bind( utils, repoPath ),
