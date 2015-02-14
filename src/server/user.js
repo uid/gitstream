@@ -2,8 +2,7 @@ var crypto = require('crypto'),
     q = require('q')
 
 module.exports = function( opts ) {
-    var dbcon = opts.dbcon,
-        logger = opts.logger
+    var dbcon = opts.dbcon
 
     return {
         getUserKey: function( userId ) {
@@ -11,19 +10,22 @@ module.exports = function( opts ) {
                 var users = db.collection('users')
                 return q.nfcall( users.findOne.bind( users ), { id: userId }, { key: true } )
                 .then( function( user ) {
-                    var userKey
+                    var newUserKey
 
                     if ( user ) {
-                        return user.key
+                        return q.fulfill( user.key )
                     } else {
-                        // LOGGING
-                        logger.createLog( userId )
+                        newUserKey = crypto.pseudoRandomBytes(20).toString('hex'),
+                        user = {
+                            id: userId,
+                            key: newUserKey,
+                            created: Date.now()
+                        }
 
-                        userKey = crypto.createHash('sha1')
-                            .update( crypto.pseudoRandomBytes(40) )
-                            .digest('hex')
-                        q.nfcall( users.insert.bind( users ), { id: userId, key: userKey } )
-                        return userKey
+                        return q.nfcall( users.insertOne.bind( users ), user )
+                        .then( function() {
+                            return newUserKey
+                        })
                     }
                 })
             })
@@ -60,10 +62,7 @@ module.exports = function( opts ) {
         },
 
         createRandomId: function() {
-            return 'user' + crypto.createHash('sha1')
-                .update( crypto.pseudoRandomBytes(20) )
-                .digest('hex')
-                .substring(0, 5)
+            return 'user' + crypto.pseudoRandomBytes(3).toString('hex').substring(0, 5)
         }
     }
 }
