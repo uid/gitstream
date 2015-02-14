@@ -30,7 +30,13 @@ var angler = require('git-angler'),
     }),
     CLIENT_IDLE_TIMEOUT = 60 * 60 * 1000, // 1 hr before resting client state expires
     PORT = 4242,
-    logErr = function( err ) { if ( err ) { console.error( 'Error: ' + err ) } }
+    logDbErr = function( userId, exercise, data ) {
+        return function ( err ) {
+            if ( !err ) { return }
+            data.msg = err.message
+            logger.err( logger.ERR.DB, userId, exercise, data )
+        }
+    }
 
 /**
  * Extracts data from the components of a repo's path
@@ -140,9 +146,12 @@ function createRepo( repoName ) {
                 })
                 .done( function() {
                     done.resolve( repoInfo )
+                }, function( err ) {
+                    done.reject( err )
                 })
             })
         })
+        .catch( function( err ) { done.reject( err ) })
         .done() // TODO: make promises impl of cp-r
 
         return done.promise
@@ -155,14 +164,17 @@ eventBus.setHandler( '*', '404', function( repoName, _, data, clonable ) {
 
     // LOGGING
     var repoInfo = extractRepoInfoFromPath( repoName )
-    logger.log( repoInfo.userId, logger.EVENT.REPO_404, repoInfo.userId, repoInfo.exerciseName )
+    logger.log( logger.EVENT.INIT_CLONE, repoInfo.userId, repoInfo.exerciseName )
 
     createRepo( repoName )
     .done( function() {
         clonable( true )
     }, function( err ) {
         clonable( false )
-        console.error( err )
+        // LOGGING
+        logger.err( logger.ERR.CREATE_REPO, repoInfo.userId, repoInfo.exerciseName, {
+            msg: err.message
+        })
     })
 })
 
@@ -174,8 +186,11 @@ backend = angler.gitHttpBackend({
         .done( function() {
             cb({ ok: true })
         }, function( err ) {
+            var info = extractRepoInfoFromPath( params.repoPath )
+            logger.err( logger.ERR.GIT_HTTP, info.userId, info.exerciseName, {
+                msg: err.message
+            })
             cb({ ok: false, status: 404 })
-            console.error( err )
         })
     }
 })
@@ -205,24 +220,15 @@ eventBus.setHandler( '*', 'receive', function( repo, action, updates, done ) {
     }
 
     chain.catch( function( err ) {
-        console.error( err )
+        var repoInfo = extractRepoInfoFromPath( repo )
+        // LOGGING
+        logger.err( logger.ERR.ON_RECEIVE, repoInfo.userId, repoInfo.exerciseName, {
+            msg: err.message
+        })
     })
     .done( function() {
         done()
     })
-})
-
-// LOGGING
-eventBus.addListener( 'logger', '*', '*', function( repo, action ) {
-    if ( action !== 'clone' || action !== 'push' ) { return }
-    var args = Array.prototype.slice.call( arguments ).slice(2),
-        repoInfo = extractRepoInfoFromPath( repo ),
-        data = {
-            exercise: repoInfo.exerciseName,
-            action: action,
-            data: args
-        }
-    logger.log( repoInfo.userId, logger.EVENT.GIT, data )
 })
 
 app.use( compression() )
@@ -241,13 +247,22 @@ app.use( '/go', function( req, res ) {
 
     createRepo( repo )
     .done( function( repoInfo ) {
-        rcon.publish( repoInfo.userId + ':go', repoInfo.exerciseName, logErr )
+        rcon.publish( repoInfo.userId + ':go', repoInfo.exerciseName,
+                   logDbErr( repoInfo.userId, repoInfo.exerciseName, {
+                       desc: 'Redis go publish'
+                   }) )
         res.writeHead( 200 )
         res.end()
     }, function( err ) {
         res.writeHead( 403 )
         res.end()
-        console.error( err )
+        // LOGGING
+        logger.err( logger.ERR.CREATE_REPO, null, null, {
+            desc: 'New repo on go',
+            repo: repo,
+            remoteUrl: remoteUrl,
+            msg: err.message
+        })
     })
 })
 
@@ -296,8 +311,10 @@ shoe( function( stream ) {
                         listenerDef.helper.apply( null, args )
 
                         // LOGGING
-                        logger.log( userId, logger.EVENT.EM,
-                                   { type: listenerDef.event, info: args.slice(1) })
+                        logger.log( logger.EVENT.EM, userId, exerciseName, {
+                            type: listenerDef.event,
+                            info: args.slice( 1 )
+                        })
                     }
                 },
                 unsetExercise = function() {
@@ -310,7 +327,10 @@ shoe( function( stream ) {
                         rcon.multi()
                         .expire( userId, CLIENT_IDLE_TIMEOUT )
                         .hset( userId, FIELD_EXERCISE_STATE, newState )
-                        .exec( logErr )
+                        .exec( logDbErr( userId, exerciseName, {
+                            desc: 'Redis step update exercise state',
+                            newState: newState
+                        }) )
                     } }
                 ]
 
@@ -330,7 +350,7 @@ shoe( function( stream ) {
         rsub.quit()
 
         // LOGGING
-        logger.log( userId, logger.EVENT.QUIT )
+        logger.log( logger.EVENT.QUIT, userId, null )
     })
 
     // on connect, sync the client with the stored client state
@@ -339,27 +359,37 @@ shoe( function( stream ) {
 
         var userKeyPromise = user.getUserKey( userId )
 
-        userKeyPromise.done( function( key ) { userKey = key })
+        userKeyPromise.done( function( key ) { userKey = key }, function( err ) {
+            // LOGGING
+            logger.err( logger.ERR.DB, userId, null, { msg: err.message } )
+        })
 
         rcon.hgetall( userId, function( err, clientState ) {
+            if ( err ) {
+                // LOGGING
+                logger.err( logger.ERR.DB, userId, null, {
+                    desc: 'Redis get client state',
+                    msg: err.message
+                })
+                return clientEvents.emit( 'err', err )
+            }
             if ( !clientState ) {
                 clientState = { currentExercise: null }
-                rcon.hmset( userId, clientState, logErr )
+                rcon.hmset( userId, clientState, logDbErr( userId, null, {
+                    desc: 'Redis unset client state'
+                }) )
             }
 
-            userKeyPromise.done( function( userKey ) {
+            userKeyPromise.then( function( userKey ) {
                 var timeRemaining = clientState[ FIELD_END_TIME ] - Date.now() || undefined,
                     exerciseState = clientState[ FIELD_EXERCISE_STATE ],
                     currentExercise = clientState[ FIELD_CURRENT_EXERCISE ]
 
                 // LOGGING
-                logger.log( userId, logger.EVENT.SYNC, {
+                logger.log( logger.EVENT.SYNC, userId, currentExercise, {
                     timeRemaining: timeRemaining,
-                    exercieState: exerciseState,
-                    exerciseName: currentExercise
+                    exercieState: exerciseState
                 })
-
-                if ( err ) { return clientEvents.emit( 'err', err ) }
 
                 if ( exerciseState && ( timeRemaining === undefined || timeRemaining > 0 ) ) {
                     // there's already an excercise running. reconnect to it
@@ -386,7 +416,7 @@ shoe( function( stream ) {
         rsub.subscribe( userId + ':go' )
         rsub.on( 'message', function( channel, exerciseName ) {
             // LOGGING
-            logger.log( userId, logger.EVENT.GO, exerciseName )
+            logger.log( logger.EVENT.GO, userId, exerciseName )
 
             rcon.hgetall( userId, function( err, state ) {
                 var startState,
@@ -406,7 +436,15 @@ shoe( function( stream ) {
                     .hmset( userId,
                        FIELD_EXERCISE_STATE, startState,
                        FIELD_END_TIME, endTime )
-                    .exec( logErr )
+                    .exec( function( err ) {
+                        if ( err ) {
+                            // LOGGING
+                            logger.err( logger.ERR.DB, userId, exerciseName, {
+                                desc: 'Redis go',
+                                msg: err.message
+                            })
+                        }
+                    })
 
                 state[ FIELD_EXERCISE_STATE ] = startState
                 state.timeRemaining = exerciseMachine._timeLimit * 1000
@@ -430,10 +468,9 @@ shoe( function( stream ) {
             .expire( userId, CLIENT_IDLE_TIMEOUT )
             .hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME )
             .hset( userId, FIELD_CURRENT_EXERCISE, newExercise )
-            .exec( logErr )
+            .exec( logDbErr( userId, newExercise, { desc: 'Redis change exercise' } ) )
 
         // LOGGING
-        logger.log( userId, logger.EVENT.CHANGE_EXERCISE, newExercise )
-
+        logger.log( logger.EVENT.CHANGE_EXERCISE, userId, newExercise )
     })
 }).install( server, '/events' )

@@ -1,50 +1,59 @@
-var q = require('q')
-
 module.exports = function( opts ) {
     var dbcon = opts.dbcon
 
     return {
         EVENT: {
-            REPO_404: 'REPO_404',
-            GIT: 'GIT',
+            NEW_USER: 'NEW_USER',
+            INIT_CLONE: 'INIT_CLONE',
             QUIT: 'QUIT',
             EM: 'EM',
             GO: 'GO',
             CHANGE_EXERCISE: 'CHANGE_EXERCISE',
-            SYNC: 'SYNC'
+            SYNC: 'SYNC',
+            ERROR: 'ERROR'
+        },
+        ERR: {
+            GIT_HTTP: 'GIT_HTTP',
+            CREATE_REPO: 'LOG_ERR',
+            ON_RECEIVE: 'ON_RECEIVE',
+            EX: 'EXERCISE_ERR',
+            DB: 'DB_ERR',
+            ERR: 'ERR'
         },
 
-        log: function( userId, eventType, data ) {
-            if ( !this.EVENT[ eventType ] ) {
-                throw Error('Attempted to log invalid event: ' + eventType)
-            }
-            var record = {
-                userId: userId,
-                event: eventType,
-                timestamp: Date.now(),
-                data: data
-            }
-            dbcon.then( function( db ) {
-                db.collection('logs').findOneAndUpdate({ userId: userId }, {
-                    $push: { events: record }
-                }, function( err ) {
-                    if ( err ) { console.err('LOG ERROR:', err) }
+        _log: function( record ) {
+            record.timestamp = Date.now()
+
+            dbcon.done( function( db ) {
+                db.collection('logs').insertOne( record, function( err ) {
+                    if ( err ) { console.error( '[ERROR] Logger error:', record, err ) }
                 })
             })
-            .done()
         },
 
-        createLog: function( userId ) {
-            var userLog = {
-                userId: userId,
-                created: Date.now(),
-                events: []
+        log: function( eventType, userId, exercise, data ) {
+            if ( !this.EVENT[ eventType ] ) {
+                return console.error( '[ERROR] Tried logging invalid event: ', eventType )
             }
-            dbcon.then( function( db ) {
-                var logs = db.collection('logs')
-                return q.nfcall( logs.insert.bind( logs ), userLog )
+            this._log({
+                userId: userId,
+                event: eventType,
+                exercise: exercise,
+                data: data
             })
-            .done()
+        },
+
+        err: function( type, userId, exercise, data ) {
+            if ( !this.ERR[ type ] ) {
+                return console.error( '[ERROR] Tried logging invalid error type: ', type )
+            }
+            this._log({
+                event: this.EVENT.ERROR,
+                type: type,
+                userId: userId,
+                exercise: exercise,
+                data: data
+            })
         }
     }
 }
