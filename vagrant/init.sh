@@ -22,7 +22,7 @@ su gitstream -c 'git config --global user.name "GitStream"'
 
 # build gitstream if it hasn't already been built
 if [ ! -d "/opt/gitstream/dist" ]; then
-    apt-get install npm
+    apt-get -y install npm make
     cd /opt/gitstream
     make build
 fi
