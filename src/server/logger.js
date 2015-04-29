@@ -45,7 +45,7 @@ module.exports = function( opts ) {
 
         err: function( type, userId, exercise, data ) {
             if ( !this.ERR[ type ] ) {
-                return console.error( '[ERROR] Tried logging invalid error type: ', type )
+                return console.error( '[ERROR] Tried logging invalid error type: ', type, data )
             }
             this._log({
                 event: this.EVENT.ERROR,
