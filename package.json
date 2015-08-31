@@ -18,7 +18,7 @@
     "duplex-emitter": "^2.1.2",
     "forever": "^0.13.0",
     "git-angler": "^1.0.1",
-    "gitstream-exercises": "uid/gitstream-exercises",
+    "gitstream-exercises": "git://github.com/uid/gitstream-exercises.git",
     "glob": "^4.3.5",
     "hiredis": "^0.1.17",
     "lodash": "^2.4.1",
