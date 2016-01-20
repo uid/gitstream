@@ -14,9 +14,11 @@ $ sudo apt-get update && sudo apt-get install gitstream
 Start by installing git, mongodb, nginx, node, npm, and redis-server.
 
 ```
+$ sudo apt-get update
+$ sudo apt-get -y install git nodejs-legacy npm nginx mongodb redis-server
 $ git clone https://github.com/uid/gitstream.git && cd gitstream
 $ make && sudo make install && cd /opt/gitstream
-$ sudo nginx
+$ sudo service nginx reload
 $ sudo su gitstream
 $ mongod --dbpath /var/opt/gitstream/mongo --fork --syslog
 $ redis-server redis.conf
