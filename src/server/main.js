@@ -474,4 +474,8 @@ shoe( function( stream ) {
         // LOGGING
         logger.log( logger.EVENT.CHANGE_EXERCISE, userId, newExercise )
     })
+
+    clientEvents.on( 'exerciseDone', function( doneExercise ) {
+        utils.exportToOmnivore(userId, doneExercise)
+    })
 }).install( server, '/events' )

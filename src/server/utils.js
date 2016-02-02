@@ -3,6 +3,8 @@ var spawn = require('child_process').spawn,
     fs = require('fs'),
     q = require('q'),
     mustache = require('mustache'),
+    crypto = require('crypto'),
+    request = require('request'),
     utils
 
 utils = module.exports = {
@@ -170,6 +172,33 @@ utils = module.exports = {
                 '--author="' + commitAuthor + '"',
                 '--date=' + commitDate
             ])
+        })
+    },
+
+    exportToOmnivore: function( userId, exercise ) {
+        console.log(userId)
+        console.log(exercise)
+
+        var doneExercise = exercise.toLowerCase()
+        var private_key = fs.readFileSync('omnivore.pem')
+
+        var record = {
+            username: userId,
+            key: '/classes/01-static-checking/gitstream-exercises/' + doneExercise + '/complete',
+            ts: new Date(),
+            value: true, // filler
+        }
+        var input = [ record ]
+        var sign = crypto.createSign('RSA-SHA256')
+        sign.update(JSON.stringify(input))
+        var signature = sign.sign(private_key, 'base64')
+        request.post({
+            url: 'https://omni.csail.mit.edu/6.005/sp16/api/v2/multiadd',
+            headers: { 'X-Omnivore-Signed': 'gitstream ' + signature },
+            json: input}, function(err, res) {
+            console.log(err)
+            console.log(res.statusCode)
+            console.log(res.body)
         })
     }
 }

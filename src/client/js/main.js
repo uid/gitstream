@@ -222,6 +222,9 @@ events.on( 'sync', function( newState ) {
 
 // forward exercise events to exercise machine emitter
 events.on( 'step', triggerExerciseEvent( 'step', function( newState, oldState, stepOutput ) {
+    if (newState === 'done') {
+        events.emit( 'exerciseDone', state.currentExercise)
+    }
     var newStateStepView = selectViewStep( newState ),
         newStateFeedback = newStateStepView.find('.feedback'),
         exerciseSteps = $('.exercise-view').find('.exercise-step')
