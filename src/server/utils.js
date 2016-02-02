@@ -176,15 +176,12 @@ utils = module.exports = {
     },
 
     exportToOmnivore: function( userId, exercise ) {
-        console.log(userId)
-        console.log(exercise)
-
         var doneExercise = exercise.toLowerCase()
         var private_key = fs.readFileSync('omnivore.pem')
 
         var record = {
             username: userId,
-            key: '/classes/01-static-checking/gitstream-exercises/' + doneExercise + '/complete',
+            key: '/classes/02-basic-java/gitstream-exercises/' + doneExercise + '/complete',
             ts: new Date(),
             value: true, // filler
         }
@@ -196,9 +193,6 @@ utils = module.exports = {
             url: 'https://omni.csail.mit.edu/6.005/sp16/api/v2/multiadd',
             headers: { 'X-Omnivore-Signed': 'gitstream ' + signature },
             json: input}, function(err, res) {
-            console.log(err)
-            console.log(res.statusCode)
-            console.log(res.body)
         })
     }
 }
