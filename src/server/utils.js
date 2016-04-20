@@ -175,13 +175,15 @@ utils = module.exports = {
         })
     },
 
-    exportToOmnivore: function( userId, exercise ) {
+    exportToOmnivore: function( userId, exercise, private_key ) {
+        if (!exercise) {
+            return
+        }
         var doneExercise = exercise.toLowerCase()
-        var private_key = fs.readFileSync('omnivore.pem')
 
         var record = {
             username: userId,
-            key: '/classes/02-basic-java/gitstream-exercises/' + doneExercise + '/complete',
+            key: '/classes/27-team-version-control/gitstream-exercises/' + doneExercise + '/complete',
             ts: new Date(),
             value: true, // filler
         }

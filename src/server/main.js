@@ -278,6 +278,7 @@ app.use( '/user', function( req, res ) {
 server = app.listen( PORT )
 
 shoe( function( stream ) {
+    var private_key = fs.readFileSync('gitstream.pem')
     var clientEvents = duplexEmitter( stream ),
         exerciseMachine,
         userId,
@@ -476,6 +477,6 @@ shoe( function( stream ) {
     })
 
     clientEvents.on( 'exerciseDone', function( doneExercise ) {
-        utils.exportToOmnivore(userId, doneExercise)
+        utils.exportToOmnivore(userId, doneExercise, private_key)
     })
 }).install( server, '/events' )
