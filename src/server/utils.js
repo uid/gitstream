@@ -194,7 +194,6 @@ utils = module.exports = {
         request.post({
             url: 'https://omni.csail.mit.edu/6.005/sp16/api/v2/multiadd',
             headers: { 'X-Omnivore-Signed': 'gitstream ' + signature },
-            json: input}, function(err, res) {
-        })
+            json: input})
     }
 }
