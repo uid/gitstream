@@ -1,5 +1,6 @@
 #!/usr/bin/make -f
 
+SRC := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 DEST = $(DESTDIR)/opt/gitstream
 GSDIRS = $(DEST) $(DESTDIR)/srv/repos $(DESTDIR)/var/opt/gitstream/mongo
 NGINXLOGS = $(DESTDIR)/var/log/nginx
@@ -15,10 +16,12 @@ endif
 install:
 	npm prune --production
 	mkdir -p $(GSDIRS) $(NGINXLOGS)
+ifneq ($(DEST), $(SRC))
 	cp -R dist $(DEST)
 	cp -R node_modules $(DEST)
 	cp nginx.conf $(DEST)
 	cp redis.conf $(DEST)
+endif
 	touch $(GSLOGS)
 
 ifeq ($(PACKAGING),)
