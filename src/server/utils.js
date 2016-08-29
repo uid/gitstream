@@ -183,7 +183,7 @@ utils = module.exports = {
 
         var record = {
             username: userId,
-            key: '/classes/27-team-version-control/gitstream-exercises/' + doneExercise + '/complete',
+            key: '/classes/02-basic-java/gitstream-exercises/' + doneExercise + '/complete',
             ts: new Date(),
             value: true, // filler
         }
@@ -192,7 +192,7 @@ utils = module.exports = {
         sign.update(JSON.stringify(input))
         var signature = sign.sign(private_key, 'base64')
         request.post({
-            url: 'https://omni.csail.mit.edu/6.005/sp16/api/v2/multiadd',
+            url: 'https://omni.csail.mit.edu/6.005/fa16/api/v2/multiadd',
             headers: { 'X-Omnivore-Signed': 'gitstream ' + signature },
             json: input})
     }
