@@ -215,9 +215,11 @@ events.on( 'sync', function( newState ) {
 
     radio.emit( 'exerciseChanged', {
         newExercise: hashExercise,
-        silent: state.currentExercise === hashExercise,
+        silent: state.currentExercise === hashExercise || window.synchronized,
         setHash: true
     })
+
+    setTimeout( function() { window.synchronized = true}, 0 )
 })
 
 // forward exercise events to exercise machine emitter
