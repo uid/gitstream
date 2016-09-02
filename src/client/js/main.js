@@ -237,7 +237,9 @@ events.on( 'step', triggerExerciseEvent( 'step', function( newState, oldState, s
 
     newStateStepView.addClass('focused')
     if ( stepOutput ) {
-        newStateStepView.addClass('issue')
+        if ( newState !== 'done' ) {
+            newStateStepView.addClass('issue')
+        }
         newStateFeedback.html( stepOutput )
         newStateFeedback.addClass('flash')
         setTimeout( function() {

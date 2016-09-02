@@ -41,7 +41,7 @@ function ExerciseViewer( config, eventEmitter ) {
                 newStateDef.onEnter.call( config, output, doneCb )
             }
         } else {
-            doneCb()
+            doneCb(oldStateDef[ newState ])
         }
         this._currentState = newState
     }.bind( this ) )
