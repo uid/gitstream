@@ -6,8 +6,10 @@
       <code class="run-command">git clone {{cloneUrl}}</code><br>
       <code class="run-command">cd {{exerciseName}}</code><br>
       <code class="run-command">./go.sh</code><br>
-      <code class="run-commant" style="font-weight:bold"># run ./go.sh again to restart the exercise</code>
     </div>
+    <br>
+      Then follow the instructions below as they become visible.<br>
+      If you get stuck and need to restart the exercise, just run <code class="run-command">./go.sh</code> again.
   </header>
   <div class="timer-wrap">
     <span class="timer">{{{timeLimit}}}</span>
@@ -23,7 +25,7 @@
       {{/each}}
       <li class="exercise-step done" data-statename="done">
         <div class="step-number">&#10003;</div>
-        <span class="step-desc">Done! Run <code>cd ..</code> to leave the repo.</span>
+        <span class="step-desc">Done! Run <code>cd ..</code> to leave the repo. Close this page before starting another exercise.</span>
       </li>
 
     </ol>
