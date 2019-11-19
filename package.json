@@ -14,7 +14,7 @@
   "dependencies": {
     "compression": "^1.4.0",
     "connect": "^3.3.4",
-    "diff": "^1.2.2",
+    "diff": "^4.0.1",
     "duplex-emitter": "^2.1.2",
     "forever": "^0.13.0",
     "git-angler": "^1.0.1",
