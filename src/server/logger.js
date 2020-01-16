@@ -32,9 +32,10 @@ module.exports = function( opts ) {
         },
 
         log: function( eventType, userId, exercise, data ) {
-            if ( !this.EVENT[ eventType ] ) {
-                return console.error( '[ERROR] Tried logging invalid event: ', eventType )
-            }
+            // if ( !this.EVENT[ eventType ] ) {
+            //     return console.error( '[ERROR] Tried logging invalid event: ', eventType )
+            // }
+            console.info(eventType, userId, exercise, data);
             this._log({
                 userId: userId,
                 event: eventType,
@@ -44,9 +45,10 @@ module.exports = function( opts ) {
         },
 
         err: function( type, userId, exercise, data ) {
-            if ( !this.ERR[ type ] ) {
-                return console.error( '[ERROR] Tried logging invalid error type: ', type, data )
-            }
+            // if ( !this.ERR[ type ] ) {
+            //     return console.error( '[ERROR] Tried logging invalid error type: ', type, data )
+            // }
+            console.error(type, userId, exercise, data);
             this._log({
                 event: this.EVENT.ERROR,
                 type: type,

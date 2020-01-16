@@ -41,6 +41,7 @@ utils = module.exports = {
         .then( function() {
             var done = q.defer(),
                 cmdArgs = ( args instanceof Array ? args : args.trim().split(' ') ),
+                unused = console.log('running git', cmd, cmdArgs, repo),
                 git = spawn( 'git', [ cmd ].concat( cmdArgs ), { cwd: repo } ),
                 output = '',
                 errOutput = ''
@@ -164,7 +165,8 @@ utils = module.exports = {
             return utils.writeOut( src, destPath( dest ), template )
         }) )
         .then( function() {
-            return utils.git( repo, 'add', filesToStage.join(' ') )
+            if (filesToStage.length == 0) return Promise.resolve();
+            else return utils.git( repo, 'add', filesToStage.join(' ') )
         })
         .then( function() {
             return utils.git( repo, 'commit', [

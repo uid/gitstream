@@ -1,6 +1,7 @@
 # install required packages
 apt-get update
-apt-get -y install git mongodb-server nginx nodejs redis-server nodejs-legacy
+curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
+apt-get -y install git mongodb-server nginx nodejs redis-server make
 
 # make the repos and database directory
 mkdir -p /srv/repos /var/opt/gitstream/mongo
@@ -22,7 +23,6 @@ su gitstream -c 'git config --global user.name "GitStream"'
 
 # build gitstream if it hasn't already been built
 if [ ! -d "/opt/gitstream/dist" ]; then
-    apt-get -y install npm make
     cd /opt/gitstream
     make build
 fi

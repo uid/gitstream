@@ -15,7 +15,6 @@ var gulp = require('gulp'),
     sass = require('gulp-sass'),
     source = require('vinyl-source-stream'),
     stylish,
-    symlink = require('gulp-symlink'),
     uglify = require('gulp-uglify'),
     watchify,
 
@@ -66,19 +65,18 @@ function notilde( path ) {
     return [].concat( path, '!**/*~' );
 }
 
-gulp.task( 'build', [ 'sass', 'browserify', 'collectstatic', 'collectserver', 'linkexercises' ] );
-gulp.task( 'default', [ 'checkstyle', 'test', 'watch', 'build' ] );
 
 gulp.task( 'clean', function( cb ) {
-    rimraf( path.dist.base, cb );
+    return rimraf( path.dist.base, cb );
 });
 
 gulp.task( 'test', function() {
-    gulp.src( path.tests )
+    return gulp.src( path.tests )
         .pipe( plumber())
         .pipe( nodeunit({
             reporter: 'skip_passed'
         }) );
+
 });
 
 gulp.task( 'checkstyle', function() {
@@ -90,7 +88,7 @@ gulp.task( 'checkstyle', function() {
             .pipe( cache('scripts') );
     }
 
-    stream.pipe( jscs() )
+    return stream.pipe( jscs() )
         .pipe( jshint() )
         .pipe( jshint.reporter( stylish ) );
 });
@@ -103,7 +101,7 @@ gulp.task( 'sass', function() {
             .pipe( plumber() )
     }
 
-    stream.pipe( sass() )
+    return stream.pipe( sass() )
         .pipe( minifyCss({ cache: true }) )
         .pipe( concatCss('bundle.css') )
         .pipe( prefixer('> 5%') )
@@ -150,7 +148,7 @@ gulp.task( 'collectstatic', function() {
         stream = stream.pipe( cache('static') );
     }
 
-    stream.pipe( gulp.dest( path.dist.client ) );
+    return stream.pipe( gulp.dest( path.dist.client ) );
 });
 
 gulp.task( 'collectserver', function() {
@@ -160,12 +158,12 @@ gulp.task( 'collectserver', function() {
         stream = stream.pipe( cache('server') );
     }
 
-    stream.pipe( gulp.dest( path.dist.server ) );
+    return stream.pipe( gulp.dest( path.dist.server ) );
 });
 
 gulp.task( 'linkexercises', function() {
-    gulp.src( path.src.exercises )
-        .pipe( symlink( path.dist.exercises ) );
+    return gulp.src( path.src.exercises )
+        .pipe( gulp.symlink( path.dist.exercises , { overwrite: true, relativeSymlinks: true }) );
 });
 
 gulp.task( 'watch', function() {
@@ -175,5 +173,12 @@ gulp.task( 'watch', function() {
     gulp.watch( notilde( path.src.client.scss ), [ 'sass' ] );
     gulp.watch( notilde( path.src.client.static ), [ 'collectstatic' ] );
     gulp.watch( notilde( path.src.server ), [ 'collectserver' ] );
-    gulp.watch( path.dist.all ).on( 'change', livereload.changed );
+    return gulp.watch( path.dist.all ).on( 'change', livereload.changed );
+});
+
+gulp.task( 'build', gulp.series('sass', 'browserify', 'collectstatic', 'collectserver', 'linkexercises'), function build (cb) {
+    cb();
+});
+gulp.task( 'default', gulp.series('checkstyle', 'test', 'watch', 'build'), function defaultTask (cb) {
+    cb();
 });

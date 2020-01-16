@@ -9,7 +9,7 @@ var angler = require('git-angler'),
     rimraf = require('rimraf'),
     shoe = require('shoe'),
     spawn = require('child_process').spawn,
-    mongodb = q.nfcall( require('mongodb').MongoClient.connect, 'mongodb://localhost/gitstream' ),
+    mongodb = q.nfcall( require('mongodb').MongoClient.connect, 'mongodb://localhost/gitstream' ).then(client => client.db()),
     logger = require('./logger')({ dbcon: mongodb }), // LOGGING
     user = require('./user')({ dbcon: mongodb }),
     exerciseConfs = require('gitstream-exercises'),
@@ -35,6 +35,7 @@ var angler = require('git-angler'),
         return function ( err ) {
             if ( !err ) { return }
             data.msg = err.message
+            console.error(err);
             logger.err( logger.ERR.DB, userId, exercise, data )
         }
     }
@@ -106,12 +107,14 @@ function createRepo( repoName ) {
 
     return verifyAndGetRepoInfo( repoName )
     .then( function( info ) {
+        console.log('verified', info);
         repoInfo = info
         pathToExercise = path.join( PATH_TO_EXERCISES, repoInfo.exerciseName )
         pathToStarterRepo = path.join( pathToExercise, 'starting.git' )
         return q.nfcall( rimraf, pathToRepoDir )
     })
     .then( function() {
+        console.log('rimraf ran', pathToRepo, pathToRepoDir, pathToExercise, pathToStarterRepo);
         var done = q.defer(),
             repoUtils = {
                 _: require('lodash'),
@@ -327,6 +330,7 @@ shoe( function( stream ) {
                     { event: 'ding', helper: unsetExercise },
                     { event: 'halt', helper: unsetExercise },
                     { event: 'step', helper: function( newState ) {
+                        console.error('hset', userId, FIELD_EXERCISE_STATE, newState);
                         rcon.multi()
                         .expire( userId, CLIENT_IDLE_TIMEOUT )
                         .hset( userId, FIELD_EXERCISE_STATE, newState )
@@ -376,8 +380,10 @@ shoe( function( stream ) {
                 })
                 return clientEvents.emit( 'err', err )
             }
+            console.error('hgetall', userId, clientState);
             if ( !clientState ) {
                 clientState = { currentExercise: null }
+                console.error('hmset', userId, clientState);
                 rcon.hmset( userId, clientState, logDbErr( userId, null, {
                     desc: 'Redis unset client state'
                 }) )
@@ -391,7 +397,7 @@ shoe( function( stream ) {
                 // LOGGING
                 logger.log( logger.EVENT.SYNC, userId, currentExercise, {
                     timeRemaining: timeRemaining,
-                    exercieState: exerciseState
+                    exerciseState: exerciseState
                 })
 
                 if ( exerciseState && ( timeRemaining === undefined || timeRemaining > 0 ) ) {
@@ -424,6 +430,7 @@ shoe( function( stream ) {
             rcon.hgetall( userId, function( err, state ) {
                 var startState,
                     endTime
+                console.error('hgetall', userId, state);
 
                 // only start exercise if user is on the exercise page
                 if ( exerciseName !== state.currentExercise ) { return }
@@ -434,6 +441,8 @@ shoe( function( stream ) {
                 // set by EM during init, but init sends events. TODO: should probably be fixed
                 endTime = Date.now() + exerciseMachine._timeLimit * 1000
 
+                console.error('hmset', FIELD_EXERCISE_STATE, startState,
+                       FIELD_END_TIME, endTime );
                 rcon.multi()
                     .expire( userId, CLIENT_IDLE_TIMEOUT )
                     .hmset( userId,
@@ -467,6 +476,7 @@ shoe( function( stream ) {
             exerciseMachine = null
         }
 
+        console.error('hset', userId, FIELD_CURRENT_EXERCISE, newExercise);
         rcon.multi()
             .expire( userId, CLIENT_IDLE_TIMEOUT )
             .hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME )
