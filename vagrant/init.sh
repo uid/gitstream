@@ -14,7 +14,7 @@ chown -R gitstream:gitstream /srv/repos /var/log/nginx /var/opt/gitstream
 usermod -G gitstream vagrant
 
 # move the nginx config file into place and stop the server
-ln -fs /opt/gitstream/nginx.conf /etc/nginx/nginx.conf
+ln -fs /opt/gitstream/nginx-dev.conf /etc/nginx/nginx.conf
 killall nginx
 
 # set up gitstream git config to prevent stupid complaining by git

@@ -7,11 +7,11 @@ NGINXLOGS = $(DESTDIR)/var/log/nginx
 GSLOGS = $(NGINXLOGS)/gitstream_access.log $(NGINXLOGS)/gitstream_error.log
 GITSTREAM_USER := $(shell grep gitstream /etc/passwd; echo $$?)
 
-build: node_modules
-	NODE_ENV=production node node_modules/gulp/bin/gulp.js build
-
-node_modules:
+build:
+ifeq ($(PACKAGING),)
 	npm install
+endif
+	NODE_ENV=production node node_modules/gulp/bin/gulp.js build	
 
 install:
 	npm prune --production
@@ -19,7 +19,7 @@ install:
 ifneq ($(DEST), $(SRC))
 	cp -R dist $(DEST)
 	cp -R node_modules $(DEST)
-	cp nginx.conf $(DEST)
+	cp nginx-deployed.conf $(DEST)/nginx.conf
 	cp redis.conf $(DEST)
 endif
 	touch $(GSLOGS)
@@ -31,7 +31,7 @@ ifeq ($(GITSTREAM_USER), 1)
 	su gitstream -lc 'git config --global user.email "gitstream@gitstream.csail.mit.edu"'
 	su gitstream -lc 'git config --global user.name "GitStream"'
 endif
-	ln -sf /opt/gitstream/nginx.conf /etc/nginx/nginx.conf
+	ln -sf /opt/gitstream/nginx-deployed.conf /etc/nginx/nginx.conf
 endif
 
 uninstall:

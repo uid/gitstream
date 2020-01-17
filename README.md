@@ -39,12 +39,14 @@ $ cd vagrant
 $ vagrant up && vagrant ssh
 ```
 
-Once in the VM, start the server by running
+Once in the VM, rebuild and start the server by running
 
 ```
-$ sudo su gitstream -c 'node /opt/gitstream/dist/server/main'
+cd /opt/gitstream ; \
+node node_modules/gulp/bin/gulp.js build ; \
+sudo su gitstream -c 'node /opt/gitstream/dist/server/main'
 ```
 
 You can now view GitStream by navigating your browser to [http://localhost:8080](http://localhost:8080).
 
-To re-build GitStream when changes are made, run `make` within the project directory. You will have to manually restart the server after editing anything in src/server.
+You will have to rebuild and restart the server after editing anything in src/server.
