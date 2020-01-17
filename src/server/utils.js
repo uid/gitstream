@@ -177,7 +177,7 @@ utils = module.exports = {
         })
     },
 
-    exportToOmnivore: function( userId, exercise, private_key ) {
+    exportToOmnivore: function( userId, exercise, private_key, callback ) {
         if (!exercise) {
             return
         }
@@ -196,6 +196,6 @@ utils = module.exports = {
         request.post({
             url: 'https://omni.csail.mit.edu/6.005/fa16/api/v2/multiadd',
             headers: { 'X-Omnivore-Signed': 'gitstream ' + signature },
-            json: input})
+            json: input}, callback);
     }
 }

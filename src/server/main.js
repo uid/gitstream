@@ -107,14 +107,12 @@ function createRepo( repoName ) {
 
     return verifyAndGetRepoInfo( repoName )
     .then( function( info ) {
-        console.log('verified', info);
         repoInfo = info
         pathToExercise = path.join( PATH_TO_EXERCISES, repoInfo.exerciseName )
         pathToStarterRepo = path.join( pathToExercise, 'starting.git' )
         return q.nfcall( rimraf, pathToRepoDir )
     })
     .then( function() {
-        console.log('rimraf ran', pathToRepo, pathToRepoDir, pathToExercise, pathToStarterRepo);
         var done = q.defer(),
             repoUtils = {
                 _: require('lodash'),
@@ -488,6 +486,7 @@ shoe( function( stream ) {
     })
 
     clientEvents.on( 'exerciseDone', function( doneExercise ) {
-        utils.exportToOmnivore(userId, doneExercise, private_key)
+        utils.exportToOmnivore(userId, doneExercise, private_key, 
+                    logDbErr( userId, doneExercise, { desc: 'Omnivore POST error' } ));
     })
 }).install( server, '/events' )
