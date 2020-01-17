@@ -20,6 +20,7 @@ ifneq ($(DEST), $(SRC))
 	cp -R dist $(DEST)
 	cp -R node_modules $(DEST)
 	cp nginx-deployed.conf $(DEST)
+	cp -R gitstream-exercises $(DEST)
 	cp redis.conf $(DEST)
 endif
 	touch $(GSLOGS)

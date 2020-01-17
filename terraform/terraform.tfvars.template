@@ -1,0 +1,8 @@
+# username for CSAIL OpenStack; typically yourusername@csail.mit.edu
+openstack_user_name = "..."
+
+# your password for CSAIL OpenStack
+openstack_password  = "..."
+
+# the name of the ssh keypair on OpenStack to use for the new VM
+keypair  = "..."
