@@ -11,7 +11,7 @@ build:
 ifeq ($(PACKAGING),)
 	npm install
 endif
-	NODE_ENV=production node node_modules/gulp/bin/gulp.js build	
+	NODE_ENV=production node node_modules/gulp/bin/gulp.js build
 
 install:
 	npm prune --production
@@ -19,7 +19,7 @@ install:
 ifneq ($(DEST), $(SRC))
 	cp -R dist $(DEST)
 	cp -R node_modules $(DEST)
-	cp nginx-deployed.conf $(DEST)/nginx.conf
+	cp nginx-deployed.conf $(DEST)
 	cp redis.conf $(DEST)
 endif
 	touch $(GSLOGS)
