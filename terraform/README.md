@@ -2,13 +2,13 @@
 To use this Terraform script, you will need to place the following deployment-specific files in this folder:
 
 terraform.tfvars
-: see ./terraform.tfvars.template; variables for terraform.tf script, e.g. OpenStack username/password and ssh private key for the Caesar VM
+: see ./terraform.tfvars.template; variables for terraform.tf script, e.g. OpenStack username/password and ssh private key for the OpenStack VM
 
-settings_local.py
-: see ../settings_local.py.template; Django settings file with e.g. Caesar database location and password
+gitstream_csail_mit_edu_cert.cer
+: public cert for SSL
 
-krb5.keytab
-: Kerberos host key for caesar.csail.mit.edu, so that Caesar can have permission to the 6.031 Athena AFS locker to load code from
+gitstream.csail.mit.edu.key
+: private key for SSL
 
-didit-privatekey.pem
-: private key for communicating with Didit
+../gitstream.pem
+: private key for communicating with Omnivore

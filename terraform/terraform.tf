@@ -21,7 +21,7 @@ provider "openstack" {
 
 # This is the virtual machine.
 resource "openstack_compute_instance_v2" "gitstream" {
-  name = "gitstream-new"
+  name = "gitstream"
   flavor_name = "ups.2c2g"
   image_id = var.boot-image-uuid
 
@@ -35,7 +35,7 @@ resource "openstack_compute_instance_v2" "gitstream" {
 
   network {
     name = "inet"
-    #fixed_ip_v4 = "128.52.128.206"
+    fixed_ip_v4 = "128.52.129.73"
   }
 
   # IMPORTANT: generate this keypair yourself with "ssh-keygen -t rsa",
@@ -82,4 +82,42 @@ resource "null_resource" "provision" {
       bastion_password = var.bastion_password
   }
 
+  # upload the application code
+  provisioner "local-exec" {
+    # COPYFILE_DISABLE is for MacOS, prevents resource forks (._blahblah) from appearing in the tarball
+    command = "COPYFILE_DISABLE=1 tar czf ./deployed-bundle.tgz --exclude=terraform --exclude=.DS_Store --exclude=.vagrant --exclude='node_modules' --exclude='dist' -C .. ."
+  }
+
+  provisioner "file" {
+    source = "deployed-bundle.tgz"
+    destination = "/home/ubuntu/deployed-bundle.tgz"
+  }
+
+  provisioner "file" {
+    source = "gitstream.csail.mit.edu.key"
+    destination = "/etc/ssl/private/gitstream.csail.mit.edu.key"
+  }
+
+  provisioner "file" {
+    source = "gitstream_csail_mit_edu_cert.cer"
+    destination = "/etc/ssl/certs/gitstream_csail_mit_edu_cert.cer"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "mkdir -p $HOME/gitstream",
+      "cd $HOME/gitstream",
+      "tar xzf $HOME/deployed-bundle.tgz",
+      "echo '${var.staff_password}\n${var.staff_password}' | sudo /usr/bin/passwd ubuntu",
+      "sudo apt-get update",
+      "curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -",
+      "sudo apt-get -y install git mongodb-server nginx nodejs redis-server make",
+      "make",
+      "sudo make install",
+      "cd /opt/gitstream",
+      "sudo service nginx reload",
+      "sudo su gitstream -c 'node_modules/forever/bin/forever stopall'",
+      "sudo su gitstream -c 'node_modules/forever/bin/forever start dist/server/main.js'",
+    ]
+  }
 }
