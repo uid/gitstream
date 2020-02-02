@@ -22,6 +22,7 @@ ifneq ($(DEST), $(SRC))
 	cp nginx-deployed.conf $(DEST)
 	cp -R gitstream-exercises $(DEST)
 	cp redis.conf $(DEST)
+	cp gitstream.pem $(DEST)
 endif
 	touch $(GSLOGS)
 

@@ -6,3 +6,4 @@ krb5.keytab
 didit-privatekey.pem
 *.cer
 *.key
+*.pem
