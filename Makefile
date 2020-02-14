@@ -29,10 +29,10 @@ endif
 ifeq ($(PACKAGING),)
 ifeq ($(GITSTREAM_USER), 1)
 	useradd -m gitstream
-	chown -R gitstream:gitstream $(GSDIRS) $(GSLOGS)
 	su gitstream -lc 'git config --global user.email "gitstream@gitstream.csail.mit.edu"'
 	su gitstream -lc 'git config --global user.name "GitStream"'
 endif
+	chown -R gitstream:gitstream $(GSDIRS) $(GSLOGS)
 	ln -sf /opt/gitstream/nginx-deployed.conf /etc/nginx/nginx.conf
 endif
 
