@@ -20,15 +20,11 @@ var EVENTS_ENDPOINT = '/events',
     viewer
 
 $.get( '/user', function( userId ) {
-    var storedId = localStorage.userId,
-        syncId
-    if ( storedId ) {
-        syncId = storedId
+    if (!userId) {
+        document.location = "/login" + document.location.search;
     } else {
-        syncId = userId
-        localStorage.userId = userId
+        events.emit( 'sync', userId );
     }
-    events.emit( 'sync', syncId )
 })
 
 
@@ -135,17 +131,17 @@ function selectViewStep( name ) {
     return $('.exercise-view').find( '[data-statename="' + name + '"]' )
 }
 
-function hashChangeExercise() {
-    radio.emit( 'exerciseChanged', window.location.hash.substring(1) )
+function changeExercise() {
+    radio.emit( 'exerciseChanged', window.location.search.substring(1) )
 }
 
-function changeHashSilent( newHash ) {
-    $(window).off( 'hashchange', hashChangeExercise )
-    window.location.hash = newHash
-    setTimeout( function() {
-        $(window).on( 'hashchange', hashChangeExercise )
-    }, 0 )
-}
+// function changeHashSilent( newHash ) {
+//     $(window).off( 'hashchange', changeExercise )
+//     window.location.search = newHash
+//     setTimeout( function() {
+//         $(window).on( 'hashchange', changeExercise )
+//     }, 0 )
+// }
 
 radio.on( 'exerciseChanged', function( changeTo ) {
     var exerciseViewerConf,
@@ -170,7 +166,7 @@ radio.on( 'exerciseChanged', function( changeTo ) {
         delete state.exerciseState
     }
 
-    if ( setHash ) { changeHashSilent( newExercise ) }
+    // if ( setHash ) { changeHashSilent( newExercise ) }
 
     if ( exercises[ newExercise ] ) {
         exerciseViewerConf = exercises[ newExercise ]()
@@ -189,7 +185,7 @@ radio.on( 'exerciseChanged', function( changeTo ) {
 
         viewer = new ExerciseViewer( exerciseViewerConf.feedback, exerciseEvents )
     } else {
-        changeHashSilent('')
+        // changeHashSilent('')
         $('.main-content').html( indexTmp({ desc: exercises._order.map( function( exercise ) {
             return { title: exercises[ exercise ]().title, name: exercise }
         }) }) )
@@ -198,10 +194,10 @@ radio.on( 'exerciseChanged', function( changeTo ) {
     $('.main-content').removeClass('hide')
 })
 
-$(window).on( 'hashchange', hashChangeExercise )
+// $(window).on( 'hashchange', changeExercise )
 
 events.on( 'sync', function( newState ) {
-    var hashExercise = window.location.hash.substring(1)
+    var hashExercise = window.location.search.substring(1)
 
     /* merge the server's state with the client state
        only overwriting if new (non-null) value, endTime,
@@ -262,6 +258,6 @@ events.on( 'ding', triggerExerciseEvent( 'ding', function() {
 }) )
 
 window.resetId = function() {
-    localStorage.clear('userId')
-    window.location.reload()
+    // localStorage.clear('userId')
+    // window.location.reload()
 }

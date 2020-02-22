@@ -1,6 +1,6 @@
 var angler = require('git-angler'),
     compression = require('compression'),
-    connect = require('connect'),
+    express = require('express'),
     duplexEmitter = require('duplex-emitter'),
     fs = require('fs'),
     path = require('path'),
@@ -15,7 +15,7 @@ var angler = require('git-angler'),
     exerciseConfs = require('gitstream-exercises'),
     ExerciseMachine = require('./ExerciseMachine'),
     utils = require('./utils'),
-    app = connect(),
+    app = express(),
     server,
     eventBus = new angler.EventBus(),
     PATH_TO_REPOS = '/srv/repos',
@@ -39,6 +39,12 @@ var angler = require('git-angler'),
             logger.err( logger.ERR.DB, userId, exercise, data )
         }
     }
+
+const session = require('cookie-session');
+const Passport = require('passport').Passport;
+const PassportStrategy = require('passport').Strategy;
+const openidclient = require('openid-client');
+const settings = require('../../openid-settings');
 
 /**
  * Extracts data from the components of a repo's path
@@ -234,48 +240,159 @@ eventBus.setHandler( '*', 'receive', function( repo, action, updates, done ) {
     })
 })
 
-app.use( compression() )
-app.use( '/repos', backend )
-app.use( '/hooks', githookEndpoint )
+async function configureApp() {
+    // setUserAuthenticateIfNecessary: this middleware sets req.user to an object { username:string, fullname:string }, either from
+    // session cookie information or by authenticating the user using the authentication method selected in settings.js.
+    // By default there is no authentication method, so this method does nothing; it is replaced with an authentication-method-specific
+    // implementation below.
+    let setUserAuthenticateIfNecessary = function(req,res,next) { next(); };
 
-// invoked from the "go" script in client repo
-app.use( '/go', function( req, res ) {
-    if ( !req.headers['x-gitstream-repo'] ) {
-        res.writeHead(400)
-        return res.end()
+    // setUserFromSession: sets req.user to an object { username:string, fullname:string } if the user has 
+    // already been authenticated in the current session, otherwise leaves the request without a user.
+    // By default this method does nothing; it is replaced with authentication-method-specific implementation below.
+    let setUserFromSession = function(req,res,next) { next(); };
+
+    // // if we have settings for OpenID authentication, configure it
+    if (settings.openid) {
+
+        const passport = new Passport();
+        const openidissuer = await openidclient.Issuer.discover(settings.openid.serverUrl);
+        const client = new openidissuer.Client({
+            client_id: settings.openid.clientId,
+            client_secret: settings.openid.clientSecret,
+            redirect_uris: [ settings.openid.clientUrl + (settings.openid.clientUrl.endsWith('/') ? '' : '/') + 'auth' ]
+        });
+
+        // https://github.com/panva/node-openid-client/blob/master/docs/README.md#customizing-clock-skew-tolerance
+        client[(openidclient.custom).clock_tolerance] = 'clockTolerance' in settings.openid ? settings.openid.clockTolerance : 5;
+        
+        var usernameFromEmail = settings.openid.usernameFromEmail || ((email) => email);
+        
+        passport.use('openid', new openidclient.Strategy({
+            client,
+            params: { scope: 'openid email profile' },
+        }, (tokenset, passportUserInfo, done) => {
+            console.log('passport returned', passportUserInfo);
+            const username = usernameFromEmail(passportUserInfo.email || '');
+            const fullname = passportUserInfo.name || '';
+            done(null, { username, fullname });
+        }));
+        const returnUserInfo = (userinfo, done) => done(null, userinfo);
+        passport.serializeUser(returnUserInfo);
+        passport.deserializeUser(returnUserInfo);
+        
+        // set up a session cookie to hold the user's identity after authentication
+        const sessionParser = session({
+            secret: settings.sessionSecret,
+            sameSite: 'lax',
+            signed: true,
+            overwrite: true,
+        });
+        app.use(sessionParser);
+
+        const passportInit = passport.initialize();
+        app.use(passportInit);
+        const passportSession = passport.session();
+        app.use(passportSession);
+        app.use('/auth',
+                (req, res, next) => {
+                    passport.authenticate(
+                        'openid',
+                        // see "Custom Callback" at http://www.passportjs.org/docs/authenticate/
+                        (err, user, info) => {
+                            if (err || !user) {
+                                // put some debugging info in the log
+                                console.log('problem in OpenId authentication', req.originalUrl);
+                                console.log('error', err);
+                                console.log('user', user);
+                                console.log('info', info);
+                            }
+
+                            if (err) { return next(err); }
+                            if (!user) {
+                                // unsuccessful authentication
+                                return res.status(401).send('Unauthorized: ' + info);
+                            } else {
+                                // successful authentication, log the user in
+                                // http://www.passportjs.org/docs/login/
+                                req.login(user, (err) => {
+                                    if (err) { return next(err); }
+                                    return res.redirect(req.session.returnTo);
+                                });
+                            }
+                        }
+                    ) (req, res, next);
+                }
+        );
+
+        setUserFromSession = function(req, res, next) {
+            sessionParser(req, res, function(err) {
+                if (err) return console.log(err);
+                passportInit(req, res, function(err) {
+                    if (err) return console.log(err);
+                    passportSession(req, res, next);
+                });
+            });
+        }
+
+        setUserAuthenticateIfNecessary = function(req, res, next) {
+            if ( ! req.user ) {
+                req.session.returnTo = req.originalUrl;
+                return res.redirect('/auth');
+            }
+            console.log('OpenID authenticated as', req.user);
+            next();
+        }
+
+        console.log('openid auth is ready');
     }
 
-    var remoteUrl = req.headers['x-gitstream-repo'],
-        repo = remoteUrl.substring( remoteUrl.indexOf( gitHTTPMount ) + gitHTTPMount.length )
+    app.use( compression() )
+    app.use( '/repos', backend )
+    app.use( '/hooks', githookEndpoint )
 
-    createRepo( repo )
-    .done( function( repoInfo ) {
-        rcon.publish( repoInfo.userId + ':go', repoInfo.exerciseName,
-                   logDbErr( repoInfo.userId, repoInfo.exerciseName, {
-                       desc: 'Redis go publish'
-                   }) )
-        res.writeHead( 200 )
-        res.end()
-    }, function( err ) {
-        res.writeHead( 403 )
-        res.end()
-        // LOGGING
-        logger.err( logger.ERR.CREATE_REPO, null, null, {
-            desc: 'New repo on go',
-            repo: repo,
-            remoteUrl: remoteUrl,
-            msg: err.message
+    // invoked from the "go" script in client repo
+    app.use( '/go', function( req, res ) {
+        if ( !req.headers['x-gitstream-repo'] ) {
+            res.writeHead(400)
+            return res.end()
+        }
+
+        var remoteUrl = req.headers['x-gitstream-repo'],
+            repo = remoteUrl.substring( remoteUrl.indexOf( gitHTTPMount ) + gitHTTPMount.length )
+
+        createRepo( repo )
+        .done( function( repoInfo ) {
+            rcon.publish( repoInfo.userId + ':go', repoInfo.exerciseName,
+                       logDbErr( repoInfo.userId, repoInfo.exerciseName, {
+                           desc: 'Redis go publish'
+                       }) )
+            res.writeHead( 200 )
+            res.end()
+        }, function( err ) {
+            res.writeHead( 403 )
+            res.end()
+            // LOGGING
+            logger.err( logger.ERR.CREATE_REPO, null, null, {
+                desc: 'New repo on go',
+                repo: repo,
+                remoteUrl: remoteUrl,
+                msg: err.message
+            })
         })
     })
-})
 
-app.use( '/user', function( req, res ) {
-    var userRe = /([a-z0-9_-]{0,8})@MIT.EDU/,
-        match = userRe.exec( req.headers['x-ssl-client-s-dn'] ),
-        userId = ( match ? match[1] : null ) || user.createRandomId()
-    res.writeHead( 200, { 'Content-Type': 'text/plain' } )
-    res.end( userId )
-})
+    app.use( '/login', setUserAuthenticateIfNecessary, function( req, res ) {
+        res.redirect(req.originalUrl.replace(/^\/login/, '/'));
+    })
+
+    app.use( '/user', setUserFromSession, function( req, res ) {
+        var userId = ( req.user && req.user.username ) || ""; //user.createRandomId()
+        res.writeHead( 200, { 'Content-Type': 'text/plain' } )
+        res.end( userId )
+    })
+}
+configureApp().catch(err => console.error(err));
 
 server = app.listen( PORT )
 
