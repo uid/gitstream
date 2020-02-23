@@ -38,13 +38,13 @@ var angler = require('git-angler'),
             console.error(err);
             logger.err( logger.ERR.DB, userId, exercise, data )
         }
-    }
-
-const session = require('cookie-session');
-const Passport = require('passport').Passport;
-const PassportStrategy = require('passport').Strategy;
-const openidclient = require('openid-client');
-const settings = require('../../settings');
+    },
+    session = require('cookie-session'),
+    Passport = require('passport').Passport,
+    PassportStrategy = require('passport').Strategy,
+    openidclient = require('openid-client'),
+    settings = require('../../settings'),
+    crypto = require('crypto');
 
 /**
  * Extracts data from the components of a repo's path
@@ -240,16 +240,39 @@ eventBus.setHandler( '*', 'receive', function( repo, action, updates, done ) {
     })
 })
 
+
+// set up a session cookie to hold the user's identity after authentication
+const sessionParser = session({
+    secret: settings.sessionSecret || crypto.pseudoRandomBytes(16).toString('hex'),
+    sameSite: 'lax',
+    signed: true,
+    overwrite: true,
+});
+app.use(sessionParser);
+
 // setUserAuthenticateIfNecessary: this middleware sets req.user to an object { username:string, fullname:string }, either from
 // session cookie information or by authenticating the user using the authentication method selected in settings.js.
-// By default there is no authentication method, so this method does nothing; it is replaced with an authentication-method-specific
-// implementation below.
-let setUserAuthenticateIfNecessary = function(req,res,next) { next(); };
+//
+// By default there is no authentication method, so this method authenticates as a guest user with a randomly-generated username.
+let setUserAuthenticateIfNecessary = function(req,res,next) {
+    if ( ! req.user ) {
+        req.user = req.session.guest_user = { username: user.createRandomId(), fullname: "Guest User" }
+    }
+    console.log('guest user connected as', req.user);
+    next();
+};
 
 // setUserFromSession: sets req.user to an object { username:string, fullname:string } if the user has 
 // already been authenticated in the current session, otherwise leaves the request without a user.
-// By default this method does nothing; it is replaced with authentication-method-specific implementation below.
-let setUserFromSession = function(req,res,next) { next(); };
+//
+// By default this method uses the guest user if available.
+let setUserFromSession = function(req,res,next) { 
+    sessionParser(req, res, function(err) {
+        if (err) return console.log(err);
+        req.user = req.session.guest_user;
+        next();
+    });
+};
 
 
 async function configureApp() {
@@ -282,15 +305,6 @@ async function configureApp() {
         passport.serializeUser(returnUserInfo);
         passport.deserializeUser(returnUserInfo);
         
-        // set up a session cookie to hold the user's identity after authentication
-        const sessionParser = session({
-            secret: settings.sessionSecret,
-            sameSite: 'lax',
-            signed: true,
-            overwrite: true,
-        });
-        app.use(sessionParser);
-
         const passportInit = passport.initialize();
         app.use(passportInit);
         const passportSession = passport.session();
@@ -388,7 +402,7 @@ async function configureApp() {
     })
 
     app.use( '/user', setUserFromSession, function( req, res ) {
-        var userId = ( req.user && req.user.username ) || ""; //user.createRandomId()
+        var userId = ( req.user && req.user.username ) || "";
         res.writeHead( 200, { 'Content-Type': 'text/plain' } )
         res.end( userId )
     })
