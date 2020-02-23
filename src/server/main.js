@@ -44,7 +44,7 @@ const session = require('cookie-session');
 const Passport = require('passport').Passport;
 const PassportStrategy = require('passport').Strategy;
 const openidclient = require('openid-client');
-const settings = require('../../openid-settings');
+const settings = require('../../settings');
 
 /**
  * Extracts data from the components of a repo's path
@@ -240,18 +240,19 @@ eventBus.setHandler( '*', 'receive', function( repo, action, updates, done ) {
     })
 })
 
+// setUserAuthenticateIfNecessary: this middleware sets req.user to an object { username:string, fullname:string }, either from
+// session cookie information or by authenticating the user using the authentication method selected in settings.js.
+// By default there is no authentication method, so this method does nothing; it is replaced with an authentication-method-specific
+// implementation below.
+let setUserAuthenticateIfNecessary = function(req,res,next) { next(); };
+
+// setUserFromSession: sets req.user to an object { username:string, fullname:string } if the user has 
+// already been authenticated in the current session, otherwise leaves the request without a user.
+// By default this method does nothing; it is replaced with authentication-method-specific implementation below.
+let setUserFromSession = function(req,res,next) { next(); };
+
+
 async function configureApp() {
-    // setUserAuthenticateIfNecessary: this middleware sets req.user to an object { username:string, fullname:string }, either from
-    // session cookie information or by authenticating the user using the authentication method selected in settings.js.
-    // By default there is no authentication method, so this method does nothing; it is replaced with an authentication-method-specific
-    // implementation below.
-    let setUserAuthenticateIfNecessary = function(req,res,next) { next(); };
-
-    // setUserFromSession: sets req.user to an object { username:string, fullname:string } if the user has 
-    // already been authenticated in the current session, otherwise leaves the request without a user.
-    // By default this method does nothing; it is replaced with authentication-method-specific implementation below.
-    let setUserFromSession = function(req,res,next) { next(); };
-
     // // if we have settings for OpenID authentication, configure it
     if (settings.openid) {
 

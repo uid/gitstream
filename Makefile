@@ -23,6 +23,7 @@ ifneq ($(DEST), $(SRC))
 	cp -R gitstream-exercises $(DEST)
 	cp redis.conf $(DEST)
 	cp gitstream.pem $(DEST)
+	cp settings.js $(DEST)
 endif
 	touch $(GSLOGS)
 
