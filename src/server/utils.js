@@ -5,6 +5,7 @@ var spawn = require('child_process').spawn,
     mustache = require('mustache'),
     crypto = require('crypto'),
     request = require('request'),
+    settings = require('../../settings'),
     utils
 
 utils = module.exports = {
@@ -177,26 +178,32 @@ utils = module.exports = {
         })
     },
 
-    exportToOmnivore: function( userId, exercise, private_key, callback ) {
-        if (!exercise) {
-            return
-        }
-        var doneExercise = exercise.toLowerCase()
+    exportToOmnivore: function( userId, exerciseName, callback ) {
+        try {
+            if (!exerciseName) {
+                return callback();
+            }
 
-        var record = {
-            username: userId,
-            key: '/classes/02-basic-java/gitstream-exercises/' + doneExercise + '/complete',
-            // key: '/classes/28-team-version-control/gitstream-exercises/' + doneExercise + '/complete',
-            ts: new Date(),
-            value: true, // filler
-        }
-        var input = [ record ]
-        var sign = crypto.createSign('RSA-SHA256')
-        sign.update(JSON.stringify(input))
-        var signature = sign.sign(private_key, 'base64')
-        request.post({
-            url: 'https://omni.csail.mit.edu/6.031/sp20/api/v2/multiadd',
-            headers: { 'X-Omnivore-Signed': 'gitstream ' + signature },
-            json: input}, callback);
+            var omnivoreKey = settings.omnivoreKeyForExercise(exerciseName);
+            console.log(userId, 'completed', omnivoreKey);
+
+            var record = {
+                username: userId,
+                key: omnivoreKey,
+                ts: new Date(),
+                value: true, // filler
+            }
+            var input = [ record ]
+            var sign = crypto.createSign('RSA-SHA256')
+            sign.update(JSON.stringify(input))
+            var privateKey = fs.readFileSync('gitstream.pem');
+            var signature = sign.sign(privateKey, 'base64')
+            request.post({
+                url: settings.omnivoreUrl,
+                headers: { 'X-Omnivore-Signed': 'gitstream ' + signature },
+                json: input}, callback);
+        } catch (e) {
+            return callback(e);
+        }        
     }
 }

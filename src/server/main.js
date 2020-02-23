@@ -412,7 +412,6 @@ configureApp().catch(err => console.error(err));
 server = app.listen( PORT )
 
 shoe( function( stream ) {
-    var private_key = fs.readFileSync('gitstream.pem')
     var clientEvents = duplexEmitter( stream ),
         exerciseMachine,
         userId,
@@ -618,7 +617,7 @@ shoe( function( stream ) {
     })
 
     clientEvents.on( 'exerciseDone', function( doneExercise ) {
-        utils.exportToOmnivore(userId, doneExercise, private_key, 
+        utils.exportToOmnivore(userId, doneExercise,
                     logDbErr( userId, doneExercise, { desc: 'Omnivore POST error' } ));
     })
 }).install( server, '/events' )
