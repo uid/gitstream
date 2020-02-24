@@ -103,17 +103,11 @@ resource "null_resource" "provision" {
     destination = "/home/ubuntu/gitstream_csail_mit_edu_cert.cer"
   }
 
-  provisioner "file" {
-    source = "mit-client.pem"
-    destination = "/home/ubuntu/mit-client.pem"
-  }
-
   provisioner "remote-exec" {
     inline = [
       "sudo mv $HOME/gitstream.csail.mit.edu.key /etc/ssl/private/",
       "sudo mv $HOME/gitstream_csail_mit_edu_cert.cer /etc/ssl/certs/",
-      "sudo mv $HOME/mit-client.pem /etc/ssl/certs/",
-      "sudo chown root:root /etc/ssl/private/gitstream.csail.mit.edu.key /etc/ssl/certs/gitstream_csail_mit_edu_cert.cer /etc/ssl/certs/mit-client.pem",
+      "sudo chown root:root /etc/ssl/private/gitstream.csail.mit.edu.key /etc/ssl/certs/gitstream_csail_mit_edu_cert.cer",
       "echo '${var.staff_password}\n${var.staff_password}' | sudo /usr/bin/passwd ubuntu",
       "mkdir -p $HOME/gitstream",
       "cd $HOME/gitstream",
