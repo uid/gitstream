@@ -118,6 +118,7 @@ resource "null_resource" "provision" {
       "mkdir -p $HOME/gitstream",
       "cd $HOME/gitstream",
       "tar xzf $HOME/deployed-bundle.tgz",
+      "ln -sf settings-deployed.js settings.js",
       "./setup.sh",
     ]
   }

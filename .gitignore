@@ -8,4 +8,5 @@ gitstream-exercises/
 # Omnivore key
 gitstream.pem
 
-settings.js
+# local settings (e.g. authentication secrets) that shouldn't be committed
+settings*.js
