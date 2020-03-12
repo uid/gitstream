@@ -24,7 +24,11 @@ sudo make install
 # restart Nginx
 sudo service nginx reload
 
-# start the Node server
-cd /opt/gitstream
+# start up the Node server using forever
+FOREVER_CMDLINE="cd /opt/gitstream ; forever start dist/server/main.js"
 sudo su gitstream -c 'forever stopall'
-sudo su gitstream -c 'forever start dist/server/main.js'
+sudo su gitstream -c "$FOREVER_CMDLINE" || exit 1
+
+# put 'forever start' in crontab if it's not there already
+sudo su gitstream -c "(crontab -l | grep -v 'forever start' ; echo '@reboot $FOREVER_CMDLINE') | crontab -" || exit 1
+sudo su gitstream -c "crontab -l"
