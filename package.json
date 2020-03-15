@@ -17,7 +17,6 @@
     "diff": "^4.0.2",
     "duplex-emitter": "^2.1.2",
     "express": "^4.17.1",
-    "forever": "^2.0.0",
     "git-angler": "^1.0.1",
     "gitstream-exercises": "file:gitstream-exercises",
     "glob": "^7.1.6",
