@@ -201,7 +201,15 @@ utils = module.exports = {
             request.post({
                 url: settings.omnivoreUrl,
                 headers: { 'X-Omnivore-Signed': 'gitstream ' + signature },
-                json: input}, callback);
+                json: input},
+                function(error, response, body) {
+                    if (error) return callback(error);
+                    console.log('omnivore responded', response.statusCode, response.statusMessage);
+                    if (response.statusCode != 200) {
+                        return callback(new Error("omnivore responded " + response.statusCode + " " + response.statusMessage));
+                    }
+                    callback();
+                });
         } catch (e) {
             return callback(e);
         }        

@@ -59,6 +59,8 @@ node node_modules/gulp/bin/gulp.js build ; \
 sudo su gitstream -c 'node dist/server/main'
 ```
 
-You can now view GitStream by navigating your browser to [http://localhost:8080](http://localhost:8080).
+You can now view GitStream by navigating your browser to one of the exercises, e.g.:
+
+[http://localhost:8000?theGitGo](http://localhost:8000?theGitGo).
 
 You will have to rebuild and restart the server after editing anything in src/server.
