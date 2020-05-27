@@ -35,7 +35,7 @@
   },
   "devDependencies": {
     "browserify": "^16.5.1",
-    "crypto-js": "^3.3.0",
+    "crypto-js": "^4.0.0",
     "event-emitter": "^0.3.5",
     "gulp": "^4.0.2",
     "gulp-autoprefixer": "^7.0.1",
