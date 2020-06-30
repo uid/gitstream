@@ -6,6 +6,51 @@ sudo systemd-run --property="After=apt-daily.service apt-daily-upgrade.service" 
 # make sure we have the latest package list
 sudo DEBIAN_FRONTEND=noninteractive apt-get -y update
 
+# install certbot first, so we can set up persistent volume first
+sudo DEBIAN_FRONTEND=noninteractive apt-get -y install software-properties-common
+sudo DEBIAN_FRONTEND=noninteractive add-apt-repository -y universe
+sudo DEBIAN_FRONTEND=noninteractive add-apt-repository -y ppa:certbot/certbot
+sudo DEBIAN_FRONTEND=noninteractive apt-get -y update
+sudo DEBIAN_FRONTEND=noninteractive apt-get -y install certbot python3-certbot-nginx || exit 1
+
+# set up the persistent volume
+if sudo file -s /dev/vdb | grep '/dev/vdb: data'
+then
+    # format the volume and copy over the starting contents of /etc/letsencrypt
+    sudo mkdir /tmp/persistent
+    sudo cp -a /etc/letsencrypt /tmp/persistent
+    sudo mkfs.ext4 -L persistent -d /tmp/persistent /dev/vdb || exit 1
+    sudo rm -rf /tmp/persistent
+else
+    echo 
+    # confirm that it's the persistent volume and not some other volume
+    if sudo file -s /dev/vdb | grep 'volume name "persistent"'
+    then echo persistent volume is already initialized
+    else
+        echo /dev/vdb volume has unexpected filesystem on it:
+        sudo file -s /dev/vdb
+        exit 1
+    fi
+fi
+
+# define its mountpoint
+sudo mkdir -p /mnt/persistent
+if grep 'persistent' /etc/fstab
+then echo fstab already has entry for persistent volume
+else
+    sudo sh -c "echo 'LABEL=persistent   /mnt/persistent        ext4    defaults        0 0' >> /etc/fstab" || exit 1
+    echo fstab entry added
+fi
+
+# mount the persistent volume and symlink to it
+sudo mount -a || exit 1
+if [ ! -L /etc/letsencrypt ]
+then
+    sudo mv /etc/letsencrypt /etc/letsencrypt.orig
+    sudo ln -sf /mnt/persistent/letsencrypt /etc/letsencrypt
+fi
+echo created symlinks to /mnt/persistent
+
 # install Linux packages
 sudo DEBIAN_FRONTEND=noninteractive apt-get -y install git mongodb-server nginx nodejs redis-server make || exit 1
 

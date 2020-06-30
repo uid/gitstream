@@ -8,7 +8,7 @@ variable "bastion_user" { }
 variable "bastion_password" { }
 
 variable "boot-image-uuid" {
-  default = "7a0a850f-6ca5-4b16-947c-0781d18313ca" # CSAIL-Ubuntu-18.04LTS+autofs
+  default = "71f64ff6-f948-48e3-acaf-8ea8d2cb8103" # CSAIL-Ubuntu-18.04LTS 17-Jun-2020
 }
 
 # CSAIL's OpenStack provider.
@@ -17,6 +17,15 @@ provider "openstack" {
   user_name = var.openstack_user_name
   password  = var.openstack_password
   auth_url  = "https://keystone.csail.mit.edu:35358/"
+}
+
+# This is the volume where persistent data is stored
+# (e.g. the Let's Encrypt folder).
+# It's mounted at /mnt/persistent in the running VM,
+# and symlinked to from various places on the VM filesystem.
+resource "openstack_blockstorage_volume_v1" "gitstream-persistent" {
+  name     = "gitstream-persistent"
+  size     = 1 # GB
 }
 
 # This is the virtual machine.
@@ -32,6 +41,14 @@ resource "openstack_compute_instance_v2" "gitstream" {
     boot_index            = 0
     delete_on_termination = true
   }
+
+  block_device {
+    uuid = openstack_blockstorage_volume_v1.gitstream-persistent.id
+    source_type = "volume"
+    destination_type = "volume"
+    boot_index = 1
+  }
+
 
   network {
     name = "inet"
@@ -93,21 +110,8 @@ resource "null_resource" "provision" {
     destination = "/home/ubuntu/deployed-bundle.tgz"
   }
 
-  provisioner "file" {
-    source = "gitstream.csail.mit.edu.key"
-    destination = "/home/ubuntu/gitstream.csail.mit.edu.key"
-  }
-
-  provisioner "file" {
-    source = "gitstream_csail_mit_edu_cert.cer"
-    destination = "/home/ubuntu/gitstream_csail_mit_edu_cert.cer"
-  }
-
   provisioner "remote-exec" {
     inline = [
-      "sudo mv $HOME/gitstream.csail.mit.edu.key /etc/ssl/private/",
-      "sudo mv $HOME/gitstream_csail_mit_edu_cert.cer /etc/ssl/certs/",
-      "sudo chown root:root /etc/ssl/private/gitstream.csail.mit.edu.key /etc/ssl/certs/gitstream_csail_mit_edu_cert.cer",
       "echo '${var.staff_password}\n${var.staff_password}' | sudo /usr/bin/passwd ubuntu",
       "mkdir -p $HOME/gitstream",
       "cd $HOME/gitstream",
