@@ -262,18 +262,6 @@ let setUserAuthenticateIfNecessary = function(req,res,next) {
     next();
 };
 
-// setUserFromSession: sets req.user to an object { username:string, fullname:string } if the user has 
-// already been authenticated in the current session, otherwise leaves the request without a user.
-//
-// By default this method uses the guest user if available.
-let setUserFromSession = function(req,res,next) { 
-    sessionParser(req, res, function(err) {
-        if (err) return console.log(err);
-        req.user = req.session.guest_user;
-        next();
-    });
-};
-
 
 async function configureApp() {
     // // if we have settings for OpenID authentication, configure it
@@ -340,16 +328,6 @@ async function configureApp() {
                 }
         );
 
-        setUserFromSession = function(req, res, next) {
-            sessionParser(req, res, function(err) {
-                if (err) return console.log(err);
-                passportInit(req, res, function(err) {
-                    if (err) return console.log(err);
-                    passportSession(req, res, next);
-                });
-            });
-        }
-
         setUserAuthenticateIfNecessary = function(req, res, next) {
             if ( ! req.user ) {
                 req.session.returnTo = req.originalUrl;
@@ -401,7 +379,7 @@ async function configureApp() {
         res.redirect(req.originalUrl.replace(/^\/login/, '/'));
     })
 
-    app.use( '/user', setUserFromSession, function( req, res ) {
+    app.use( '/user', function( req, res ) {
         var userId = ( req.user && req.user.username ) || "";
         res.writeHead( 200, { 'Content-Type': 'text/plain' } )
         res.end( userId )
