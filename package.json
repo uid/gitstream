@@ -20,7 +20,7 @@
     "git-angler": "^1.0.1",
     "gitstream-exercises": "file:gitstream-exercises",
     "glob": "^7.1.6",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.19",
     "mongodb": "^3.5.9",
     "mustache": "^4.0.1",
     "node-uuid": "^1.4.8",
