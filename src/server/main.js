@@ -242,7 +242,7 @@ eventBus.setHandler( '*', 'receive', function( repo, action, updates, done ) {
 
 
 // set up a session cookie to hold the user's identity after authentication
-const sessionParser = session({
+var sessionParser = session({
     secret: settings.sessionSecret || crypto.pseudoRandomBytes(16).toString('hex'),
     sameSite: 'lax',
     signed: true,
@@ -267,9 +267,9 @@ async function configureApp() {
     // // if we have settings for OpenID authentication, configure it
     if (settings.openid) {
 
-        const passport = new Passport();
-        const openidissuer = await openidclient.Issuer.discover(settings.openid.serverUrl);
-        const client = new openidissuer.Client({
+        var passport = new Passport();
+        var openidissuer = await openidclient.Issuer.discover(settings.openid.serverUrl);
+        var client = new openidissuer.Client({
             client_id: settings.openid.clientId,
             client_secret: settings.openid.clientSecret,
             redirect_uris: [ settings.openid.clientUrl + (settings.openid.clientUrl.endsWith('/') ? '' : '/') + 'auth' ]
@@ -285,17 +285,17 @@ async function configureApp() {
             params: { scope: 'openid email profile' },
         }, (tokenset, passportUserInfo, done) => {
             console.log('passport returned', passportUserInfo);
-            const username = usernameFromEmail(passportUserInfo.email || '');
-            const fullname = passportUserInfo.name || '';
+            var username = usernameFromEmail(passportUserInfo.email || '');
+            var fullname = passportUserInfo.name || '';
             done(null, { username, fullname });
         }));
-        const returnUserInfo = (userinfo, done) => done(null, userinfo);
+        var returnUserInfo = (userinfo, done) => done(null, userinfo);
         passport.serializeUser(returnUserInfo);
         passport.deserializeUser(returnUserInfo);
         
-        const passportInit = passport.initialize();
+        var passportInit = passport.initialize();
         app.use(passportInit);
-        const passportSession = passport.session();
+        var passportSession = passport.session();
         app.use(passportSession);
         app.use('/auth',
                 (req, res, next) => {
