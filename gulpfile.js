@@ -125,7 +125,7 @@ gulp.task( 'browserify', function() {
         if ( production ) {
             stream = stream
                 .pipe( buffer() )
-                .pipe( uglify() )
+                //.pipe( uglify() )
         }
 
         stream.pipe( gulp.dest( path.dist.client ) );
