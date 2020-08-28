@@ -31,7 +31,7 @@ module.exports = function( config ) {
             .then( fn.apply.bind( fn, null, args ) )
             .then( function( output ) {
                 result = output
-                return git( 'checkout', 'master' )
+                return git( 'checkout', 'main' )
             })
             .then( function() {
                 return result
