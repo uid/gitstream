@@ -7,11 +7,10 @@ sudo systemd-run --property="After=apt-daily.service apt-daily-upgrade.service" 
 sudo DEBIAN_FRONTEND=noninteractive apt-get -y update
 
 # install certbot first, so we can set up persistent volume first
-sudo DEBIAN_FRONTEND=noninteractive apt-get -y install software-properties-common
-sudo DEBIAN_FRONTEND=noninteractive add-apt-repository -y universe
-sudo DEBIAN_FRONTEND=noninteractive add-apt-repository -y ppa:certbot/certbot
-sudo DEBIAN_FRONTEND=noninteractive apt-get -y update
-sudo DEBIAN_FRONTEND=noninteractive apt-get -y install certbot python3-certbot-nginx || exit 1
+sudo snap install core
+sudo snap refresh core
+sudo snap install --classic certbot
+sudo ln -s /snap/bin/certbot /usr/bin/certbot
 
 # set up the persistent volume
 if sudo file -s /dev/vdb | grep '/dev/vdb: data'
