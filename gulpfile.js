@@ -2,12 +2,11 @@ var gulp = require('gulp'),
     browserify = require('browserify'),
     buffer = require('vinyl-buffer'),
     cache,
-    concatCss = require('gulp-concat-css'),
+    concat = require('gulp-concat'),
     hbsfy = require('hbsfy'),
     jscs,
     jshint,
     livereload,
-    //minifyCss = require('gulp-minify-css'),
     nodeunit,
     plumber,
     prefixer = require('gulp-autoprefixer'),
@@ -103,7 +102,7 @@ gulp.task( 'sass', function() {
 
     return stream.pipe( sass() )
         //.pipe( minifyCss({ cache: true }) )
-        .pipe( concatCss('bundle.css') )
+        .pipe( concat('bundle.css') )
         .pipe( prefixer('> 5%') )
         .pipe( gulp.dest( path.dist.client ) );
 });
