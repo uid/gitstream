@@ -1,6 +1,6 @@
 # install required packages
 apt-get update
-curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
+curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash -
 apt-get -y install git mongodb-server nginx nodejs redis-server make
 
 # make the repos and database directory

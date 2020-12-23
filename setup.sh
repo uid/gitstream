@@ -54,7 +54,7 @@ echo created symlinks to /mnt/persistent
 sudo DEBIAN_FRONTEND=noninteractive apt-get -y install git mongodb-server nginx nodejs redis-server make || exit 1
 
 # install node
-curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
+curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash -
 sudo DEBIAN_FRONTEND=noninteractive apt-get -y install nodejs || exit 1
 
 # node commands needed globally
