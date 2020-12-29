@@ -8,7 +8,7 @@ variable "bastion_user" { }
 variable "bastion_password" { }
 
 variable "boot-image-uuid" {
-  default = "71f64ff6-f948-48e3-acaf-8ea8d2cb8103" # CSAIL-Ubuntu-18.04LTS 17-Jun-2020
+  default = "eb9a6c2a-ffce-496d-a74e-a10d4cf3cf1e" # CSAIL-Ubuntu-20.04LTS 12-Nov-2020
 }
 
 # CSAIL's OpenStack provider.
@@ -88,7 +88,10 @@ resource "null_resource" "provision" {
   depends_on = [
     openstack_compute_instance_v2.gitstream
   ]
-
+  triggers = {
+    instance_changed = openstack_compute_instance_v2.gitstream.id
+  }
+  
   connection {
       type     = "ssh"
       user     = "ubuntu"

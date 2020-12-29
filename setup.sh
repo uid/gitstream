@@ -51,11 +51,18 @@ fi
 echo created symlinks to /mnt/persistent
 
 # install Linux packages
-sudo DEBIAN_FRONTEND=noninteractive apt-get -y install git mongodb-server nginx nodejs redis-server make || exit 1
+sudo DEBIAN_FRONTEND=noninteractive apt-get -y install git nginx redis-server make || exit 1
 
 # install node
 curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash -
 sudo DEBIAN_FRONTEND=noninteractive apt-get -y install nodejs || exit 1
+
+# install MongoDB Community Edition
+wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | sudo apt-key add -
+echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list
+sudo apt-get update
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mongodb-org || exit 1
+sudo systemctl enable mongodb.service
 
 # node commands needed globally
 # use sudo -H so that npm cache goes in /root rather than /home/ubuntu
@@ -66,7 +73,7 @@ make
 sudo make install
 
 # restart Nginx
-sudo service nginx reload
+sudo systemctl restart nginx
 
 # start up the Node server using forever
 FOREVER_CMDLINE="cd /opt/gitstream ; forever start dist/server/main.js"

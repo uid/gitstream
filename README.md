@@ -18,9 +18,11 @@ cd gitstream
 
 ```
 sudo apt-get update
-curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
-sudo apt-get -y install git mongodb-server nginx nodejs redis-server make
+curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash -
+sudo apt-get -y install git nginx nodejs redis-server make
 ```
+
+Install [MongoDB Community Edition](https://docs.mongodb.com/manual/administration/install-community/).
 
 ```
 make

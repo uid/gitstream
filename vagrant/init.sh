@@ -1,7 +1,14 @@
 # install required packages
 apt-get update
 curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash -
-apt-get -y install git mongodb-server nginx nodejs redis-server make
+apt-get -y install git nginx nodejs redis-server make
+
+# install MongoDB Community Edition
+wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | sudo apt-key add -
+echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list
+sudo apt-get update
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mongodb-org || exit 1
+sudo systemctl enable mongodb.service
 
 # make the repos and database directory
 mkdir -p /srv/repos /var/opt/gitstream/mongo
