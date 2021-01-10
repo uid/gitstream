@@ -62,7 +62,7 @@ wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | sudo apt-key add 
 echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list
 sudo apt-get update
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mongodb-org || exit 1
-sudo systemctl enable mongodb.service
+sudo systemctl enable mongod.service
 
 # node commands needed globally
 # use sudo -H so that npm cache goes in /root rather than /home/ubuntu
