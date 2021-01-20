@@ -24,7 +24,7 @@
     "mongodb": "^3.6.3",
     "mustache": "^4.1.0",
     "node-uuid": "^1.4.8",
-    "openid-client": "^4.2.2",
+    "openid-client": "^4.2.3",
     "passport": "^0.4.1",
     "q": "^1.5.1",
     "redis": "^3.0.0",
