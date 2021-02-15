@@ -178,40 +178,45 @@ utils = module.exports = {
         })
     },
 
-    exportToOmnivore: function( userId, exerciseName, callback ) {
+    // errorCallback: Error -> void, called only when there is an error;
+    //     may be called more than once
+    exportToOmnivore: function( userId, exerciseName, errorCallback ) {
         try {
             if (!exerciseName) {
-                return callback();
+                return;
             }
 
-            var omnivoreKey = settings.omnivoreKeyForExercise(exerciseName);
-            console.log(userId, 'completed', omnivoreKey);
+            // omnivoreEndpoints: Array<{url:"https://omni.mit.edu/<course>/<sem>/api/v2/multiadd",
+            //                           key:"/classes/..."}>
+            var omnivoreEndpoints = settings.omnivoreEndpointsForExercise(exerciseName);
+            console.log(userId, 'completed', omnivoreEndpoints);
 
-            var record = {
-                username: userId,
-                key: omnivoreKey,
-                ts: new Date(),
-                value: true, // filler
-            }
-            var input = [ record ]
-            var sign = crypto.createSign('RSA-SHA256')
-            sign.update(JSON.stringify(input))
-            var privateKey = fs.readFileSync('gitstream.pem');
-            var signature = sign.sign(privateKey, 'base64')
-            request.post({
-                url: settings.omnivoreUrl,
-                headers: { 'X-Omnivore-Signed': 'gitstream ' + signature },
-                json: input},
-                function(error, response, body) {
-                    if (error) return callback(error);
-                    console.log('omnivore responded', response.statusCode, response.statusMessage);
-                    if (response.statusCode != 200) {
-                        return callback(new Error("omnivore responded " + response.statusCode + " " + response.statusMessage));
-                    }
-                    callback();
-                });
+            omnivoreEndpoints.forEach(function( omnivoreEndpoint ) {
+                var record = {
+                    username: userId,
+                    key: omnivoreEndpoint.key,
+                    ts: new Date(),
+                    value: true, // filler
+                }
+                var input = [ record ]
+                var sign = crypto.createSign('RSA-SHA256')
+                sign.update(JSON.stringify(input))
+                var privateKey = fs.readFileSync('gitstream.pem');
+                var signature = sign.sign(privateKey, 'base64')
+                request.post({
+                    url: omnivoreEndpoint.url,
+                    headers: { 'X-Omnivore-Signed': 'gitstream ' + signature },
+                    json: input},
+                    function(error, response, body) {
+                        if (error) return errorCallback(error);
+                        console.log('omnivore responded', response.statusCode, response.statusMessage);
+                        if (response.statusCode != 200) {
+                            return errorCallback(new Error("omnivore responded " + response.statusCode + " " + response.statusMessage));
+                        }
+                    });
+            });
         } catch (e) {
-            return callback(e);
+            return errorCallback(e);
         }        
     }
 }

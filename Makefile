@@ -11,7 +11,7 @@ build:
 ifeq ($(PACKAGING),)
 	npm install
 endif
-	NODE_ENV=production node node_modules/gulp/bin/gulp.js build
+	NODE_ENV=production npx gulp build
 
 install:
 	npm prune --production

@@ -44,21 +44,25 @@ Navigate your browser to your server and GitStream away!
 
 ## Development
 
-For active development, you will want to have node and npm installed on your system.  
-If you only want to work inside of the VM, omit the initial `make`.
+For active development, you will want to use Vagrant.
 
 ```
-make
 cd vagrant
 vagrant up && vagrant ssh
 ```
 
-Once in the VM, rebuild and start the server by running
+Once in the VM:
 
 ```
-cd /opt/gitstream ; \
-node node_modules/gulp/bin/gulp.js build ; \
-sudo su gitstream -c 'node dist/server/main'
+cd /opt/gitstream
+make
+```
+
+Whenever you edit the source, you can rebuild and start the server by running (from `/opt/gitstream` in the VM):
+
+
+```
+npx gulp build ; sudo su gitstream -c 'node dist/server/main'
 ```
 
 You can now view GitStream by navigating your browser to one of the exercises, e.g.:
