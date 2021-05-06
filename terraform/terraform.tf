@@ -8,7 +8,7 @@ variable "bastion_user" { }
 variable "bastion_password" { }
 
 variable "boot-image-uuid" {
-  default = "eb9a6c2a-ffce-496d-a74e-a10d4cf3cf1e" # CSAIL-Ubuntu-20.04LTS 12-Nov-2020
+  default = "ef794b7d-4a30-4e28-8230-e599de4d9b19" # CSAIL-Ubuntu-20.04LTS 12-Nov-2020
 }
 
 # CSAIL's OpenStack provider.

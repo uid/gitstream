@@ -4,7 +4,7 @@ echo waiting for unattended upgrades to finish
 sudo systemd-run --property="After=apt-daily.service apt-daily-upgrade.service" --wait /bin/true
 
 # make sure we have the latest package list
-sudo DEBIAN_FRONTEND=noninteractive apt-get -y update
+sudo DEBIAN_FRONTEND=noninteractive apt -y update
 
 # install certbot first, so we can set up persistent volume first
 sudo snap install core
@@ -51,18 +51,20 @@ fi
 echo created symlinks to /mnt/persistent
 
 # install Linux packages
-sudo DEBIAN_FRONTEND=noninteractive apt-get -y install git nginx redis-server make || exit 1
+sudo apt update
+sudo DEBIAN_FRONTEND=noninteractive apt -y install git nginx redis-server make || exit 1
 
 # install node
 curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash -
-sudo DEBIAN_FRONTEND=noninteractive apt-get -y install nodejs || exit 1
+sudo DEBIAN_FRONTEND=noninteractive apt -y install nodejs || exit 1
 
 # install MongoDB Community Edition
 wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | sudo apt-key add -
 echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list
-sudo apt-get update
-sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mongodb-org || exit 1
+sudo apt update
+sudo DEBIAN_FRONTEND=noninteractive apt install -y mongodb-org || exit 1
 sudo systemctl enable mongod.service
+sudo systemctl start mongod.service
 
 # node commands needed globally
 # use sudo -H so that npm cache goes in /root rather than /home/ubuntu
