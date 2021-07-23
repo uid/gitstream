@@ -89,7 +89,7 @@ a {
     font-size: 90%;
     position: absolute;
     text-align: center;
-    width: calc(100% - #{2*$bodyPaddingSides};
+    width: calc(100% - #{2*$bodyPaddingSides});
 
     * {
         color: gray !important;
