@@ -37,7 +37,7 @@ sudo service nginx reload
 ```
 
 ```
-sudo su gitstream -c 'node_modules/forever/bin/forever start dist/server/main.js'
+sudo su gitstream -c 'forever start dist/server/main.js'
 ```
 
 Navigate your browser to your server and GitStream away!
