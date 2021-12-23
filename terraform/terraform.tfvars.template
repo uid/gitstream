@@ -6,3 +6,9 @@ openstack_password  = "..."
 
 # the name of the ssh keypair on OpenStack to use for the new VM
 keypair  = "..."
+
+
+# if you are offcampus and need to connect through the CSAIL jump server instead of the MIT VPN,
+# (see terraform.tf), then uncomment these and set them to your CSAIL username/password
+# bastion_user = "..."
+# bastion_password = "..."

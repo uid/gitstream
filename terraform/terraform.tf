@@ -3,9 +3,10 @@ variable "openstack_password" { }
 variable "keypair" { }
 variable "staff_password" { }
 variable "private_key_file" { }
-variable "bastion_host" { }
-variable "bastion_user" { }
-variable "bastion_password" { }
+
+# only uncomment if using CSAIL's jump server, see below
+#variable "bastion_user" { }
+#variable "bastion_password" { }
 
 variable "boot-image-uuid" {
   default = "ef794b7d-4a30-4e28-8230-e599de4d9b19" # CSAIL-Ubuntu-20.04LTS 12-Nov-2020
@@ -92,14 +93,22 @@ resource "null_resource" "provision" {
     instance_changed = openstack_compute_instance_v2.gitstream.id
   }
   
+  # IMPORTANT: the security setup above allows incoming ssh only from MIT network addresses.
+  # So you can't run this provisioning unless you're on the MIT network.
+  # When you're offcampus, use the MIT VPN (https://ist.mit.edu/vpn).
+  # If MIT VPN is impossible, can also use CSAIL's jump server:
+  #   1. uncomment the "variable" sections for bastion_username and bastion_password at the top of this file
+  #   2. uncomment the bastion_... lines below
+  #   3. define bastion_user and bastion_password with your CSAIL username/password in terraform.tfvars
   connection {
       type     = "ssh"
       user     = "ubuntu"
       host     = openstack_compute_instance_v2.gitstream.access_ip_v4
       private_key = file(var.private_key_file)
-      bastion_host = var.bastion_host
-      bastion_user = var.bastion_user
-      bastion_password = var.bastion_password
+
+      #bastion_host = "jump.csail.mit.edu"
+      #bastion_user = var.bastion_user
+      #bastion_password = var.bastion_password
   }
 
   # upload the application code
