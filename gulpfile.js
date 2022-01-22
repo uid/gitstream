@@ -5,7 +5,7 @@ var gulp = require('gulp'),
     concat = require('gulp-concat'),
     hbsfy = require('hbsfy'),
     jscs,
-    jshint,
+    // jshint,
     livereload,
     nodeunit,
     plumber,
@@ -13,7 +13,7 @@ var gulp = require('gulp'),
     rimraf,
     sass = require('gulp-sass')(require('sass')),
     source = require('vinyl-source-stream'),
-    stylish,
+    // stylish,
     uglify = require('gulp-uglify'),
     watchify,
 
@@ -50,12 +50,12 @@ var gulp = require('gulp'),
 if ( !production ) {
     cache = require('gulp-cached');
     //jscs = require('gulp-jscs');
-    jshint = require('gulp-jshint');
+    // jshint = require('gulp-jshint');
     livereload = require('gulp-livereload');
     //nodeunit = require('gulp-nodeunit');
     plumber = require('gulp-plumber');
     rimraf = require('rimraf');
-    stylish = require('jshint-stylish');
+    // stylish = require('jshint-stylish');
     //watchify = require('watchify');
 }
 
@@ -78,19 +78,19 @@ gulp.task( 'test', function() {
 
 });
 
-gulp.task( 'checkstyle', function() {
-    var stream = gulp.src( [].concat( path.src.js, path.tests ) )
+// gulp.task( 'checkstyle', function() {
+//     var stream = gulp.src( [].concat( path.src.js, path.tests ) )
 
-    if ( !production ) {
-        stream = stream
-            .pipe( plumber() )
-            .pipe( cache('scripts') );
-    }
+//     if ( !production ) {
+//         stream = stream
+//             .pipe( plumber() )
+//             .pipe( cache('scripts') );
+//     }
 
-    return stream.pipe( jscs() )
-        .pipe( jshint() )
-        .pipe( jshint.reporter( stylish ) );
-});
+//     return stream.pipe( jscs() )
+//         .pipe( jshint() )
+//         .pipe( jshint.reporter( stylish ) );
+// });
 
 gulp.task( 'sass', function() {
     var stream = gulp.src( path.src.client.scss )
@@ -168,7 +168,7 @@ gulp.task( 'linkexercises', function() {
 gulp.task( 'watch', function() {
     livereload({ silent: true });
     watching = true;
-    gulp.watch( notilde( [].concat( path.src.js, path.tests ) ), [ 'checkstyle', 'test' ] );
+    gulp.watch( notilde( [].concat( path.src.js, path.tests ) ), [ /*'checkstyle',*/ 'test' ] );
     gulp.watch( notilde( path.src.client.scss ), [ 'sass' ] );
     gulp.watch( notilde( path.src.client.static ), [ 'collectstatic' ] );
     gulp.watch( notilde( path.src.server ), [ 'collectserver' ] );
@@ -178,6 +178,6 @@ gulp.task( 'watch', function() {
 gulp.task( 'build', gulp.series('sass', 'browserify', 'collectstatic', 'collectserver', 'linkexercises'), function build (cb) {
     cb();
 });
-gulp.task( 'default', gulp.series('checkstyle', 'test', 'watch', 'build'), function defaultTask (cb) {
+gulp.task( 'default', gulp.series(/*'checkstyle',*/ 'test', 'watch', 'build'), function defaultTask (cb) {
     cb();
 });
