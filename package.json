@@ -24,7 +24,7 @@
     "mongodb": "^3.7.3",
     "mustache": "^4.1.0",
     "node-uuid": "^1.4.8",
-    "openid-client": "^5.1.4",
+    "openid-client": "^5.1.5",
     "passport": "^0.5.2",
     "q": "^1.5.1",
     "redis": "^3.0.0",
@@ -50,7 +50,7 @@
     "handlebars": "^4.7.6",
     "hbsfy": "^2.8.1",
     "normalize.css": "^8.0.1",
-    "sass": "^1.49.9",
+    "sass": "^1.50.1",
     "vinyl-buffer": "^1.0.1",
     "vinyl-source-stream": "^2.0.0",
     "zeptojs": "^1.1.4"
