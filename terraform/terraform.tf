@@ -32,7 +32,7 @@ resource "openstack_blockstorage_volume_v1" "gitstream-persistent" {
 # This is the virtual machine.
 resource "openstack_compute_instance_v2" "gitstream" {
   name = "gitstream"
-  flavor_name = "ups.2c2g"
+  flavor_name = "ups.1c1g"
   image_id = var.boot-image-uuid
 
   block_device {
