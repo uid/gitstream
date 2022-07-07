@@ -68,7 +68,7 @@ sudo systemctl start mongod.service
 
 # node commands needed globally
 # use sudo -H so that npm cache goes in /root rather than /home/ubuntu
-sudo -H npm install -g forever || exit 1
+sudo -H npm install -g pm2 || exit 1
 
 # make Gitstream
 make
@@ -77,11 +77,11 @@ sudo make install
 # restart Nginx
 sudo systemctl restart nginx
 
-# start up the Node server using forever
-FOREVER_CMDLINE="cd /opt/gitstream ; forever start dist/server/main.js"
-sudo su gitstream -c 'forever stopall'
-sudo su gitstream -c "$FOREVER_CMDLINE" || exit 1
+# start up the Node server using pm2
+SERVER_CMDLINE="cd /opt/gitstream ; pm2 start dist/server/main.js"
+sudo su gitstream -c 'pm2 delete all'
+sudo su gitstream -c "$SERVER_CMDLINE" || exit 1
 
-# put 'forever start' in crontab if it's not there already
-sudo su gitstream -c "(crontab -l | grep -v 'forever start' ; echo '@reboot $FOREVER_CMDLINE') | crontab -" || exit 1
+# start server in crontab if it's not there already
+sudo su gitstream -c "(crontab -l | grep -v pm2 ; echo '@reboot $SERVER_CMDLINE') | crontab -" || exit 1
 sudo su gitstream -c "crontab -l"
