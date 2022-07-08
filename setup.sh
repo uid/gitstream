@@ -78,10 +78,10 @@ sudo make install
 sudo systemctl restart nginx
 
 # start up the Node server using pm2
-SERVER_CMDLINE="cd /opt/gitstream ; pm2 start dist/server/main.js"
 sudo su gitstream -c 'pm2 delete all'
-sudo su gitstream -c "$SERVER_CMDLINE" || exit 1
+sudo su gitstream -c "cd /opt/gitstream ; pm2 start dist/server/main.js" || exit 1
+sudo su gitstream -c 'pm2 save'
 
 # start server in crontab if it's not there already
-sudo su gitstream -c "(crontab -l | grep -v pm2 ; echo '@reboot $SERVER_CMDLINE') | crontab -" || exit 1
+sudo su gitstream -c "(crontab -l | grep -v pm2 ; echo '@reboot sleep 10 ; pm2 resurrect') | crontab -" || exit 1
 sudo su gitstream -c "crontab -l"
