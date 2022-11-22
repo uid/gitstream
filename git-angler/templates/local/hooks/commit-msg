@@ -1,0 +1,17 @@
+#!/bin/bash
+
+repo="$(git config remote.origin.url)"
+anglerUrl="$(git config angler.url)"
+
+res="$(curl -s --data "$(cat $1)" "$anglerUrl?hook=pre-commit&repo=$repo")"
+
+IFS=$'\n' respArgs=($res)
+
+exitcode=${respArgs[0]}
+
+for echoline in "${respArgs[@]:1}"
+do
+    echo "remote: $echoline"
+done
+
+exit $exitcode

@@ -1,0 +1,37 @@
+{
+  "name": "git-http-backend",
+  "version": "0.1.5",
+  "description": "serve a git repository over http",
+  "main": "index.js",
+  "dependencies": {
+    "git-side-band-message": "~0.0.3",
+    "inherits": "~2.0.1"
+  },
+  "scripts": {
+    "test": "node test/test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/substack/git-http-backend.git"
+  },
+  "homepage": "https://github.com/substack/git-http-backend",
+  "keywords": [
+    "git",
+    "http",
+    "backend",
+    "web",
+    "server",
+    "git-receive-pack",
+    "git-update-pack"
+  ],
+  "author": {
+    "name": "James Halliday",
+    "email": "mail@substack.net",
+    "url": "http://substack.net"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "rimraf": "~2.2.6",
+    "tape": "~2.3.2"
+  }
+}
