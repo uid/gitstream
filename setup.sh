@@ -55,7 +55,7 @@ sudo apt update
 sudo DEBIAN_FRONTEND=noninteractive apt -y install git nginx redis-server make || exit 1
 
 # install node
-curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo DEBIAN_FRONTEND=noninteractive apt -y install nodejs || exit 1
 
 # install MongoDB Community Edition
