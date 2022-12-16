@@ -18,7 +18,7 @@ cd gitstream
 
 ```
 sudo apt-get update
-curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash -
+curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt-get -y install git nginx nodejs redis-server make
 ```
 
@@ -37,7 +37,7 @@ sudo service nginx reload
 ```
 
 ```
-sudo su gitstream -c 'forever start dist/server/main.js'
+sudo su gitstream -c 'pm2 start dist/server/main.js'
 ```
 
 Navigate your browser to your server and GitStream away!
