@@ -79,7 +79,7 @@ sudo systemctl restart nginx
 
 # start up the Node server using pm2
 sudo su gitstream -c 'pm2 delete all'
-sudo su gitstream -c "cd /opt/gitstream ; pm2 start dist/server/main.js" || exit 1
+sudo su gitstream -c "cd /opt/gitstream ; pm2 --name gitstream start dist/server/main.js" || exit 1
 sudo su gitstream -c 'pm2 save'
 
 # start server in crontab if it's not there already
