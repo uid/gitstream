@@ -23,7 +23,7 @@
     "gitstream-exercises": "file:gitstream-exercises",
     "glob": "^8.0.3",
     "lodash": "^4.17.20",
-    "mongodb": "~4.10.0",
+    "mongodb": "~4.17.0",
     "mustache": "^4.1.0",
     "node-uuid": "^1.4.8",
     "openid-client": "^5.1.8",
