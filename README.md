@@ -44,7 +44,12 @@ Navigate your browser to your server and GitStream away!
 
 ## Development
 
-For active development, you will want to use Vagrant.
+### Dependencies
+1. Download GitStream Excercises and place inside the root folder of GitStream.
+2. Install Vagrant
+3. Add a new Vagrant box to your machine: `vagrant box add ubuntu/focal64`
+
+### Running 
 
 ```
 cd vagrant
