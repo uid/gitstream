@@ -37,7 +37,7 @@ sudo service nginx reload
 ```
 
 ```
-sudo su gitstream -c 'pm2 start dist/server/main.js'
+sudo -u gitstream pm2 start dist/server/main.js
 ```
 
 Navigate your browser to your server and GitStream away!
@@ -67,7 +67,7 @@ Whenever you edit the source, you can rebuild and start the server by running (f
 
 
 ```
-npx gulp build ; sudo su gitstream -c 'node dist/server/main'
+npx gulp build ; sudo -u gitstream node dist/server/main
 ```
 
 You can now view GitStream by navigating your browser to one of the exercises, e.g.:
