@@ -5,18 +5,19 @@
   "main": "index.js",
   "license": "MIT",
   "repository": {
-      "type": "git",
-      "url": "https://github.com/nhynes/git-angler.git"
+    "type": "git",
+    "url": "https://github.com/nhynes/git-angler.git"
   },
   "scripts": {
-    "test": "gulp test"
+    "test": "mocha mocha-test"
   },
   "author": "Nick Hynes",
   "dependencies": {
-    "git-http-backend": "file:../git-http-backend"
+    "git-http-backend": "file:../git-http-backend",
+    "mocha": "^10.2.0"
   },
   "devDependencies": {
-    "gulp": "^3.8.7",
+    "gulp": "^3.9.1",
     "gulp-jscs": "^1.1.0",
     "gulp-jshint": "^1.8.4",
     "gulp-nodeunit": "0.0.5",
