@@ -15,12 +15,14 @@ var path = {
 
 gulp.task( 'default', [ 'checkstyle', 'test', 'watch' ] );
 
+// replace w/ mocha
 gulp.task( 'test', function() {
     gulp.src( path.tests )
         .pipe( plumber())
         .pipe( nodeunit() );
 });
 
+// replace w/ eslint in future, eliminate entirely for now
 gulp.task( 'checkstyle', function() {
     gulp.src( path.js )
         .pipe( plumber())
@@ -29,6 +31,7 @@ gulp.task( 'checkstyle', function() {
         .pipe( jshint.reporter( stylish ) );
 });
 
+// not important
 gulp.task( 'watch', function() {
     gulp.watch( [ path.js ], [ 'checkstyle', 'test' ]);
 });
