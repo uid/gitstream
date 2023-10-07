@@ -28,25 +28,4 @@ Events sent from local (client) repo with hooks installed:
 
 
 ## Testing
-
-
-### Using Gulp 
-(soon to be deprecated)
-
-#### Pre-requisites
-* Version 11 of node
-    - \[!\] we're doing this in order to be backwards compatible with gulp 3.x.x
-    - General steps: download `nvm` via methods in [Github Repo](https://github.com/nvm-sh/nvm) -> Get node version 11 via  `nvm install 11` -> Use version 11 via `nvm use 11` -> Confirm version via `node -v`.  
-* gulp-cli
-    - Install via `npm install -g gulp-cli`
-
-#### Run
-1. In the root directory, run `gulp test`.
-
-### Using nodeunit
-(soon to be deprecated)
-
-Run `npx nodeunit`
-
-### Using mocha
-`npm test`
+Run `npm test`
