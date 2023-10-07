@@ -7,7 +7,7 @@ describe('EventBus', function() {
   const testArgs = [ 'arg1', 'arg2', 'arg3' ];
 
 
-  before(function () {
+  beforeEach(function () {
     bus = EventBus();
   })
 
