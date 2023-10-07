@@ -183,7 +183,60 @@ describe('EventBus', function() {
     bus.triggerListeners( 'other_scope', 'event', testArgs );
   })
 
-  it('empty', function (){
-    assert(true)
+  it('testListenerGlobalAllEvents', function (){
+    const pass = () => assert( true );
+
+    bus.addListener( 'l1', '*', '*', pass );
+    bus.addListener( 'l2', '*', '*', pass );
+
+    bus.addListener( 'l3', '*', 'event', pass );
+    bus.addListener( 'l4', '*', 'other_event', pass );
+
+    bus.addListener( 'l5', 'scope', '*', pass );
+    bus.addListener( 'l6', 'other_scope', '*', pass );
+
+    bus.addListener( 'l7', 'scope', 'event', pass );
+    bus.addListener( 'l8', 'scope', 'other_event', pass );
+
+    bus.addListener( 'l9', 'other_scope', 'event', pass );
+    bus.addListener( 'l10', 'other_scope', 'other_event', pass );
+
+    bus.addListener( 'l11', 'untriggered', 'untriggered', function() {
+        assert( false );
+    });
+
+    bus.triggerListeners( 'scope', 'event', testArgs );
+    bus.triggerListeners( 'scope', 'other_event', testArgs );
+    bus.triggerListeners( 'other_scope', 'event', testArgs );
+    bus.triggerListeners( 'other_scope', 'other_event', testArgs );
+  })
+
+  it('testRemoveEventListener', function(){
+    const pass = () => assert( true );
+    const fail = () => assert( false );
+    let removed;
+
+    bus.addListener( 'bad', 'scope', 'event', fail );
+    bus.addListener( 'good', 'scope', 'event', pass );
+
+    removed = bus.removeListener( 'bad', 'scope', 'event' );
+    assert( removed );
+
+    removed = bus.removeListener( 'good', 'other_scope', 'event' );
+    assert( !removed );
+
+    removed = bus.removeListener( 'good', 'scope', 'other_event', fail );
+    assert( !removed );
+
+    bus.triggerListeners( 'scope', 'event' );
+  })
+
+  it('testTrigger', function(){
+    const okay =  () => assert( true );
+
+    bus.setHandler( 'scope', 'event', okay );
+    bus.addListener( 'l1', 'scope', 'event', okay );
+
+    bus.trigger( 'scope', 'event' );
   })
 })
