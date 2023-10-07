@@ -9,18 +9,11 @@ var gulp = require('gulp'),
 
 var path = {
     js: [ 'test/**/*.js', 'lib/**/*.js' ],
-    tests: 'test/**/*.js',
     lib: 'lib/'
 }
 
-gulp.task( 'default', [ 'checkstyle', 'test', 'watch' ] );
+gulp.task( 'default', [ 'checkstyle', 'watch' ] );
 
-// replace w/ mocha
-gulp.task( 'test', function() {
-    gulp.src( path.tests )
-        .pipe( plumber())
-        .pipe( nodeunit() );
-});
 
 // replace w/ eslint in future, eliminate entirely for now
 gulp.task( 'checkstyle', function() {
@@ -33,5 +26,5 @@ gulp.task( 'checkstyle', function() {
 
 // not important
 gulp.task( 'watch', function() {
-    gulp.watch( [ path.js ], [ 'checkstyle', 'test' ]);
+    gulp.watch( [ path.js ], [ 'checkstyle']);
 });

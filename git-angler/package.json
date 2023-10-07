@@ -9,12 +9,11 @@
     "url": "https://github.com/nhynes/git-angler.git"
   },
   "scripts": {
-    "test": "mocha mocha-test"
+    "test": "mocha test"
   },
   "author": "Nick Hynes",
   "dependencies": {
-    "git-http-backend": "file:../git-http-backend",
-    "mocha": "^10.2.0"
+    "git-http-backend": "file:../git-http-backend"
   },
   "devDependencies": {
     "gulp": "^3.9.1",
@@ -23,6 +22,6 @@
     "gulp-nodeunit": "0.0.5",
     "gulp-plumber": "^0.6.5",
     "jshint-stylish": "^0.4.0",
-    "nodeunit": "^0.9.0"
+    "mocha": "^10.2.0"
   }
 }
