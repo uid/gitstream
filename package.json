@@ -6,6 +6,9 @@
   "author": "Nick Hynes",
   "license": "MIT",
   "repository": "https://github.com/uid/gitstream",
+  "scripts": {
+    "test": "mocha mocha-test/**/*.mjs"
+  },
   "browserify": {
     "transform": [
       "hbsfy"
@@ -51,6 +54,7 @@
     "gulp-uglify": "^3.0.2",
     "handlebars": "^4.7.6",
     "hbsfy": "^2.8.1",
+    "mocha": "^10.2.0",
     "normalize.css": "^8.0.1",
     "sass": "^1.54.5",
     "vinyl-buffer": "^1.0.1",
