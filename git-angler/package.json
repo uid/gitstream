@@ -16,7 +16,6 @@
     "git-http-backend": "file:../git-http-backend"
   },
   "devDependencies": {
-    "jshint-stylish": "^0.4.0",
     "mocha": "^10.2.0"
   }
 }
