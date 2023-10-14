@@ -334,10 +334,3 @@ describe('ExcerciseMachine', function() {
     })
   })
 })
-
-
-/**
-it('', function (){
-})
-*/
-
