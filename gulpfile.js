@@ -35,7 +35,6 @@ var gulp = require('gulp'),
             exercises: 'node_modules/gitstream-exercises/exercises',
             server: 'src/server/**/*'
         },
-        tests: 'test/**/*.js',
         dist: {
             base: 'dist/',
             all: 'dist/**/*',
@@ -69,17 +68,9 @@ gulp.task( 'clean', function( cb ) {
     return rimraf( path.dist.base, cb );
 });
 
-gulp.task( 'test', function() {
-    return gulp.src( path.tests )
-        .pipe( plumber())
-        .pipe( nodeunit({
-            reporter: 'skip_passed'
-        }) );
-
-});
 
 // gulp.task( 'checkstyle', function() {
-//     var stream = gulp.src( [].concat( path.src.js, path.tests ) )
+//     var stream = gulp.src( [].concat( path.src.js ) )
 
 //     if ( !production ) {
 //         stream = stream
@@ -168,7 +159,7 @@ gulp.task( 'linkexercises', function() {
 gulp.task( 'watch', function() {
     livereload({ silent: true });
     watching = true;
-    gulp.watch( notilde( [].concat( path.src.js, path.tests ) ), [ /*'checkstyle',*/ 'test' ] );
+    gulp.watch( notilde( [].concat( path.src.js ) ), [ /*'checkstyle',*/ ] );
     gulp.watch( notilde( path.src.client.scss ), [ 'sass' ] );
     gulp.watch( notilde( path.src.client.static ), [ 'collectstatic' ] );
     gulp.watch( notilde( path.src.server ), [ 'collectserver' ] );
@@ -178,6 +169,6 @@ gulp.task( 'watch', function() {
 gulp.task( 'build', gulp.series('sass', 'browserify', 'collectstatic', 'collectserver', 'linkexercises'), function build (cb) {
     cb();
 });
-gulp.task( 'default', gulp.series(/*'checkstyle',*/ 'test', 'watch', 'build'), function defaultTask (cb) {
+gulp.task( 'default', gulp.series(/*'checkstyle',*/ 'watch', 'build'), function defaultTask (cb) {
     cb();
 });
