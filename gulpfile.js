@@ -63,12 +63,12 @@ function notilde( path ) {
     return [].concat( path, '!**/*~' );
 }
 
-
+// todo: convert to a makefile task to delete the dist folder
 gulp.task( 'clean', function( cb ) {
     return rimraf( path.dist.base, cb );
 });
 
-
+// todo: throw away, we can use ESLint instead
 // gulp.task( 'checkstyle', function() {
 //     var stream = gulp.src( [].concat( path.src.js ) )
 
@@ -83,6 +83,7 @@ gulp.task( 'clean', function( cb ) {
 //         .pipe( jshint.reporter( stylish ) );
 // });
 
+// todo: Convert to an npm script to compile Sass. Make use of the package `node-sass`
 gulp.task( 'sass', function() {
     var stream = gulp.src( path.src.client.scss )
 
@@ -98,6 +99,8 @@ gulp.task( 'sass', function() {
         .pipe( gulp.dest( path.dist.client ) );
 });
 
+
+// todo: Convert to an npm script to bundle JS with `esbuild`
 gulp.task( 'browserify', function() {
     var bundler = browserify({
         cache: {}, packageCache: {}, fullPaths: true,
@@ -131,6 +134,7 @@ gulp.task( 'browserify', function() {
     return bundle();
 });
 
+// todo: Throw away, we can copy static assets as part of build
 gulp.task( 'collectstatic', function() {
     var stream = gulp.src( notilde( path.src.client.static ) );
 
@@ -141,6 +145,7 @@ gulp.task( 'collectstatic', function() {
     return stream.pipe( gulp.dest( path.dist.client ) );
 });
 
+// todo: throw away, we can copy the server files as part of build
 gulp.task( 'collectserver', function() {
     var stream = gulp.src( notilde( path.src.server ) )
 
@@ -151,11 +156,13 @@ gulp.task( 'collectserver', function() {
     return stream.pipe( gulp.dest( path.dist.server ) );
 });
 
+// todo: throw away, we can create these symlinks as part of build
 gulp.task( 'linkexercises', function() {
     return gulp.src( path.src.exercises )
         .pipe( gulp.symlink( path.dist.exercises , { overwrite: true, relativeSymlinks: true }) );
 });
 
+// todo: throw away, replace with a modern package
 gulp.task( 'watch', function() {
     livereload({ silent: true });
     watching = true;
@@ -166,9 +173,12 @@ gulp.task( 'watch', function() {
     return gulp.watch( path.dist.all ).on( 'change', livereload.changed );
 });
 
+// todo: convert to makefile task to run build steps
 gulp.task( 'build', gulp.series('sass', 'browserify', 'collectstatic', 'collectserver', 'linkexercises'), function build (cb) {
     cb();
 });
+
+// todo:  convert to makefile default task
 gulp.task( 'default', gulp.series(/*'checkstyle',*/ 'watch', 'build'), function defaultTask (cb) {
     cb();
 });
