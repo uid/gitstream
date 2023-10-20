@@ -63,11 +63,6 @@ function notilde( path ) {
     return [].concat( path, '!**/*~' );
 }
 
-// todo: convert to a makefile task to delete the dist folder
-gulp.task( 'clean', function( cb ) {
-    return rimraf( path.dist.base, cb );
-});
-
 // todo: throw away, we can use ESLint instead
 // gulp.task( 'checkstyle', function() {
 //     var stream = gulp.src( [].concat( path.src.js ) )
@@ -162,7 +157,7 @@ gulp.task( 'linkexercises', function() {
         .pipe( gulp.symlink( path.dist.exercises , { overwrite: true, relativeSymlinks: true }) );
 });
 
-// todo: throw away, replace with a modern package
+// todo: throw away for now, take a look again once we merge with ProxisTutor
 gulp.task( 'watch', function() {
     livereload({ silent: true });
     watching = true;
