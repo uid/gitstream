@@ -5,46 +5,39 @@ var gulp = require('gulp'),
     concat = require('gulp-concat'),
     hbsfy = require('hbsfy'),
     livereload,
-    nodeunit,
     plumber,
     prefixer = require('gulp-autoprefixer'),
     rimraf,
     sass = require('gulp-sass')(require('sass')),
     source = require('vinyl-source-stream'),
-    // stylish,
-    uglify = require('gulp-uglify'),
 
     production = process.env.NODE_ENV === 'production',
 
     path = {
         src: {
-            all: 'src/**/*',
-            js: 'src/**/*.js',
-            client: {
-                main: './src/client/js/main.js',
-                scss: 'src/client/**/*.s[ac]ss',
-                static: [
-                    'src/client/resources/**/*',
-                    'src/client/exercises/**/*',
-                    'src/client/*.html'
-                ]
-            },
-            exercises: 'node_modules/gitstream-exercises/exercises',
-            server: 'src/server/**/*'
+          client: {
+            main: './src/client/js/main.js',
+            scss: 'src/client/**/*.s[ac]ss',
+            static: [
+              'src/client/resources/**/*',
+              'src/client/exercises/**/*',
+              'src/client/*.html'
+            ]
+          },
+          exercises: 'node_modules/gitstream-exercises/exercises',
+          server: 'src/server/**/*'
         },
         dist: {
-            base: 'dist/',
-            all: 'dist/**/*',
-            client: 'dist/client/',
-            server: 'dist/server/',
-            exercises: 'dist/server'
-        },
-    }
+          base: 'dist/',
+          client: 'dist/client/',
+          server: 'dist/server/',
+          exercises: 'dist/server'
+        }
+    };
 
 if ( !production ) {
     cache = require('gulp-cached');
     livereload = require('gulp-livereload');
-    //nodeunit = require('gulp-nodeunit');
     plumber = require('gulp-plumber');
     rimraf = require('rimraf');
 }
@@ -89,7 +82,6 @@ gulp.task( 'browserify', function() {
         if ( production ) {
             stream = stream
                 .pipe( buffer() )
-                //.pipe( uglify() )
         }
 
         stream.pipe( gulp.dest( path.dist.client ) );
