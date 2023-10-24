@@ -4,8 +4,6 @@ var gulp = require('gulp'),
     cache,
     concat = require('gulp-concat'),
     hbsfy = require('hbsfy'),
-    jscs,
-    // jshint,
     livereload,
     nodeunit,
     plumber,
@@ -48,13 +46,10 @@ var gulp = require('gulp'),
 
 if ( !production ) {
     cache = require('gulp-cached');
-    //jscs = require('gulp-jscs');
-    // jshint = require('gulp-jshint');
     livereload = require('gulp-livereload');
     //nodeunit = require('gulp-nodeunit');
     plumber = require('gulp-plumber');
     rimraf = require('rimraf');
-    // stylish = require('jshint-stylish');
     //watchify = require('watchify');
 }
 
@@ -62,21 +57,6 @@ if ( !production ) {
 function notilde( path ) {
     return [].concat( path, '!**/*~' );
 }
-
-// todo: throw away, we can use ESLint instead
-// gulp.task( 'checkstyle', function() {
-//     var stream = gulp.src( [].concat( path.src.js ) )
-
-//     if ( !production ) {
-//         stream = stream
-//             .pipe( plumber() )
-//             .pipe( cache('scripts') );
-//     }
-
-//     return stream.pipe( jscs() )
-//         .pipe( jshint() )
-//         .pipe( jshint.reporter( stylish ) );
-// });
 
 // todo: Convert to an npm script to compile Sass. Make use of the package `node-sass`
 gulp.task( 'sass', function() {
@@ -161,7 +141,6 @@ gulp.task( 'linkexercises', function() {
 gulp.task( 'watch', function() {
     livereload({ silent: true });
     watching = true;
-    gulp.watch( notilde( [].concat( path.src.js ) ), [ /*'checkstyle',*/ ] );
     gulp.watch( notilde( path.src.client.scss ), [ 'sass' ] );
     gulp.watch( notilde( path.src.client.static ), [ 'collectstatic' ] );
     gulp.watch( notilde( path.src.server ), [ 'collectserver' ] );
@@ -174,6 +153,6 @@ gulp.task( 'build', gulp.series('sass', 'browserify', 'collectstatic', 'collects
 });
 
 // todo:  convert to makefile default task
-gulp.task( 'default', gulp.series(/*'checkstyle',*/ 'watch', 'build'), function defaultTask (cb) {
+gulp.task( 'default', gulp.series('watch', 'build'), function defaultTask (cb) {
     cb();
 });
