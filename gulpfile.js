@@ -4,7 +4,6 @@ var gulp = require('gulp'),
     cache,
     concat = require('gulp-concat'),
     hbsfy = require('hbsfy'),
-    livereload,
     plumber,
     prefixer = require('gulp-autoprefixer'),
     sass = require('gulp-sass')(require('sass')),
@@ -36,7 +35,6 @@ var gulp = require('gulp'),
 
 if ( !production ) {
     cache = require('gulp-cached');
-    livereload = require('gulp-livereload');
     plumber = require('gulp-plumber');
 }
 
