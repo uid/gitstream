@@ -7,7 +7,6 @@ var gulp = require('gulp'),
     livereload,
     plumber,
     prefixer = require('gulp-autoprefixer'),
-    rimraf,
     sass = require('gulp-sass')(require('sass')),
     source = require('vinyl-source-stream'),
 
@@ -39,7 +38,6 @@ if ( !production ) {
     cache = require('gulp-cached');
     livereload = require('gulp-livereload');
     plumber = require('gulp-plumber');
-    rimraf = require('rimraf');
 }
 
 // todo: Convert to an npm script to compile Sass. Make use of the package `node-sass`
