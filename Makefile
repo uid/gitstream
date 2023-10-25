@@ -1,4 +1,5 @@
 #!/usr/bin/make -f
+.DEFAULT_GOAL := build
 
 include paths.mk
 
@@ -39,5 +40,3 @@ uninstall:
 
 clean:
 	rm -rf dist
-
-distclean: clean;
