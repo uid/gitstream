@@ -2,11 +2,8 @@ var gulp = require('gulp'),
     browserify = require('browserify'),
     buffer = require('vinyl-buffer'),
     cache,
-    concat = require('gulp-concat'),
     hbsfy = require('hbsfy'),
     plumber,
-    prefixer = require('gulp-autoprefixer'),
-    sass = require('gulp-sass')(require('sass')),
     source = require('vinyl-source-stream'),
 
     devMode = process.env.NODE_ENV === 'development',
@@ -14,12 +11,10 @@ var gulp = require('gulp'),
     path = {
         src: {
           client: {
-            main: './src/client/js/main.js',
-            scss: 'src/client/**/*.s[ac]ss'
+            main: './src/client/js/main.js'
           }
         },
         dist: {
-          base: 'dist/',
           client: 'dist/client/'
         }
     };
@@ -28,22 +23,6 @@ if ( devMode ) {
     cache = require('gulp-cached');
     plumber = require('gulp-plumber');
 }
-
-// todo: Convert to an npm script to compile Sass. Make use of the package `node-sass`
-gulp.task( 'sass', function() {
-    var stream = gulp.src( path.src.client.scss )
-
-    if ( devMode ) {
-        stream = stream
-            .pipe( plumber() )
-    }
-
-    return stream.pipe( sass() )
-        //.pipe( minifyCss({ cache: true }) )
-        .pipe( concat('bundle.css') )
-        .pipe( prefixer('> 5%') )
-        .pipe( gulp.dest( path.dist.client ) );
-});
 
 
 // todo: Convert to an npm script to bundle JS with `esbuild`
@@ -75,7 +54,7 @@ gulp.task( 'browserify', function() {
 });
 
 // todo: convert to makefile task to run build steps
-gulp.task( 'build', gulp.series('sass', 'browserify'), function build (cb) {
+gulp.task( 'build', gulp.series('browserify'), function build (cb) {
     cb();
 });
 

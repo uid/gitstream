@@ -8,6 +8,8 @@ ifeq ($(PACKAGING),)
 	npm install
 endif
 	NODE_ENV=production # can either be `development` or `production`
+
+	npm run sass
 	npx gulp build
 
 ifeq ($(NODE_ENV),development)
