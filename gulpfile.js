@@ -9,7 +9,7 @@ var gulp = require('gulp'),
     sass = require('gulp-sass')(require('sass')),
     source = require('vinyl-source-stream'),
 
-    production = process.env.NODE_ENV === 'production',
+    devMode = process.env.NODE_ENV === 'development',
 
     path = {
         src: {
@@ -33,7 +33,7 @@ var gulp = require('gulp'),
         }
     };
 
-if ( !production ) {
+if ( devMode ) {
     cache = require('gulp-cached');
     plumber = require('gulp-plumber');
 }
@@ -42,7 +42,7 @@ if ( !production ) {
 gulp.task( 'sass', function() {
     var stream = gulp.src( path.src.client.scss )
 
-    if ( !production ) {
+    if ( devMode ) {
         stream = stream
             .pipe( plumber() )
     }
@@ -60,7 +60,7 @@ gulp.task( 'browserify', function() {
     var bundler = browserify({
         cache: {}, packageCache: {}, fullPaths: true,
         entries: path.src.client.main,
-        debug: !production
+        debug: devMode
     });
 
     var bundle = function() {
@@ -70,7 +70,7 @@ gulp.task( 'browserify', function() {
             })
             .pipe( source('bundle.js') );
 
-        if ( production ) {
+        if ( !devMode ) {
             stream = stream
                 .pipe( buffer() )
         }
@@ -87,7 +87,7 @@ gulp.task( 'browserify', function() {
 gulp.task( 'collectstatic', function() {
     var stream = gulp.src( path.src.client.static);
 
-    if( !production ) {
+    if( devMode ) {
         stream = stream.pipe( cache('static') );
     }
 
@@ -98,7 +98,7 @@ gulp.task( 'collectstatic', function() {
 gulp.task( 'collectserver', function() {
     var stream = gulp.src( path.src.server )
 
-    if( !production ) {
+    if( devMode ) {
         stream = stream.pipe( cache('server') );
     }
 
