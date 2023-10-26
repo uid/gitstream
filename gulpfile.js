@@ -17,13 +17,11 @@ var gulp = require('gulp'),
             main: './src/client/js/main.js',
             scss: 'src/client/**/*.s[ac]ss'
           },
-          exercises: 'node_modules/gitstream-exercises/exercises',
-          server: 'src/server/**/*'
+          exercises: 'node_modules/gitstream-exercises/exercises'
         },
         dist: {
           base: 'dist/',
           client: 'dist/client/',
-          server: 'dist/server/',
           exercises: 'dist/server'
         }
     };
@@ -78,17 +76,6 @@ gulp.task( 'browserify', function() {
     return bundle();
 });
 
-// todo: throw away, we can copy the server files as part of build
-gulp.task( 'collectserver', function() {
-    var stream = gulp.src( path.src.server )
-
-    if( devMode ) {
-        stream = stream.pipe( cache('server') );
-    }
-
-    return stream.pipe( gulp.dest( path.dist.server ) );
-});
-
 // todo: throw away, we can create these symlinks as part of build
 gulp.task( 'linkexercises', function() {
     return gulp.src( path.src.exercises )
@@ -96,7 +83,7 @@ gulp.task( 'linkexercises', function() {
 });
 
 // todo: convert to makefile task to run build steps
-gulp.task( 'build', gulp.series('sass', 'browserify','collectserver', 'linkexercises'), function build (cb) {
+gulp.task( 'build', gulp.series('sass', 'browserify', 'linkexercises'), function build (cb) {
     cb();
 });
 

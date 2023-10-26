@@ -13,9 +13,15 @@ endif
 ifeq ($(NODE_ENV),development)
 	# collectstatic
 	rsync -av --ignore-existing $(SRC_CLIENT_STATIC) $(DIST_CLIENT)
+
+	# collectserver
+	rsync -av --ignore-existing $(SRC_SERVER) $(DIST_SERVER)
 else
 	# collectstatic
 	rsync -a $(SRC_CLIENT_STATIC) $(DIST_CLIENT)
+
+	# collectserver
+	rsync -a $(SRC_SERVER) $(DIST_SERVER)
 endif
 
 install:
