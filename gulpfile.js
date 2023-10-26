@@ -16,13 +16,11 @@ var gulp = require('gulp'),
           client: {
             main: './src/client/js/main.js',
             scss: 'src/client/**/*.s[ac]ss'
-          },
-          exercises: 'node_modules/gitstream-exercises/exercises'
+          }
         },
         dist: {
           base: 'dist/',
-          client: 'dist/client/',
-          exercises: 'dist/server'
+          client: 'dist/client/'
         }
     };
 
@@ -76,14 +74,8 @@ gulp.task( 'browserify', function() {
     return bundle();
 });
 
-// todo: throw away, we can create these symlinks as part of build
-gulp.task( 'linkexercises', function() {
-    return gulp.src( path.src.exercises )
-        .pipe( gulp.symlink( path.dist.exercises , { overwrite: true, relativeSymlinks: true }) );
-});
-
 // todo: convert to makefile task to run build steps
-gulp.task( 'build', gulp.series('sass', 'browserify', 'linkexercises'), function build (cb) {
+gulp.task( 'build', gulp.series('sass', 'browserify'), function build (cb) {
     cb();
 });
 

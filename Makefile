@@ -24,6 +24,9 @@ else
 	rsync -a $(SRC_SERVER) $(DIST_SERVER)
 endif
 
+	# linkexercises
+	ln -s $(SRC_EXERCISES) $(DIST_EXERCISES)
+
 install:
 	npm prune --production
 	mkdir -p $(GSDIRS) $(NGINXLOGS)
