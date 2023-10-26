@@ -25,7 +25,7 @@ else
 endif
 
 	# linkexercises
-	ln -s $(SRC_EXERCISES) $(DIST_EXERCISES)
+	ln -srf $(SRC_EXERCISES) $(DIST_EXERCISES)
 
 install:
 	npm prune --production
