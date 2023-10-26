@@ -15,12 +15,7 @@ var gulp = require('gulp'),
         src: {
           client: {
             main: './src/client/js/main.js',
-            scss: 'src/client/**/*.s[ac]ss',
-            static: [
-              'src/client/resources/**/*',
-              'src/client/exercises/**/*',
-              'src/client/*.html'
-            ]
+            scss: 'src/client/**/*.s[ac]ss'
           },
           exercises: 'node_modules/gitstream-exercises/exercises',
           server: 'src/server/**/*'
@@ -83,17 +78,6 @@ gulp.task( 'browserify', function() {
     return bundle();
 });
 
-// todo: Throw away, we can copy static assets as part of build
-gulp.task( 'collectstatic', function() {
-    var stream = gulp.src( path.src.client.static);
-
-    if( devMode ) {
-        stream = stream.pipe( cache('static') );
-    }
-
-    return stream.pipe( gulp.dest( path.dist.client ) );
-});
-
 // todo: throw away, we can copy the server files as part of build
 gulp.task( 'collectserver', function() {
     var stream = gulp.src( path.src.server )
@@ -112,7 +96,7 @@ gulp.task( 'linkexercises', function() {
 });
 
 // todo: convert to makefile task to run build steps
-gulp.task( 'build', gulp.series('sass', 'browserify', 'collectstatic', 'collectserver', 'linkexercises'), function build (cb) {
+gulp.task( 'build', gulp.series('sass', 'browserify','collectserver', 'linkexercises'), function build (cb) {
     cb();
 });
 

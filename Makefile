@@ -7,7 +7,16 @@ build:
 ifeq ($(PACKAGING),)
 	npm install
 endif
-	NODE_ENV=production npx gulp build
+	NODE_ENV=production # can either be `development` or `production`
+	npx gulp build
+
+ifeq ($(NODE_ENV),development)
+	# collectstatic
+	rsync -av --ignore-existing $(SRC_CLIENT_STATIC) $(DIST_CLIENT)
+else
+	# collectstatic
+	rsync -a $(SRC_CLIENT_STATIC) $(DIST_CLIENT)
+endif
 
 install:
 	npm prune --production
