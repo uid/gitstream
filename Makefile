@@ -10,7 +10,8 @@ endif
 	NODE_ENV=production # can either be `development` or `production`
 
 	npm run sass
-	npx gulp build
+	# npx gulp build
+	npm run build-js
 
 ifeq ($(NODE_ENV),development)
 	# collectstatic

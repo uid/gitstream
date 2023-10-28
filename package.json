@@ -6,9 +6,11 @@
   "author": "Nick Hynes",
   "license": "MIT",
   "repository": "https://github.com/uid/gitstream",
+  "type": "commonjs",
   "scripts": {
     "test": "mocha test/**/*.mjs",
-    "sass": "node-sass src/client/scss/ -o dist/client/"  
+    "sass": "node-sass src/client/scss/ -o dist/client",
+    "build-js": "node esbuild.config.js"
   },
   "browserify": {
     "transform": [
@@ -42,6 +44,8 @@
   "devDependencies": {
     "browserify": "^17.0.0",
     "crypto-js": "^4.1.1",
+    "esbuild": "^0.19.5",
+    "esbuild-plugin-handlebars": "^1.0.2",
     "event-emitter": "^0.3.5",
     "gulp": "^4.0.2",
     "gulp-cached": "^1.1.1",
