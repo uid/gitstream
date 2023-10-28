@@ -38,7 +38,7 @@ gulp.task( 'browserify', function() {
             .on( 'error', function( e ) {
                 console.error( '\x1b[31;1m', 'Browserify Error', e.toString(), '\x1b[0m' );
             })
-            .pipe( source('bundle.js') );
+            .pipe( source('main.js') );
 
         if ( !devMode ) {
             stream = stream
