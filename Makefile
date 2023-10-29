@@ -9,7 +9,6 @@ ifeq ($(PACKAGING),)
 	npm install
 endif
 	npm run sass
-	# npx gulp build
 	npm run browserify
 
 	# collectstatic
