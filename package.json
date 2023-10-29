@@ -10,7 +10,9 @@
   "scripts": {
     "test": "mocha test/**/*.mjs",
     "sass": "node-sass src/client/scss/ -o dist/client",
-    "build-js": "node esbuild.config.js"
+    "build-js": "node esbuild.config.js",
+    "esbuild": "esbuild --bundle src/client/js/main.js --outfile=dist/client/bundle.js",
+    "browserify": "browserify src/client/js/main.js --outfile=dist/client/bundle.js"
   },
   "browserify": {
     "transform": [

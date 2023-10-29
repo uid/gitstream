@@ -11,7 +11,7 @@ endif
 
 	npm run sass
 	# npx gulp build
-	npm run build-js
+	npm run browserify
 
 ifeq ($(NODE_ENV),development)
 	# collectstatic
