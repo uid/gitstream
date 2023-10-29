@@ -49,18 +49,12 @@
     "esbuild": "^0.19.5",
     "esbuild-plugin-handlebars": "^1.0.2",
     "event-emitter": "^0.3.5",
-    "gulp": "^4.0.2",
-    "gulp-cached": "^1.1.1",
-    "gulp-plumber": "^1.2.1",
-    "gulp-uglify": "^3.0.2",
     "handlebars": "^4.7.6",
     "hbsfy": "^2.8.1",
     "mocha": "^10.2.0",
     "node-sass": "^9.0.0",
     "normalize.css": "^8.0.1",
     "sass": "^1.54.5",
-    "vinyl-buffer": "^1.0.1",
-    "vinyl-source-stream": "^2.0.0",
     "zeptojs": "^1.1.4"
   }
 }
