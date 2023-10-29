@@ -3,7 +3,8 @@
 
 include paths.mk
 
-build:
+build: clean
+
 ifeq ($(PACKAGING),)
 	npm install
 endif
