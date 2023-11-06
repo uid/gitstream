@@ -4,7 +4,6 @@ var spawn = require('child_process').spawn,
     q = require('q'),
     mustache = require('mustache'),
     crypto = require('crypto'),
-    request = require('request'), // todo: remove
     settings = require('../../settings'),
     utils
 
@@ -203,17 +202,6 @@ utils = module.exports = {
                 sign.update(JSON.stringify(input))
                 var privateKey = fs.readFileSync('gitstream.pem');
                 var signature = sign.sign(privateKey, 'base64')
-                // request.post({
-                //     url: omnivoreEndpoint.url,
-                //     headers: { 'X-Omnivore-Signed': 'gitstream ' + signature },
-                //     json: input},
-                //     function(error, response, body) {
-                //         if (error) return errorCallback(error);
-                //         console.log('omnivore responded', response.statusCode, response.statusMessage);
-                //         if (response.statusCode != 200) {
-                //             return errorCallback(new Error("omnivore responded " + response.statusCode + " " + response.statusMessage));
-                //         }
-                //     });
                 
                 const url = omnivoreEndpoint.url;
                 const headers = { 
