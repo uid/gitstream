@@ -20,6 +20,9 @@ endif
 	# linkexercises
 	ln -srf $(SRC_EXERCISES) $(DIST_EXERCISES)
 
+run: build
+	sudo -u gitstream node dist/server/main
+
 install:
 	npm prune --production
 	mkdir -p $(GSDIRS) $(NGINXLOGS)
