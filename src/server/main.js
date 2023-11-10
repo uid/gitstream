@@ -356,6 +356,7 @@ async function configureApp() {
 
         createRepo( repo )
         .done( function( repoInfo ) {
+            // only 1 instance of publish
             rcon.publish( repoInfo.userId + ':go', repoInfo.exerciseName,
                        logDbErr( repoInfo.userId, repoInfo.exerciseName, {
                            desc: 'Redis go publish'
@@ -431,14 +432,13 @@ shoe( function( stream ) {
                     }
                 },
                 unsetExercise = function() {
-                    logger.dbCall('hdel', 1);
                     rcon.hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME )
+                    logger.redisCall(rcon, userId, 'hdel');
                 },
                 listeners = [
                     { event: 'ding', helper: unsetExercise },
                     { event: 'halt', helper: unsetExercise },
                     { event: 'step', helper: function( newState ) { // step seems to be important, why?
-                        logger.dbCall('hset', 1);
                         console.error('hset', userId, FIELD_EXERCISE_STATE, newState);
                         rcon.multi()
                         .expire( userId, CLIENT_IDLE_TIMEOUT )
@@ -447,6 +447,7 @@ shoe( function( stream ) {
                             desc: 'Redis step update exercise state',
                             newState: newState
                         }) )
+                        logger.redisCall(rcon, userId, 'hset');
                     } }
                 ]
 
@@ -458,6 +459,7 @@ shoe( function( stream ) {
             return exerciseMachine
         }
 
+    // once server dies
     stream.on( 'close', function() {
         if ( exerciseMachine ) {
             exerciseMachine.removeAllListeners()
@@ -480,7 +482,6 @@ shoe( function( stream ) {
             logger.err( logger.ERR.DB, userId, null, { msg: err.message } )
         })
 
-        logger.dbCall('hgetall', 1);
         rcon.hgetall( userId, function( err, clientState ) {
             if ( err ) {
                 // LOGGING
@@ -495,7 +496,7 @@ shoe( function( stream ) {
                 clientState = { currentExercise: null }
                 console.error('hmset', userId, clientState);
 
-                logger.dbCall('hmset', 1);
+                logger.redisCall(rcon, userId, 'hmset');
                 // note: I think this instance never used/called.
                 // its structure is also wrong
                 rcon.hmset( userId, clientState, logDbErr( userId, null, {
@@ -520,7 +521,7 @@ shoe( function( stream ) {
                     exerciseMachine.init( exerciseState, timeRemaining / 1000 )
 
                 } else if ( exerciseState ) { // last exercise has expired
-                    logger.dbCall('hdel', 2);
+                    logger.redisCall(rcon, userId, 'hdel');
                     rcon.hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME )
                     delete clientState[ FIELD_EXERCISE_STATE ]
                     delete clientState[ FIELD_END_TIME ]
@@ -536,13 +537,14 @@ shoe( function( stream ) {
                 clientEvents.emit( 'sync', clientState )
             })
         })
+        logger.redisCall(rcon, userId, 'hgetall');
 
+        // only 1 instance of subscribe
         rsub.subscribe( userId + ':go' )
         rsub.on( 'message', function( channel, exerciseName ) {
             // LOGGING
             logger.log( logger.EVENT.GO, userId, exerciseName )
 
-            logger.dbCall('hgetall', 2);
             rcon.hgetall( userId, function( err, state ) {
                 var startState,
                     endTime
@@ -560,7 +562,7 @@ shoe( function( stream ) {
                 console.error('hmset', FIELD_EXERCISE_STATE, startState,
                        FIELD_END_TIME, endTime );
                 
-                logger.dbCall('hmset', 2);
+                logger.redisCall(rcon, userId, 'hmset');
                 rcon.multi()
                     .expire( userId, CLIENT_IDLE_TIMEOUT )
                     .hmset( userId,
@@ -575,7 +577,7 @@ shoe( function( stream ) {
                             })
                         }
                     })
-
+                console.log("done")
                 state[ FIELD_EXERCISE_STATE ] = startState
                 state.timeRemaining = exerciseMachine._timeLimit * 1000
                 delete state[ FIELD_END_TIME ]
@@ -584,8 +586,9 @@ shoe( function( stream ) {
 
                 exerciseMachine.init()
             })
-        })
+            logger.redisCall(rcon, userId, 'hgetall');
 
+        })
     }.bind( this ) )
 
     clientEvents.on( 'exerciseChanged', function( newExercise ) {
@@ -594,15 +597,14 @@ shoe( function( stream ) {
             exerciseMachine = null
         }
 
-        logger.dbCall('hdel', 3);
-        logger.dbCall('hset', 2);
-
         console.error('hset', userId, FIELD_CURRENT_EXERCISE, newExercise);
         rcon.multi()
             .expire( userId, CLIENT_IDLE_TIMEOUT )
             .hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME )
             .hset( userId, FIELD_CURRENT_EXERCISE, newExercise )
             .exec( logDbErr( userId, newExercise, { desc: 'Redis change exercise' } ) )
+        logger.redisCall(rcon, userId, 'hdel');
+        logger.redisCall(rcon, userId, 'hset');
 
         // LOGGING
         logger.log( logger.EVENT.CHANGE_EXERCISE, userId, newExercise )

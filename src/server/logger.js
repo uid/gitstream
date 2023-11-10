@@ -1,7 +1,10 @@
+const redis = require('redis');
+
 const CLI_COL = {
     MAG: '\x1b[35m',
     RST: '\x1b[0m',
     GRN: '\x1b[32m',
+    BLU: '\x1b[34m',
 };
 
 /**
@@ -91,10 +94,25 @@ module.exports = function( opts ) {
             })
         },
 
-        dbCall: function(type, instance) {
+        redisCall: function(client, userID, type) {
             const callerInfo = getCallerInfo();
-            console.log(`${CLI_COL.GRN}[${callerInfo.fileName}:${callerInfo.lineNum}]` +
-            `${CLI_COL.RST} -- ${CLI_COL.MAG}[${type}:${instance}]${CLI_COL.RST}`);
+
+            const location = `${CLI_COL.GRN}[${callerInfo.fileName}:${callerInfo.lineNum}]` +
+            `${CLI_COL.MAG}[${type}]${CLI_COL.RST}`;
+
+            client.hgetall(userID, (err, content) => {
+                if (err) {
+                    console.error(err);
+                    return;
+                }
+
+                let contentAll = CLI_COL.BLU;
+                Object.keys(content).forEach(field => {
+                    contentAll += field + ': ' + content[field] + '\n';
+                  });
+                contentAll += CLI_COL.RST
+                console.log(`\nLocation:\n${location}\nContent:\n${contentAll}`);
+            });
         }
 
     }
