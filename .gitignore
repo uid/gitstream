@@ -10,3 +10,6 @@ gitstream.pem
 
 # local settings (e.g. authentication secrets) that shouldn't be committed
 settings*.js
+
+package-lock.json
+git-angler/package-lock.json
