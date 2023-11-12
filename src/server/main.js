@@ -447,6 +447,7 @@ shoe( function( stream ) {
                             desc: 'Redis step update exercise state',
                             newState: newState
                         }) )
+                        logger.redisCall(rcon, userId, 'expire');
                         logger.redisCall(rcon, userId, 'hset');
                     } }
                 ]
@@ -496,12 +497,12 @@ shoe( function( stream ) {
                 clientState = { currentExercise: null }
                 console.error('hmset', userId, clientState);
 
-                logger.redisCall(rcon, userId, 'hmset');
                 // note: I think this instance never used/called.
                 // its structure is also wrong
                 rcon.hmset( userId, clientState, logDbErr( userId, null, {
                     desc: 'Redis unset client state'
-                }) )
+                }))
+                logger.redisCall(rcon, userId, 'hmset');
             }
 
             userKeyPromise.then( function( userKey ) {
@@ -605,6 +606,7 @@ shoe( function( stream ) {
             .hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME )
             .hset( userId, FIELD_CURRENT_EXERCISE, newExercise )
             .exec( logDbErr( userId, newExercise, { desc: 'Redis change exercise' } ) )
+        logger.redisCall(rcon, userId, 'expire');
         logger.redisCall(rcon, userId, 'hdel');
         logger.redisCall(rcon, userId, 'hset');
 
