@@ -8,6 +8,21 @@ const CLI_COL = {
 };
 
 /**
+ * Format a field and its content with a specified width.
+ * Truncates content if it exceeds the specified width.
+ * @param field- The field name.
+ * @param content - The content associated with the field.
+ * @param width - The desired width for the field. Default 20.
+ * @returns - The formatted string with proper padding.
+ */
+function formatField(field, content, width = 20) {
+    const fieldString = field + ':';
+    const contentString = content.substring(0, width);
+    const padding = ' '.repeat(width - fieldString.length);
+    return fieldString + padding + contentString;
+  }
+
+/**
  * Fetch relavent meta information from caller, for logging and debugging purposes.
  * 
  * @returns Filename and line number of the instance of the `log` that was called. If not found,
@@ -108,10 +123,11 @@ module.exports = function( opts ) {
 
                 let contentAll = CLI_COL.BLU;
                 Object.keys(content).forEach(field => {
-                    contentAll += field + ': ' + content[field] + '\n';
+                    const formattedEntry = formatField(field, content[field]);
+                    contentAll += formattedEntry + '\n';
                   });
                 contentAll += CLI_COL.RST
-                console.log(`\nLocation:\n${location}\nContent:\n${contentAll}`);
+                console.log(`\n[HashMap Modification]\n${location}\n${contentAll}`);
             });
         }
 
