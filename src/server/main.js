@@ -562,7 +562,6 @@ shoe( function( stream ) {
                 console.error('hmset', FIELD_EXERCISE_STATE, startState,
                        FIELD_END_TIME, endTime );
                 
-                logger.redisCall(rcon, userId, 'hmset');
                 rcon.multi()
                     .expire( userId, CLIENT_IDLE_TIMEOUT )
                     .hmset( userId,
@@ -577,7 +576,10 @@ shoe( function( stream ) {
                             })
                         }
                     })
-                console.log("done")
+                    logger.redisCall(rcon, userId, 'expire');
+                    logger.redisCall(rcon, userId, 'hmset');
+
+
                 state[ FIELD_EXERCISE_STATE ] = startState
                 state.timeRemaining = exerciseMachine._timeLimit * 1000
                 delete state[ FIELD_END_TIME ]
