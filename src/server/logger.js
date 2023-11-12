@@ -23,30 +23,32 @@ function formatField(field, content, width = 20) {
   }
 
 /**
- * Fetch relavent meta information from caller, for logging and debugging purposes.
+ * Retrieves filename and line number information from some ancestor caller function that was called.
  * 
- * @returns Filename and line number of the instance of the `log` that was called. If not found,
- * returns NA for both.
+ * @param depth - The number of callers up the stack to retrieve information from. Default is parent.
+ * @returns {Object} - Filename and line number of the instance of the caller that was called. 
+ *                     If not found, returns NA for both properties.
  */
-function getCallerInfo() {
+function getCallerInfo(depth = 1) {
     try {
       throw new Error();
     } catch (error) {
       const stack = error.stack;
       if (stack) {
         const lines = stack.split('\n');
-        const callerLine = lines[3]; // grab caller infor
+            const stackIndex = depth + 2; // Add 2 to account for the throw error and getCallerInfo lines
+            const callerLine = lines[stackIndex]; // grab caller info
         const matches = /\((.*?):(\d+:\d+)\)/.exec(callerLine); // Use regex to extract info
         if (matches && matches.length === 3) {
           const [, filePath, lineInfo] = matches;
-          const fileName = filePath.split('/').pop(); // Extract the file name from the path
+                const fileName = filePath.split('/').pop(); // Extract the file name
           const lineNum = lineInfo.split(':')[0]; // Extract the line number
   
-          return {fileName, lineNum};
+                return { fileName, lineNum };
         }
       }
     }
-    return {fileName: 'NA', lineNum: 'NA'};
+    return { fileName: 'NA', lineNum: 'NA' };
   }
 
 module.exports = function( opts ) {
