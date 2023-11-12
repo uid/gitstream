@@ -642,6 +642,19 @@ shoe( function( stream ) {
                 console.error('hmset', FIELD_EXERCISE_STATE, startState,
                        FIELD_END_TIME, endTime );
                 
+                const tempCallbackName5 = function( err ) {
+                    if ( err ) {
+                        // LOGGING
+                        logger.err( logger.ERR.DB, userId, exerciseName, {
+                            desc: 'Redis go',
+                            msg: err.message
+                        })
+                    }
+                }
+                userMap.expire(userId, CLIENT_IDLE_TIMEOUT, tempCallbackName5);
+                userMap.set(userId, FIELD_EXERCISE_STATE, startState, tempCallbackName5);
+                userMap.set(userId, FIELD_END_TIME, endTime, tempCallbackName5);
+                
                 rcon.multi()
                     .expire( userId, CLIENT_IDLE_TIMEOUT )
                     .hset( userId,
