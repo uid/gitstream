@@ -25,31 +25,31 @@ function formatField(field, content, width = 20) {
 /**
  * Retrieves filename and line number information from some ancestor caller function that was called.
  * 
- * @param depth - The number of callers up the stack to retrieve information from. Default is parent.
+ * @param depth - The number of callers up the stack to retrieve information from. Default is 1 for parent.
  * @returns {Object} - Filename and line number of the instance of the caller that was called. 
  *                     If not found, returns NA for both properties.
  */
 function getCallerInfo(depth = 1) {
     try {
-      throw new Error();
+        throw new Error();
     } catch (error) {
-      const stack = error.stack;
-      if (stack) {
-        const lines = stack.split('\n');
+        const stack = error.stack;
+        if (stack) {
+            const lines = stack.split('\n');
             const stackIndex = depth + 2; // Add 2 to account for the throw error and getCallerInfo lines
             const callerLine = lines[stackIndex]; // grab caller info
-        const matches = /\((.*?):(\d+:\d+)\)/.exec(callerLine); // Use regex to extract info
-        if (matches && matches.length === 3) {
-          const [, filePath, lineInfo] = matches;
+            const matches = /\((.*?):(\d+:\d+)\)/.exec(callerLine); // Use regex to extract info
+            if (matches && matches.length === 3) {
+                const [, filePath, lineInfo] = matches;
                 const fileName = filePath.split('/').pop(); // Extract the file name
-          const lineNum = lineInfo.split(':')[0]; // Extract the line number
-  
+                const lineNum = lineInfo.split(':')[0]; // Extract the line number
+
                 return { fileName, lineNum };
+            }
         }
-      }
     }
     return { fileName: 'NA', lineNum: 'NA' };
-  }
+}
 
 module.exports = function( opts ) {
     var dbcon = opts.dbcon
@@ -131,6 +131,22 @@ module.exports = function( opts ) {
                 contentAll += CLI_COL.RST
                 console.log(`\n[HashMap Modification]\n${location}\n${contentAll}`);
             });
+        },
+        userMapMod: function(userMap, userID, type) {
+            const callerInfo = getCallerInfo(2);
+
+            const location = `${CLI_COL.GRN}[${callerInfo.fileName}:${callerInfo.lineNum}]` +
+                             `${CLI_COL.MAG}[${type}]${CLI_COL.RST}`;
+
+            const userInfo = userMap[userID] ?? {};
+            let contentAll = CLI_COL.BLU;
+
+            Object.keys(userInfo).forEach(field => {
+                const formattedEntry = formatField(field, userInfo[field]);
+                contentAll += formattedEntry + '\n';
+            });
+            contentAll += CLI_COL.RST
+            console.log(`\n[User Map Mod]\n${location}\n${contentAll}`);
         }
 
     }
