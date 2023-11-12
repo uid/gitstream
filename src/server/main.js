@@ -494,12 +494,8 @@ shoe( function( stream ) {
             }
             console.error('hgetall', userId, clientState);
             if ( !clientState ) {
-                clientState = { currentExercise: null }
-                console.error('hmset', userId, clientState);
-
-                // note: I think this instance never used/called.
-                // its structure is also wrong
-                rcon.hmset( userId, clientState, logDbErr( userId, null, {
+                console.error('hmset', FIELD_EXERCISE_STATE, null);
+                rcon.hmset( userId, FIELD_EXERCISE_STATE, null, logDbErr( userId, null, {
                     desc: 'Redis unset client state'
                 }))
                 logger.redisCall(rcon, userId, 'hmset');
