@@ -415,6 +415,7 @@ async function configureApp() {
         createRepo( repo )
         .done( function( repoInfo ) {
             // only 1 instance of publish
+            // note: this messaging system will kept for now
             rcon.publish( repoInfo.userId + ':go', repoInfo.exerciseName,
                        logDbErr( repoInfo.userId, repoInfo.exerciseName, {
                            desc: 'Redis go publish'
@@ -490,6 +491,8 @@ shoe( function( stream ) {
                     }
                 },
                 unsetExercise = function() {
+                    userMap.delete(userId, [FIELD_EXERCISE_STATE, FIELD_END_TIME]);
+
                     rcon.hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME )
                     logger.redisCall(rcon, userId, 'hdel');
                 },
@@ -498,6 +501,15 @@ shoe( function( stream ) {
                     { event: 'halt', helper: unsetExercise },
                     { event: 'step', helper: function( newState ) { // step seems to be important, why?
                         console.error('hset', userId, FIELD_EXERCISE_STATE, newState);
+
+                        const tempCallbackName2 =  logDbErr( userId, exerciseName, {
+                            desc: 'Redis step update exercise state',
+                            newState: newState
+                        });
+
+                        userMap.expire(userId, CLIENT_IDLE_TIMEOUT, tempCallbackName2);
+                        userMap.set(userId, FIELD_EXERCISE_STATE, newState, tempCallbackName2);
+
                         rcon.multi()
                         .expire( userId, CLIENT_IDLE_TIMEOUT )
                         .hset( userId, FIELD_EXERCISE_STATE, newState )
@@ -540,6 +552,9 @@ shoe( function( stream ) {
             logger.err( logger.ERR.DB, userId, null, { msg: err.message } )
         })
 
+        const tempCallbackName3 = function(){}; // populate with below function content
+        userMap.getAll(userId, tempCallbackName3)
+
         rcon.hgetall( userId, function( err, clientState ) {
             if ( err ) {
                 // LOGGING
@@ -552,6 +567,11 @@ shoe( function( stream ) {
             console.error('hgetall', userId, clientState);
             if ( !clientState ) {
                 console.error('hmset', FIELD_EXERCISE_STATE, null);
+
+                userMap.set(userId, FIELD_EXERCISE_STATE, null, logDbErr( userId, null, {
+                    desc: 'Redis unset client state'
+                }))
+
                 rcon.hset( userId, FIELD_EXERCISE_STATE, null, logDbErr( userId, null, {
                     desc: 'Redis unset client state'
                 }))
@@ -575,8 +595,10 @@ shoe( function( stream ) {
                     exerciseMachine.init( exerciseState, timeRemaining / 1000 )
 
                 } else if ( exerciseState ) { // last exercise has expired
-                    logger.redisCall(rcon, userId, 'hdel');
+                    userMap.delete(userId, FIELD_EXERCISE_STATE, FIELD_END_TIME);
+
                     rcon.hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME )
+                    logger.redisCall(rcon, userId, 'hdel');
                     delete clientState[ FIELD_EXERCISE_STATE ]
                     delete clientState[ FIELD_END_TIME ]
                 }
@@ -598,6 +620,9 @@ shoe( function( stream ) {
         rsub.on( 'message', function( channel, exerciseName ) {
             // LOGGING
             logger.log( logger.EVENT.GO, userId, exerciseName )
+
+            const tempCallbackName4 = function(){};
+            userMap.getAll(userId, tempCallbackName4)
 
             rcon.hgetall( userId, function( err, state ) {
                 var startState,
@@ -654,6 +679,13 @@ shoe( function( stream ) {
         }
 
         console.error('hset', userId, FIELD_CURRENT_EXERCISE, newExercise);
+        
+        const tempCallbackName = logDbErr( userId, newExercise, { desc: 'Redis change exercise' } )
+
+        userMap.expire(userId, CLIENT_IDLE_TIMEOUT, tempCallbackName);
+        userMap.delete(userId, [FIELD_EXERCISE_STATE, FIELD_END_TIME], tempCallbackName);
+        userMap.set(userId, FIELD_CURRENT_EXERCISE, newExercise, tempCallbackName);
+
         rcon.multi()
             .expire( userId, CLIENT_IDLE_TIMEOUT )
             .hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME )
