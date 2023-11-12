@@ -447,8 +447,7 @@ shoe( function( stream ) {
                             desc: 'Redis step update exercise state',
                             newState: newState
                         }) )
-                        logger.redisCall(rcon, userId, 'expire');
-                        logger.redisCall(rcon, userId, 'hset');
+                        logger.redisCall(rcon, userId, 'expire, hset');
                     } }
                 ]
 
@@ -495,10 +494,10 @@ shoe( function( stream ) {
             console.error('hgetall', userId, clientState);
             if ( !clientState ) {
                 console.error('hmset', FIELD_EXERCISE_STATE, null);
-                rcon.hmset( userId, FIELD_EXERCISE_STATE, null, logDbErr( userId, null, {
+                rcon.hset( userId, FIELD_EXERCISE_STATE, null, logDbErr( userId, null, {
                     desc: 'Redis unset client state'
                 }))
-                logger.redisCall(rcon, userId, 'hmset');
+                logger.redisCall(rcon, userId, 'hset');
             }
 
             userKeyPromise.then( function( userKey ) {
@@ -561,9 +560,10 @@ shoe( function( stream ) {
                 
                 rcon.multi()
                     .expire( userId, CLIENT_IDLE_TIMEOUT )
-                    .hmset( userId,
-                       FIELD_EXERCISE_STATE, startState,
-                       FIELD_END_TIME, endTime )
+                    .hset( userId,
+                       FIELD_EXERCISE_STATE, startState)
+                    .hset(userId,
+                        FIELD_END_TIME, endTime)
                     .exec( function( err ) {
                         if ( err ) {
                             // LOGGING
@@ -573,8 +573,7 @@ shoe( function( stream ) {
                             })
                         }
                     })
-                    logger.redisCall(rcon, userId, 'expire');
-                    logger.redisCall(rcon, userId, 'hmset');
+                    logger.redisCall(rcon, userId, 'expire, 2x hset');
 
 
                 state[ FIELD_EXERCISE_STATE ] = startState
@@ -602,9 +601,7 @@ shoe( function( stream ) {
             .hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME )
             .hset( userId, FIELD_CURRENT_EXERCISE, newExercise )
             .exec( logDbErr( userId, newExercise, { desc: 'Redis change exercise' } ) )
-        logger.redisCall(rcon, userId, 'expire');
-        logger.redisCall(rcon, userId, 'hdel');
-        logger.redisCall(rcon, userId, 'hset');
+        logger.redisCall(rcon, userId, 'expire, hdel, hset');
 
         // LOGGING
         logger.log( logger.EVENT.CHANGE_EXERCISE, userId, newExercise )
