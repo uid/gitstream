@@ -13,3 +13,7 @@ settings*.js
 
 package-lock.json
 git-angler/package-lock.json
+
+dev-tools/
+docs/
+logs/
