@@ -44,14 +44,15 @@ function logToFile(directory, prefix, content) {
 /**
  * Format a field and its content with a specified width.
  * Truncates content if it exceeds the specified width.
+ * 
  * @param field- The field name.
- * @param content - The content associated with the field.
+ * @param {string} content - The content associated with the field.
  * @param width - The desired width for the field. Default 20.
  * @returns - The formatted string with proper padding.
  */
 function formatField(field, content, width = 20) {
     const fieldString = field + ':';
-    const contentString = content.substring(0, width);
+    const contentString = String(content).substring(0, width);
     const padding = ' '.repeat(width - fieldString.length);
     return fieldString + padding + contentString;
   }
