@@ -1,4 +1,6 @@
 const redis = require('redis');
+const fs = require("fs");
+const path = require('path');
 
 const CLI_COL = {
     MAG: '\x1b[35m',
@@ -6,6 +8,38 @@ const CLI_COL = {
     GRN: '\x1b[32m',
     BLU: '\x1b[34m',
 };
+
+const colorCodeRegex = /\x1b\[\d{1,2}m/g;
+
+const logsDir = '/opt/gitstream/logs'
+let allLogFiles = {}; // Track the first log file generated for each prefix.
+
+/**
+ * Log content to a specified file.
+ *  
+ * @param {string} directory - The directory where the file should be placed. Should exist and be
+ *                             enabled with write permissions for all.
+ * @param {string} prefix - The prefix for the log file.
+ * @param {string} content - The content to be logged.
+ * @returns {void} Nothing.
+ */
+function logToFile(directory, prefix, content) {
+    const timestamp = new Date();
+    const date = timestamp.toISOString().split('T')[0];
+    const time = timestamp.toLocaleTimeString('en-US', { hour12: false });
+    const logFileName = `${prefix}_${date}_${time}.ansi`;
+
+    const filePath = path.join(directory, logFileName);
+
+    // If the prefix is not in the dictionary, create the file and record it.
+    if (!(prefix in allLogFiles)) {
+        fs.writeFileSync(filePath, "");
+        fs.chmodSync(filePath, 0o777);
+        allLogFiles[prefix] = filePath;
+    }
+
+    fs.appendFileSync(allLogFiles[prefix], content);
+}
 
 /**
  * Format a field and its content with a specified width.
