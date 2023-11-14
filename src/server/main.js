@@ -57,6 +57,14 @@ let userMap = {
      */
 
     /**
+     * @callback standardCallback
+     * @param {Error} err - An error object if the operation fails.
+     * @param {Error} res - A result object if the operation succeeds.
+     * @returns {void} - This function does not return anything (mutator function).
+     */
+
+
+    /**
      * Deletes user data after timeout expires.
      *
      * @param {string} userID - The ID of the user. If not in map, invokes the callback with an
@@ -138,19 +146,28 @@ let userMap = {
     },
 
     /**
-     * Retrieves all the fields and values in the map associated with a specified user ID. If 
-     * user not in map, nothing happens.
+     * Retrieves all of the data (keys and values) in the map associated with a user. If user is not
+     * found in the map, an error is raised.
      * 
-     * @param {string} userID - The ID of the user in map. If not in map, nothing happens.
-     * @param {function} callback - The callback function to be invoked when the operation is finished.
-     * @returns {null} - This function does not return anything (mutator function; callback function takes
-     *                   care of additional tasks to perform with data retrieved).
+     * @param {string} userID - The ID of the user in map.
+     * @param {standardCallback} callback - The callback to be invoked on failure or success.
+     * @returns {void} - This function does not return anything (mutator function)
      */
     getAll(userID, callback) {
-        return null
+        logger.userMapMod(this, userID, "getAll");
+
+        try {
+            const userInfo = this[userID];
+    
+            if (!userInfo)
+                return callback(new Error(`User with ID ${userID} not found in userMap.`), null);
+            
+            return callback(null, userInfo);
+        } catch (error) {
+            return callback(error, null);
     }
 }
-
+}
 
 /**
  * Extracts data from the components of a repo's path
