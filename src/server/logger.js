@@ -164,13 +164,18 @@ module.exports = function( opts ) {
                     contentAll += formattedEntry + '\n';
                   });
                 contentAll += CLI_COL.RST
-                console.log(`\n[HashMap Modification]\n${location}\n${contentAll}`);
+
+                const output= `[Redis]\n${location}\n${contentAll}`
+                
+                console.log(`\n${output}`);
+                logToFile(logsDir, 'redis', `${output.replace(colorCodeRegex, '')}\n`)
+
             });
         },
         userMapMod: function(userMap, userID, type) {
             const callerInfo = getCallerInfo(2);
 
-            const location = `${CLI_COL.GRN}[${callerInfo.fileName}:${callerInfo.lineNum}]` +
+            let location = `${CLI_COL.GRN}[${callerInfo.fileName}:${callerInfo.lineNum}]` +
                              `${CLI_COL.MAG}[${type}]${CLI_COL.RST}`;
 
             const userInfo = userMap[userID] ?? {};
@@ -181,7 +186,11 @@ module.exports = function( opts ) {
                 contentAll += formattedEntry + '\n';
             });
             contentAll += CLI_COL.RST
-            console.log(`\n[User Map Mod]\n${location}\n${contentAll}`);
+
+            const output= `[User Map]\n${location}\n${contentAll}`
+            
+            console.log(`\n${output}`);
+            logToFile(logsDir, 'userMap', `${output.replace(colorCodeRegex, '')}\n`)
         }
 
     }
