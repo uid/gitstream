@@ -51,15 +51,35 @@ var angler = require('git-angler'),
  */
 let userMap = {
     /**
+     * @callback errorCallback
+     * @param {Error?} err - An error object if the operation fails.
+     * @returns {void} - This function does not return anything (mutator function).
+     */
+
+    /**
      * Deletes user data after timeout expires.
      *
-     * @param {string} userID - The ID of the user. If not in map, nothing happens.
+     * @param {string} userID - The ID of the user. If not in map, invokes the callback with an
+     *                          error.
      * @param {number} timeout - The timeout duration in milliseconds.
-     * @param {function} callback - The optional callback function to be invoked when the operation is finished.
-     * @returns {null} - This function does not return anything (mutator function).
+     * @param {errorCallback} callback - The optional callback to be invoked if the operation fails.
+     * @returns {void} - This function does not return anything (mutator function).
      */
     expire(userID, timeout, callback=null) {
-        return null
+        logger.userMapMod(this, userID, 'expire');
+
+        if (!this[userID] && callback)
+          return callback(new Error(`User with ID ${userID} not found in userMap.`));
+        
+
+        setTimeout(() => {
+          try {
+            delete this[userID];
+          } catch (err) {
+            if (callback)
+              callback(err);
+          }
+        }, timeout);
     },
 
     /**
