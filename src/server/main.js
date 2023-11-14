@@ -83,17 +83,26 @@ let userMap = {
     },
 
     /**
-     * Sets a key-value pair for a specific user in the map. If the userID or key or value
-     * cannot be found, the function has no effect.
+     * Sets a key-value pair for a user in the map. If the user and/or key does not exist already in
+     * the map, they are created.
      * 
      * @param {string} userID - The ID of the user in map.
      * @param {string} key - The key to be set or edited for the specified user.
-     * @param {string} value - The value to be associated with the specified key for the user.
-     * @param {function} callback - The optional callback function to be invoked when the operation is finished.
-     * @returns {null} - This function does not return anything (mutator function).
+     * @param {string} value - The value to be associated with the specified key. Overrides existing
+     *                         value.
+     * @param {errorCallback} callback - The optional callback to be invoked if the operation fails.
+     * @returns {void} - This function does not return anything (mutator function).
      */
     set(userID, key, value, callback=null) {
-        return null
+        logger.userMapMod(this, userID, "set");
+
+        try {
+            if (!this[userID])
+              this[userID] = {};
+            this[userID][key] = value;
+        } catch (error) {
+            callback(error);
+        }
     },
 
     /**
