@@ -106,16 +106,35 @@ let userMap = {
     },
 
     /**
-     * Deletes a list of keys and their associated objects for a specific user in a hash map. If the userID or any key
-     * cannot be found, the function has no effect.
+     * Deletes a list of keys and their associated data for a user in the map. If the user or one of 
+     * the keys cannot be found, an error is raised.
      * 
-     * @param {string} userID - The ID of the user in the map. If not in the map, nothing happens.
-     * @param {Array<string>} keys - The list of keys to be deleted along with their associated objects.
-     * @param {function} callback - The optional callback function to be invoked when the operation is finished.
-     * @returns {null} - This function does not return anything (mutator function).
+     * @param {string} userID - The ID of the user in the map.
+     * @param {Array<string>} keys - The list of keys to be deleted along with their data.
+     * @param {errorCallback} callback - The optional callback to be invoked if the operation fails.
+     * @returns {void} - This function does not return anything (mutator function).
      */
     delete(userID, keys, callback=null) {
-        return null;
+        logger.userMapMod(this, userID, "delete");
+
+        try {
+          const userInfo = this[userID];
+          if (!userInfo && callback) {
+            return callback(new Error(`User with ID ${userID} not found in userMap.`));
+          }
+          
+          for (const key of keys) {
+            if (key in userInfo) {
+              delete userInfo[key];
+            } else {
+              if (callback)
+                callback(new Error(`Key '${key}' does not exist for user.`));
+            }
+          }
+        } catch (error) {
+          if (callback)
+            callback(error);
+        }
     },
 
     /**
