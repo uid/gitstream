@@ -83,9 +83,11 @@ let userMap = {
         setTimeout(() => {
           try {
             delete this[userID];
+            if (callback)
+              return callback(null);
           } catch (err) {
             if (callback)
-              callback(err);
+              return callback(err);
           }
         }, timeout);
     },
@@ -108,8 +110,12 @@ let userMap = {
             if (!this[userID])
               this[userID] = {};
             this[userID][key] = value;
+
+          if (callback)
+            return callback(null);
         } catch (error) {
-            callback(error);
+          if (callback)
+            return callback(error);
         }
     },
 
@@ -136,12 +142,15 @@ let userMap = {
               delete userInfo[key];
             } else {
               if (callback)
-                callback(new Error(`Key '${key}' does not exist for user.`));
+                return callback(new Error(`Key '${key}' does not exist for user.`));
             }
           }
+
+          if (callback)
+            return callback(null);
         } catch (error) {
           if (callback)
-            callback(error);
+            return callback(error);
         }
     },
 
