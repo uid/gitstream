@@ -11,34 +11,40 @@ const CLI_COL = {
 
 const colorCodeRegex = /\x1b\[\d{1,2}m/g;
 
-const logsDir = '/opt/gitstream/logs'
-let allLogFiles = {}; // Track the first log file generated for each prefix.
+const now = new Date();
+const timestamp = {
+    date: now.toISOString().split('T')[0],
+    time: now.toLocaleTimeString('en-US', { hour12: false }),
+};
+
+const logsDir = '/opt/gitstream/logs' // prereq: should exist and have write permissions for all
+
+let allLogFiles = {};
+
+// save all log files from the same session under the same timestamped folder
+const sharedLogDir = path.join(logsDir, `${timestamp.date}_${timestamp.time}`);
+fs.mkdirSync(sharedLogDir);
+fs.chmodSync(sharedLogDir, 0o777);
 
 /**
  * Log content to a specified file.
  *  
- * @param {string} directory - The directory where the file should be placed. Should exist and be
- *                             enabled with write permissions for all.
+ * @param {string} directory - The directory where the file should be placed.
  * @param {string} prefix - The prefix for the log file.
  * @param {string} content - The content to be logged.
  * @returns {void} Nothing.
  */
 function logToFile(directory, prefix, content) {
-    const timestamp = new Date();
-    const date = timestamp.toISOString().split('T')[0];
-    const time = timestamp.toLocaleTimeString('en-US', { hour12: false });
-    const logFileName = `${prefix}_${date}_${time}.ansi`;
+    const filePath = path.join(directory, `${prefix}.log`);
 
-    const filePath = path.join(directory, logFileName);
-
-    // If the prefix is not in the dictionary, create the file and record it.
+    // If the prefix is not found, create the file and record it.
     if (!(prefix in allLogFiles)) {
         fs.writeFileSync(filePath, "");
         fs.chmodSync(filePath, 0o777);
-        allLogFiles[prefix] = filePath;
+        allLogFiles[prefix] = true;
     }
 
-    fs.appendFileSync(allLogFiles[prefix], content);
+    fs.appendFileSync(filePath, content);
 }
 
 /**
@@ -167,11 +173,13 @@ module.exports = function( opts ) {
 
                 const output= `[Redis]\n${location}\n${contentAll}`
                 
+                // todo: add a turn off toggle for these
                 console.log(`\n${output}`);
-                logToFile(logsDir, 'redis', `${output.replace(colorCodeRegex, '')}\n`)
+                logToFile(sharedLogDir, 'redis', `${output.replace(colorCodeRegex, '')}\n`)
 
             });
         },
+        
         userMapMod: function(userMap, userID, type) {
             const callerInfo = getCallerInfo(2);
 
@@ -189,8 +197,9 @@ module.exports = function( opts ) {
 
             const output= `[User Map]\n${location}\n${contentAll}`
             
+            // todo: add a turn off toggle for these
             console.log(`\n${output}`);
-            logToFile(logsDir, 'userMap', `${output.replace(colorCodeRegex, '')}\n`)
+            logToFile(sharedLogDir, 'userMap', `${output.replace(colorCodeRegex, '')}\n`)
         }
 
     }
