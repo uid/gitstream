@@ -107,9 +107,9 @@ let userMap = {
         logger.userMapMod(this, userID, "set");
 
         try {
-            if (!this[userID])
-              this[userID] = {};
-            this[userID][key] = value;
+          if (!this[userID])
+            this[userID] = {};
+          this[userID][key] = value;
 
           if (callback)
             return callback(null);
@@ -169,13 +169,13 @@ let userMap = {
             const userInfo = this[userID];
     
             if (!userInfo)
-                return callback(new Error(`User with ID ${userID} not found in userMap.`), null);
+              return callback(new Error(`User with ID ${userID} not found in userMap.`), null);
             
             return callback(null, userInfo);
         } catch (error) {
             return callback(error, null);
+        }
     }
-}
 }
 
 /**
@@ -728,7 +728,7 @@ shoe( function( stream ) {
                 userMap.expire(userId, CLIENT_IDLE_TIMEOUT, tempCallbackName5);
                 userMap.set(userId, FIELD_EXERCISE_STATE, startState, tempCallbackName5);
                 userMap.set(userId, FIELD_END_TIME, endTime, tempCallbackName5);
-                
+
                 rcon.multi()
                     .expire( userId, CLIENT_IDLE_TIMEOUT )
                     .hset( userId,
