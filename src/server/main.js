@@ -44,7 +44,10 @@ var angler = require('git-angler'),
     PassportStrategy = require('passport').Strategy,
     openidclient = require('openid-client'),
     settings = require('../../settings'),
-    crypto = require('crypto');
+    crypto = require('crypto'),
+    EventEmitter = require('events');
+
+const exerciseEvents = new EventEmitter();
 
 /**
  * Global map to store user progress. Methods encapsulated.
@@ -494,10 +497,16 @@ async function configureApp() {
         .done( function( repoInfo ) {
             // only 1 instance of publish
             // note: this messaging system will kept for now
-            rcon.publish( repoInfo.userId + ':go', repoInfo.exerciseName,
-                       logDbErr( repoInfo.userId, repoInfo.exerciseName, {
-                           desc: 'Redis go publish'
-                       }) )
+            const handlePublishError =  logDbErr( repoInfo.userId, repoInfo.exerciseName, {
+                desc: 'Redis go publish'
+            })
+
+            try {
+                exerciseEvents.emit(repoInfo.userId + ':go', repoInfo.exerciseName); 
+            } catch (error) {
+                handlePublishError(error);
+            }
+
             res.writeHead( 200 )
             res.end()
         }, function( err ) {
@@ -679,21 +688,22 @@ shoe( function( stream ) {
 
         userMap.getAll(userId, handleClientState)
 
-
-        // only 1 instance of subscribe
-        rsub.subscribe( userId + ':go' )
-        rsub.on( 'message', function( channel, exerciseName ) {
+        function processNewExercise( channel, exerciseName ) {
             // LOGGING
             logger.log( logger.EVENT.GO, userId, exerciseName )
 
             const handleExerciseState = function( err, state ) {
                 var startState, endTime
+                
                 console.error('hgetall', userId, state);
 
                 // only start exercise if user is on the exercise page
-                if ( exerciseName !== state.currentExercise ) { return }
+                if ( exerciseName !== state.currentExercise ) return
 
-                if ( exerciseMachine ) { exerciseMachine.halt() }
+                if ( exerciseMachine ) {
+                    exerciseMachine.halt()
+                }
+
                 exerciseMachine = createExerciseMachine( exerciseName )
                 startState = exerciseMachine._states.startState
                 // set by EM during init, but init sends events. TODO: should probably be fixed
@@ -725,9 +735,11 @@ shoe( function( stream ) {
                 exerciseMachine.init()
             }
             userMap.getAll(userId, handleExerciseState)
+        }
 
-
-        })
+        exerciseEvents.on(userId + ':go', (exerciseName) => {
+                processNewExercise(null, exerciseName)
+            });
     }.bind( this ) )
 
     clientEvents.on( 'exerciseChanged', function( newExercise ) {
