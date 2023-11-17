@@ -152,6 +152,13 @@ module.exports = function( opts ) {
             })
         },
 
+        /**
+         * Log the state of a user's data as it exists in memory.
+         * 
+         * @param {any} client - Redis client with all user data
+         * @param {string} userID - ID of user
+         * @param {string} type - Type of operation: hdel, hset, expire, hgetall
+         */
         redisCall: function(client, userID, type) {
             const callerInfo = getCallerInfo();
 
@@ -164,22 +171,34 @@ module.exports = function( opts ) {
                     return;
                 }
 
-                let contentAll = CLI_COL.BLU;
-                Object.keys(content).forEach(field => {
-                    const formattedEntry = formatField(field, content[field]);
-                    contentAll += formattedEntry + '\n';
-                  });
-                contentAll += CLI_COL.RST
+                let output= `[Redis][${userID}]\n${location}\n`                    
 
-                const output= `[Redis]\n${location}\n${contentAll}`
-                
+                if (!content || Object.keys(content).length === 0) { // no content for user
+                    output= "Empty";
+                } else {
+                    let contentAll = CLI_COL.BLU;
+
+                    Object.keys(content).forEach(field => {
+                        const formattedEntry = formatField(field, content[field]);
+                        contentAll += formattedEntry + '\n';
+                    });
+
+                    contentAll += CLI_COL.RST
+                    output += contentAll               
+                }
+
                 // todo: add a turn off toggle for these
                 console.log(`\n${output}`);
                 logToFile(sharedLogDir, 'redis', `${output.replace(colorCodeRegex, '')}\n`)
-
             });
         },
-        
+        /**
+         * Log the state of a user's data as it exists in memory.
+         * 
+         * @param {object} userMap - Map object containing all user data
+         * @param {string} userID - ID of user
+         * @param {string} type - Type of operation: set, expire, delete, getall
+         */
         userMapMod: function(userMap, userID, type) {
             const callerInfo = getCallerInfo(2);
 
@@ -195,7 +214,7 @@ module.exports = function( opts ) {
             });
             contentAll += CLI_COL.RST
 
-            const output= `[User Map]\n${location}\n${contentAll}`
+            const output= `[User Map][${userID}]\n${location}\n${contentAll}`
             
             // todo: add a turn off toggle for these
             console.log(`\n${output}`);
