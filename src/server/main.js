@@ -74,8 +74,6 @@ let userMap = {
      * @returns {void} - This function does not return anything (mutator function).
      */
     expire(userID, timeout, callback=null) {
-        logger.userMapMod(this, userID, 'expire');
-
         if (!this[userID] && callback)
           return callback(new Error(`User with ID ${userID} not found in userMap.`));
         
@@ -83,6 +81,8 @@ let userMap = {
         setTimeout(() => {
           try {
             delete this[userID];
+            logger.userMapMod(this, userID, 'expire');
+
             if (callback)
               return callback(null);
           } catch (err) {
@@ -104,12 +104,12 @@ let userMap = {
      * @returns {void} - This function does not return anything (mutator function).
      */
     set(userID, key, value, callback=null) {
-        logger.userMapMod(this, userID, "set");
-
         try {
           if (!this[userID])
             this[userID] = {};
+
           this[userID][key] = value;
+          logger.userMapMod(this, userID, "set");
 
           if (callback)
             return callback(null);
@@ -129,8 +129,6 @@ let userMap = {
      * @returns {void} - This function does not return anything (mutator function).
      */
     delete(userID, keys, callback=null) {
-        logger.userMapMod(this, userID, "delete");
-
         try {
           const userInfo = this[userID];
           if (!userInfo && callback) {
@@ -140,6 +138,7 @@ let userMap = {
           for (const key of keys) {
             if (key in userInfo) {
               delete userInfo[key];
+              logger.userMapMod(this, userID, "delete");
             } else {
               if (callback)
                 return callback(new Error(`Key '${key}' does not exist for user.`));
@@ -171,7 +170,9 @@ let userMap = {
             if (!userInfo)
               return callback(new Error(`User with ID ${userID} not found in userMap.`), null);
             
-            return callback(null, userInfo);
+            // Return a shallow copy of the userInfo object
+            const userInfoCopy = Object.assign({}, userInfo);
+            return callback(null, userInfoCopy);
         } catch (error) {
             return callback(error, null);
         }
