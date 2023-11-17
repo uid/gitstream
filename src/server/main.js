@@ -629,23 +629,26 @@ shoe( function( stream ) {
 
         const handleClientState = function( err, clientState ) {
             if ( err ) {
+                console.error(err)
+
                 // LOGGING
                 logger.err( logger.ERR.DB, userId, null, {
                     desc: 'Redis get client state',
                     msg: err.message
                 })
+                
                 return clientEvents.emit( 'err', err )
             }
             console.error('hgetall', userId, clientState);
-            if ( !clientState ) {
+            if ( !clientState ) { // Aka user is new and we want to initialize their data
                 console.error('hmset', FIELD_EXERCISE_STATE, null);
                 
                 const handleUnsetClientState = logDbErr( userId, null, {
                     desc: 'Redis unset client state'
                 })
 
-                userMap.set(userId, FIELD_EXERCISE_STATE, null, handleUnsetClientState)
-                rcon.hset( userId, FIELD_EXERCISE_STATE, null, handleUnsetClientState)
+                userMap.set(userId, FIELD_EXERCISE_STATE, "", handleUnsetClientState)
+                rcon.hset( userId, FIELD_EXERCISE_STATE, "", handleUnsetClientState)
                 logger.redisCall(rcon, userId, 'hset');
             }
 
