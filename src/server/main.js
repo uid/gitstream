@@ -65,18 +65,21 @@ let userMap = {
 
 
     /**
-     * Deletes user data after timeout expires.
+     * Deletes user data after timeout expires. If user not in map, nothing happens.
      *
-     * @param {string} userID - The ID of the user. If not in map, invokes the callback with an
-     *                          error.
+     * @param {string} userID - The ID of the user.
      * @param {number} timeout - The timeout duration in milliseconds.
      * @param {errorCallback} callback - The optional callback to be invoked if the operation fails.
      * @returns {void} - This function does not return anything (mutator function).
      */
     expire(userID, timeout, callback=null) {
-        if (!this[userID] && callback)
-          return callback(new Error(`User with ID ${userID} not found in userMap.`));
-        
+        if (!this[userID]) {
+          if (callback)
+            return callback(null);
+          return
+        }
+        // (not needed) report user data before expire was initialized
+        logger.userMapMod(this, userID, 'expire');
 
         setTimeout(() => {
           try {
@@ -93,10 +96,9 @@ let userMap = {
     },
 
     /**
-     * Sets a key-value pair for a user in the map. If the user and/or key does not exist already in
-     * the map, they are created.
+     * Sets a key-value pair for a user. If the user and/or key does not exist, they are created.
      * 
-     * @param {string} userID - The ID of the user in map.
+     * @param {string} userID - The ID of the user.
      * @param {string} key - The key to be set or edited for the specified user.
      * @param {string} value - The value to be associated with the specified key. Overrides existing
      *                         value.
@@ -120,10 +122,10 @@ let userMap = {
     },
 
     /**
-     * Deletes a list of keys and their associated data for a user in the map. If the user or one of 
-     * the keys cannot be found, an error is raised.
+     * Deletes a list of keys and their associated data for a user. If the user or one of 
+     * the keys cannot be found, nothing happens.
      * 
-     * @param {string} userID - The ID of the user in the map.
+     * @param {string} userID - The ID of the user.
      * @param {Array<string>} keys - The list of keys to be deleted along with their data.
      * @param {errorCallback} callback - The optional callback to be invoked if the operation fails.
      * @returns {void} - This function does not return anything (mutator function).
@@ -131,17 +133,17 @@ let userMap = {
     delete(userID, keys, callback=null) {
         try {
           const userInfo = this[userID];
-          if (!userInfo && callback) {
-            return callback(new Error(`User with ID ${userID} not found in userMap.`));
+          
+          if (!userInfo) {
+            if (callback)
+              return callback(null);
+            return
           }
           
           for (const key of keys) {
             if (key in userInfo) {
               delete userInfo[key];
               logger.userMapMod(this, userID, "delete");
-            } else {
-              if (callback)
-                return callback(new Error(`Key '${key}' does not exist for user.`));
             }
           }
 
@@ -154,10 +156,10 @@ let userMap = {
     },
 
     /**
-     * Retrieves all of the data (keys and values) in the map associated with a user. If user is not
-     * found in the map, an error is raised.
+     * Retrieves all of the data (keys and values) associated with a user. If user is not
+     * found, an empty object is returned.
      * 
-     * @param {string} userID - The ID of the user in map.
+     * @param {string} userID - The ID of the user.
      * @param {standardCallback} callback - The callback to be invoked on failure or success.
      * @returns {void} - This function does not return anything (mutator function)
      */
@@ -166,10 +168,11 @@ let userMap = {
 
         try {
             const userInfo = this[userID];
-    
-            if (!userInfo)
-              return callback(new Error(`User with ID ${userID} not found in userMap.`), null);
             
+            if (!userInfo) {
+              return callback(null, {});
+            }
+
             // Return a shallow copy of the userInfo object
             const userInfoCopy = Object.assign({}, userInfo);
             return callback(null, userInfoCopy);
