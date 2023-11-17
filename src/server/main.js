@@ -571,8 +571,6 @@ shoe( function( stream ) {
                 unsetExercise = function() {
                     userMap.delete(userId, [FIELD_EXERCISE_STATE, FIELD_END_TIME]);
 
-                    rcon.hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME )
-                    logger.redisCall(rcon, userId, 'hdel');
                 },
                 listeners = [
                     { event: 'ding', helper: unsetExercise },
@@ -588,11 +586,6 @@ shoe( function( stream ) {
                         userMap.expire(userId, CLIENT_IDLE_TIMEOUT, updateState);
                         userMap.set(userId, FIELD_EXERCISE_STATE, newState, updateState);
 
-                        rcon.multi()
-                        .expire( userId, CLIENT_IDLE_TIMEOUT )
-                        .hset( userId, FIELD_EXERCISE_STATE, newState )
-                        .exec( updateState)
-                        logger.redisCall(rcon, userId, 'expire, hset');
                     } }
                 ]
 
@@ -648,8 +641,6 @@ shoe( function( stream ) {
                 })
 
                 userMap.set(userId, FIELD_EXERCISE_STATE, "", handleUnsetClientState)
-                rcon.hset( userId, FIELD_EXERCISE_STATE, "", handleUnsetClientState)
-                logger.redisCall(rcon, userId, 'hset');
             }
 
             userKeyPromise.then( function( userKey ) {
@@ -671,8 +662,6 @@ shoe( function( stream ) {
                 } else if ( exerciseState ) { // last exercise has expired
                     userMap.delete(userId, FIELD_EXERCISE_STATE, FIELD_END_TIME);
 
-                    rcon.hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME )
-                    logger.redisCall(rcon, userId, 'hdel');
                     delete clientState[ FIELD_EXERCISE_STATE ]
                     delete clientState[ FIELD_END_TIME ]
                 }
@@ -690,8 +679,6 @@ shoe( function( stream ) {
 
         userMap.getAll(userId, handleClientState)
 
-        rcon.hgetall( userId, handleClientState)
-        logger.redisCall(rcon, userId, 'hgetall');
 
         // only 1 instance of subscribe
         rsub.subscribe( userId + ':go' )
@@ -729,23 +716,6 @@ shoe( function( stream ) {
                 userMap.set(userId, FIELD_EXERCISE_STATE, startState, handleError);
                 userMap.set(userId, FIELD_END_TIME, endTime, handleError);
 
-                rcon.multi()
-                    .expire( userId, CLIENT_IDLE_TIMEOUT )
-                    .hset( userId,
-                       FIELD_EXERCISE_STATE, startState)
-                    .hset(userId,
-                        FIELD_END_TIME, endTime)
-                    .exec( function( err ) {
-                        if ( err ) {
-                            // LOGGING
-                            logger.err( logger.ERR.DB, userId, exerciseName, {
-                                desc: 'Redis go',
-                                msg: err.message
-                            })
-                        }
-                    })
-                    logger.redisCall(rcon, userId, 'expire, 2x hset');
-
                 state[ FIELD_EXERCISE_STATE ] = startState
                 state.timeRemaining = exerciseMachine._timeLimit * 1000
                 delete state[ FIELD_END_TIME ]
@@ -756,8 +726,6 @@ shoe( function( stream ) {
             }
             userMap.getAll(userId, handleExerciseState)
 
-            rcon.hgetall( userId, handleExerciseState)
-            logger.redisCall(rcon, userId, 'hgetall');
 
         })
     }.bind( this ) )
@@ -775,13 +743,6 @@ shoe( function( stream ) {
         userMap.expire(userId, CLIENT_IDLE_TIMEOUT, handleNewExercise);
         userMap.delete(userId, [FIELD_EXERCISE_STATE, FIELD_END_TIME], handleNewExercise);
         userMap.set(userId, FIELD_CURRENT_EXERCISE, newExercise, handleNewExercise);
-
-        rcon.multi()
-            .expire( userId, CLIENT_IDLE_TIMEOUT )
-            .hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME )
-            .hset( userId, FIELD_CURRENT_EXERCISE, newExercise )
-            .exec( handleNewExercise )
-        logger.redisCall(rcon, userId, 'expire, hdel, hset');
 
         // LOGGING
         logger.log( logger.EVENT.CHANGE_EXERCISE, userId, newExercise )
