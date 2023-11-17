@@ -577,21 +577,18 @@ shoe( function( stream ) {
                     { event: 'step', helper: function( newState ) { // step seems to be important, why?
                         console.error('hset', userId, FIELD_EXERCISE_STATE, newState);
 
-                        const tempCallbackName2 =  logDbErr( userId, exerciseName, {
+                        const updateState =  logDbErr( userId, exerciseName, {
                             desc: 'Redis step update exercise state',
                             newState: newState
                         });
 
-                        userMap.expire(userId, CLIENT_IDLE_TIMEOUT, tempCallbackName2);
-                        userMap.set(userId, FIELD_EXERCISE_STATE, newState, tempCallbackName2);
+                        userMap.expire(userId, CLIENT_IDLE_TIMEOUT, updateState);
+                        userMap.set(userId, FIELD_EXERCISE_STATE, newState, updateState);
 
                         rcon.multi()
                         .expire( userId, CLIENT_IDLE_TIMEOUT )
                         .hset( userId, FIELD_EXERCISE_STATE, newState )
-                        .exec( logDbErr( userId, exerciseName, {
-                            desc: 'Redis step update exercise state',
-                            newState: newState
-                        }) )
+                        .exec( updateState)
                         logger.redisCall(rcon, userId, 'expire, hset');
                     } }
                 ]
@@ -627,10 +624,7 @@ shoe( function( stream ) {
             logger.err( logger.ERR.DB, userId, null, { msg: err.message } )
         })
 
-        const tempCallbackName3 = function(){}; // populate with below function content
-        userMap.getAll(userId, tempCallbackName3)
-
-        rcon.hgetall( userId, function( err, clientState ) {
+        const handleClientState = function( err, clientState ) {
             if ( err ) {
                 // LOGGING
                 logger.err( logger.ERR.DB, userId, null, {
@@ -642,14 +636,13 @@ shoe( function( stream ) {
             console.error('hgetall', userId, clientState);
             if ( !clientState ) {
                 console.error('hmset', FIELD_EXERCISE_STATE, null);
-
-                userMap.set(userId, FIELD_EXERCISE_STATE, null, logDbErr( userId, null, {
+                
+                const handleUnsetClientState = logDbErr( userId, null, {
                     desc: 'Redis unset client state'
-                }))
+                })
 
-                rcon.hset( userId, FIELD_EXERCISE_STATE, null, logDbErr( userId, null, {
-                    desc: 'Redis unset client state'
-                }))
+                userMap.set(userId, FIELD_EXERCISE_STATE, null, handleUnsetClientState)
+                rcon.hset( userId, FIELD_EXERCISE_STATE, null, handleUnsetClientState)
                 logger.redisCall(rcon, userId, 'hset');
             }
 
@@ -687,7 +680,11 @@ shoe( function( stream ) {
 
                 clientEvents.emit( 'sync', clientState )
             })
-        })
+        };
+
+        userMap.getAll(userId, handleClientState)
+
+        rcon.hgetall( userId, handleClientState)
         logger.redisCall(rcon, userId, 'hgetall');
 
         // only 1 instance of subscribe
@@ -696,12 +693,8 @@ shoe( function( stream ) {
             // LOGGING
             logger.log( logger.EVENT.GO, userId, exerciseName )
 
-            const tempCallbackName4 = function(){};
-            userMap.getAll(userId, tempCallbackName4)
-
-            rcon.hgetall( userId, function( err, state ) {
-                var startState,
-                    endTime
+            const handleExerciseState = function( err, state ) {
+                var startState, endTime
                 console.error('hgetall', userId, state);
 
                 // only start exercise if user is on the exercise page
@@ -717,7 +710,7 @@ shoe( function( stream ) {
                 console.error('hmset', FIELD_EXERCISE_STATE, startState,
                        FIELD_END_TIME, endTime );
                 
-                const tempCallbackName5 = function( err ) {
+                const handleError = function( err ) {
                     if ( err ) {
                         // LOGGING
                         logger.err( logger.ERR.DB, userId, exerciseName, {
@@ -726,9 +719,9 @@ shoe( function( stream ) {
                         })
                     }
                 }
-                userMap.expire(userId, CLIENT_IDLE_TIMEOUT, tempCallbackName5);
-                userMap.set(userId, FIELD_EXERCISE_STATE, startState, tempCallbackName5);
-                userMap.set(userId, FIELD_END_TIME, endTime, tempCallbackName5);
+                userMap.expire(userId, CLIENT_IDLE_TIMEOUT, handleError);
+                userMap.set(userId, FIELD_EXERCISE_STATE, startState, handleError);
+                userMap.set(userId, FIELD_END_TIME, endTime, handleError);
 
                 rcon.multi()
                     .expire( userId, CLIENT_IDLE_TIMEOUT )
@@ -754,7 +747,10 @@ shoe( function( stream ) {
                 clientEvents.emit( 'sync', state )
 
                 exerciseMachine.init()
-            })
+            }
+            userMap.getAll(userId, handleExerciseState)
+
+            rcon.hgetall( userId, handleExerciseState)
             logger.redisCall(rcon, userId, 'hgetall');
 
         })
@@ -768,17 +764,17 @@ shoe( function( stream ) {
 
         console.error('hset', userId, FIELD_CURRENT_EXERCISE, newExercise);
         
-        const tempCallbackName = logDbErr( userId, newExercise, { desc: 'Redis change exercise' } )
+        const handleNewExercise = logDbErr(userId, newExercise, {desc: 'Redis change exercise'})
 
-        userMap.expire(userId, CLIENT_IDLE_TIMEOUT, tempCallbackName);
-        userMap.delete(userId, [FIELD_EXERCISE_STATE, FIELD_END_TIME], tempCallbackName);
-        userMap.set(userId, FIELD_CURRENT_EXERCISE, newExercise, tempCallbackName);
+        userMap.expire(userId, CLIENT_IDLE_TIMEOUT, handleNewExercise);
+        userMap.delete(userId, [FIELD_EXERCISE_STATE, FIELD_END_TIME], handleNewExercise);
+        userMap.set(userId, FIELD_CURRENT_EXERCISE, newExercise, handleNewExercise);
 
         rcon.multi()
             .expire( userId, CLIENT_IDLE_TIMEOUT )
             .hdel( userId, FIELD_EXERCISE_STATE, FIELD_END_TIME )
             .hset( userId, FIELD_CURRENT_EXERCISE, newExercise )
-            .exec( logDbErr( userId, newExercise, { desc: 'Redis change exercise' } ) )
+            .exec( handleNewExercise )
         logger.redisCall(rcon, userId, 'expire, hdel, hset');
 
         // LOGGING
