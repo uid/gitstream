@@ -1,4 +1,3 @@
-const redis = require('redis');
 const fs = require("fs");
 const path = require('path');
 
@@ -150,47 +149,6 @@ module.exports = function( opts ) {
                 exercise: exercise,
                 data: data
             })
-        },
-
-        /**
-         * Log the state of a user's data as it exists in memory.
-         * 
-         * @param {any} client - Redis client with all user data
-         * @param {string} userID - ID of user
-         * @param {string} type - Type of operation: hdel, hset, expire, hgetall
-         */
-        redisCall: function(client, userID, type) {
-            const callerInfo = getCallerInfo();
-
-            const location = `${CLI_COL.GRN}[${callerInfo.fileName}:${callerInfo.lineNum}]` +
-            `${CLI_COL.MAG}[${type}]${CLI_COL.RST}`;
-
-            client.hgetall(userID, (err, content) => {
-                if (err) {
-                    console.error(err);
-                    return;
-                }
-
-                let output= `[Redis][${userID}]\n${location}\n`                    
-
-                if (!content || Object.keys(content).length === 0) { // no content for user
-                    output= "Empty";
-                } else {
-                    let contentAll = CLI_COL.BLU;
-
-                    Object.keys(content).forEach(field => {
-                        const formattedEntry = formatField(field, content[field]);
-                        contentAll += formattedEntry + '\n';
-                    });
-
-                    contentAll += CLI_COL.RST
-                    output += contentAll               
-                }
-
-                // todo: add a turn off toggle for these
-                console.log(`\n${output}`);
-                logToFile(sharedLogDir, 'redis', `${output.replace(colorCodeRegex, '')}\n`)
-            });
         },
         /**
          * Log the state of a user's data as it exists in memory.

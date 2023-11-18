@@ -52,7 +52,7 @@ echo created symlinks to /mnt/persistent
 
 # install Linux packages
 sudo apt update
-sudo DEBIAN_FRONTEND=noninteractive apt -y install git nginx redis-server make || exit 1
+sudo DEBIAN_FRONTEND=noninteractive apt -y install git nginx make || exit 1
 
 # install node
 curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -

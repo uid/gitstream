@@ -24,7 +24,7 @@ Install development dependencies:
 ```sh
 sudo apt-get update
 curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get -y install git nginx nodejs redis-server make
+sudo apt-get -y install git nginx nodejs make
 ```
 
 Install [MongoDB Community Edition](https://docs.mongodb.com/manual/administration/install-community/).

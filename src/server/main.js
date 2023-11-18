@@ -5,7 +5,6 @@ var angler = require('git-angler'),
     fs = require('fs'),
     path = require('path'),
     q = require('q'),
-    redis = require('redis'),
     rimraf = require('rimraf'),
     shoe = require('shoe'),
     spawn = require('child_process').spawn,
@@ -22,7 +21,6 @@ var angler = require('git-angler'),
     PATH_TO_EXERCISES = __dirname + '/exercises/',
     repoNameRe = /\/[a-z0-9_-]+\/[a-f0-9]{6,}\/.+.git$/,
     backend,
-    rcon = redis.createClient(),
     gitHTTPMount = '/repos', // no trailing slash
     githookEndpoint = angler.githookEndpoint({
         pathToRepos: PATH_TO_REPOS,
@@ -498,7 +496,7 @@ async function configureApp() {
             // only 1 instance of publish
             // note: this messaging system will kept for now
             const handlePublishError =  logDbErr( repoInfo.userId, repoInfo.exerciseName, {
-                desc: 'Redis go publish'
+                desc: 'userMap go emit'
             })
 
             try {
@@ -541,7 +539,6 @@ shoe( function( stream ) {
         exerciseMachine,
         userId,
         userKey,
-        rsub = redis.createClient(),
         FIELD_EXERCISE_STATE = 'exerciseState',
         FIELD_END_TIME = 'endTime',
         FIELD_CURRENT_EXERCISE = 'currentExercise',
@@ -588,7 +585,7 @@ shoe( function( stream ) {
                         console.error('hset', userId, FIELD_EXERCISE_STATE, newState);
 
                         const updateState =  logDbErr( userId, exerciseName, {
-                            desc: 'Redis step update exercise state',
+                            desc: 'userMap step update exercise state',
                             newState: newState
                         });
 
@@ -612,7 +609,6 @@ shoe( function( stream ) {
             exerciseMachine.removeAllListeners()
             exerciseMachine.halt()
         }
-        rsub.quit()
 
         // LOGGING
         logger.log( logger.EVENT.QUIT, userId, null )
@@ -635,7 +631,7 @@ shoe( function( stream ) {
 
                 // LOGGING
                 logger.err( logger.ERR.DB, userId, null, {
-                    desc: 'Redis get client state',
+                    desc: 'userMap get client state',
                     msg: err.message
                 })
                 
@@ -646,7 +642,7 @@ shoe( function( stream ) {
                 console.error('hmset', FIELD_EXERCISE_STATE, null);
                 
                 const handleUnsetClientState = logDbErr( userId, null, {
-                    desc: 'Redis unset client state'
+                    desc: 'userMap unset client state'
                 })
 
                 userMap.set(userId, FIELD_EXERCISE_STATE, "", handleUnsetClientState)
@@ -717,7 +713,7 @@ shoe( function( stream ) {
                     if ( err ) {
                         // LOGGING
                         logger.err( logger.ERR.DB, userId, exerciseName, {
-                            desc: 'Redis go',
+                            desc: 'userMap go',
                             msg: err.message
                         })
                     }
@@ -750,7 +746,9 @@ shoe( function( stream ) {
 
         console.error('hset', userId, FIELD_CURRENT_EXERCISE, newExercise);
         
-        const handleNewExercise = logDbErr(userId, newExercise, {desc: 'Redis change exercise'})
+        const handleNewExercise = logDbErr(userId, newExercise, {
+            desc: 'userMap change exercise'
+        })
 
         userMap.expire(userId, CLIENT_IDLE_TIMEOUT, handleNewExercise);
         userMap.delete(userId, [FIELD_EXERCISE_STATE, FIELD_END_TIME], handleNewExercise);

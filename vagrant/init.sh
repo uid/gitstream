@@ -1,7 +1,7 @@
 # install required packages
 sudo apt-get update
 curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get -y install git nginx nodejs redis-server make
+sudo apt-get -y install git nginx nodejs make
 
 # install MongoDB Community Edition
 wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | sudo apt-key add -
