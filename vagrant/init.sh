@@ -1,7 +1,14 @@
 # install required packages
 sudo apt-get update
-curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get -y install git nginx nodejs make
+
+# install node from https://github.com/nodesource/distributions#installation-instructions
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates gnupg || exit 1
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --yes --dearmor -o /etc/apt/keyrings/nodesource.gpg
+NODE_MAJOR=18
+echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list
+sudo apt-get update
+sudo DEBIAN_FRONTEND=noninteractive apt-get -y install nodejs || exit 1
 
 # install MongoDB Community Edition
 wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | sudo apt-key add -
@@ -11,22 +18,22 @@ sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mongodb-org || exit 1
 sudo systemctl enable mongod.service
 
 # make the repos and database directory
-mkdir -p /srv/repos /var/opt/gitstream/mongo
+sudo mkdir -p /srv/repos /var/opt/gitstream/mongo
 
 # create gitstream user and give it perms
-useradd -m gitstream
-chown -R gitstream:gitstream /srv/repos /var/log/nginx /var/opt/gitstream
+sudo useradd -m gitstream
+sudo chown -R gitstream:gitstream /srv/repos /var/log/nginx /var/opt/gitstream
 
 # add the vagrant user to gitstream for convenience
-usermod -G gitstream vagrant
+sudo usermod -G gitstream vagrant
 
 # move the nginx config file into place and stop the server
-ln -fs /opt/gitstream/nginx-dev.conf /etc/nginx/nginx.conf
-killall nginx
+sudo ln -fs /opt/gitstream/nginx-dev.conf /etc/nginx/nginx.conf
+sudo killall nginx
 
 # set up gitstream git config to prevent stupid complaining by git
-su gitstream -c 'git config --global user.email "gitstream@csail.mit.edu"'
-su gitstream -c 'git config --global user.name "GitStream"'
+sudo -u gitstream git config --global user.email "gitstream@csail.mit.edu"
+sudo -u gitstream git config --global user.name "GitStream"
 
 # build gitstream if it hasn't already been built
 if [ ! -d "/opt/gitstream/dist" ]; then
