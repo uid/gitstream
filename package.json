@@ -39,7 +39,8 @@
     "q": "^1.5.1",
     "rimraf": "^3.0.2",
     "shoe": "^0.0.15",
-    "sockjs": "^0.3.24"
+    "sockjs": "^0.3.24",
+    "ws": "^8.14.2"
   },
   "devDependencies": {
     "browserify": "^17.0.0",
