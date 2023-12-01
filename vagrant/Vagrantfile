@@ -33,4 +33,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # Here be provisioners
   config.vm.provision "shell", path: "init.sh"
   config.vm.provision "shell", path: "startup.sh", run: "always"
+
+  # Automatically cd to project folder 
+  config.ssh.extra_args = ["-t", "cd /opt/gitstream; bash --login"]
 end
