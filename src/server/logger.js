@@ -1,6 +1,11 @@
 const fs = require("fs");
 const path = require('path');
 
+const CONFIG = {
+    LOG_CONSOLE: false,
+    LOG_FILE: false,
+}
+
 const CLI_COL = {
     MAG: '\x1b[35m',
     RST: '\x1b[0m',
@@ -158,6 +163,8 @@ module.exports = function( opts ) {
          * @param {string} type - Type of operation: set, expire, delete, getall
          */
         userMapMod: function(userMap, userID, type) {
+            if (!(CONFIG.LOG_CONSOLE || CONFIG.LOG_FILE)) return;
+
             const callerInfo = getCallerInfo(2);
 
             let location = `${CLI_COL.GRN}[${callerInfo.fileName}:${callerInfo.lineNum}]` +
@@ -174,9 +181,12 @@ module.exports = function( opts ) {
 
             const output= `[User Map][${userID}]\n${location}\n${contentAll}`
             
-            // todo: add a turn off toggle for these
-            console.log(`\n${output}`);
-            logToFile(sharedLogDir, 'userMap', `${output.replace(colorCodeRegex, '')}\n`)
+            if (CONFIG.LOG_CONSOLE){
+                console.log(`\n${output}`);
+            }
+            if (CONFIG.LOG_FILE){
+                logToFile(sharedLogDir, 'userMap', `${output.replace(colorCodeRegex, '')}\n`)
+            }
         }
 
     }
