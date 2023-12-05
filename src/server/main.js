@@ -1,49 +1,72 @@
-var angler = require('git-angler'),
-    compression = require('compression'),
+// Imported libraries -- EXTERNAL
+const compression = require('compression'),
     express = require('express'),
     duplexEmitter = require('duplex-emitter'),
-    fs = require('fs'),
     path = require('path'),
     q = require('q'),
     rimraf = require('rimraf'),
     shoe = require('shoe'),
-    spawn = require('child_process').spawn,
-    mongodb = q.nfcall( require('mongodb').MongoClient.connect, 'mongodb://localhost/gitstream' ).then(client => client.db()),
-    logger = require('./logger')({ dbcon: mongodb }), // LOGGING
-    user = require('./user')({ dbcon: mongodb }),
-    exerciseConfs = require('gitstream-exercises'),
-    ExerciseMachine = require('./ExerciseMachine'),
+    WebSocket = require('ws'),
+    session = require('cookie-session'),
+    { Passport } = require('passport'),
+    openidclient = require('openid-client'),
+    crypto = require('crypto'),
+    EventEmitter = require('events'),
+    { spawn } = require('child_process'),
+    mongodb = q.nfcall( require('mongodb').MongoClient.connect, 'mongodb://localhost/gitstream' ).then(client => client.db());
+
+// Imported libraries -- INTERNAL
+const ExerciseMachine = require('./ExerciseMachine'),
     utils = require('./utils'),
-    app = express(),
-    server,
-    eventBus = new angler.EventBus(),
-    PATH_TO_REPOS = '/srv/repos',
+    angler = require('git-angler'),
+    exerciseConfs = require('gitstream-exercises'),
+    settings = require('../../settings'),
+    logger = require('./logger')({ dbcon: mongodb }), // LOGGING
+    user = require('./user')({ dbcon: mongodb })
+
+// Global variables -- CONSTANT
+const PATH_TO_REPOS = '/srv/repos',
     PATH_TO_EXERCISES = __dirname + '/exercises/',
-    repoNameRe = /\/[a-z0-9_-]+\/[a-f0-9]{6,}\/.+.git$/,
-    backend,
-    gitHTTPMount = '/repos', // no trailing slash
+    CLIENT_IDLE_TIMEOUT = 60 * 60 * 1000, // 1 hr before resting client state expires
+    PORT = 4242,
+    REPO_NAME_REGEX = /\/[a-z0-9_-]+\/[a-f0-9]{6,}\/.+.git$/,
+    gitHTTPMount = '/repos' // no trailing slash
+
+// Global variables -- DYNAMIC
+var app = express(), // todo: might constant, but leaving here for now
+    eventBus = new angler.EventBus(), // todo: might constant, but leaving here for now
     githookEndpoint = angler.githookEndpoint({
         pathToRepos: PATH_TO_REPOS,
         eventBus: eventBus,
         gitHTTPMount: gitHTTPMount
-    }),
-    CLIENT_IDLE_TIMEOUT = 60 * 60 * 1000, // 1 hr before resting client state expires
-    PORT = 4242,
-    logDbErr = function( userId, exercise, data ) {
-        return function ( err ) {
-            if ( !err ) { return }
-            data.msg = err.message
-            console.error(err);
-            logger.err( logger.ERR.DB, userId, exercise, data )
-        }
-    },
-    session = require('cookie-session'),
-    Passport = require('passport').Passport,
-    PassportStrategy = require('passport').Strategy,
-    openidclient = require('openid-client'),
-    settings = require('../../settings'),
-    crypto = require('crypto'),
-    EventEmitter = require('events');
+    })
+
+var backend = angler.gitHttpBackend({ // todo: might constant, but leaving here for now
+    pathToRepos: PATH_TO_REPOS,
+    eventBus: eventBus,
+    authenticator: function( params, cb ) {
+        verifyAndGetRepoInfo( params.repoPath )
+        .done( function() {
+            cb({ ok: true })
+        }, function( err ) {
+            var info = extractRepoInfoFromPath( params.repoPath )
+            logger.err( logger.ERR.GIT_HTTP, info.userId, info.exerciseName, {
+                msg: err.message
+            })
+            cb({ ok: false, status: 404 })
+        })
+    }
+})
+
+function logDbErr (userId, exercise, data) {
+    return (err) => {
+        if (!err) return
+        data.msg = err.message
+        console.error(err);
+        logger.err(logger.ERR.DB, userId, exercise, data)
+    }
+}
+
 
 const exerciseEvents = new EventEmitter();
 
@@ -305,7 +328,7 @@ function createRepo( repoName ) {
 
 // transparently initialize exercise repos right before user clones it
 eventBus.setHandler( '*', '404', function( repoName, _, data, clonable ) {
-    if ( !repoNameRe.test( repoName ) ) { return clonable( false ) }
+    if ( !REPO_NAME_REGEX.test( repoName ) ) { return clonable( false ) }
 
     // LOGGING
     var repoInfo = extractRepoInfoFromPath( repoName )
@@ -323,22 +346,6 @@ eventBus.setHandler( '*', '404', function( repoName, _, data, clonable ) {
     })
 })
 
-backend = angler.gitHttpBackend({
-    pathToRepos: PATH_TO_REPOS,
-    eventBus: eventBus,
-    authenticator: function( params, cb ) {
-        verifyAndGetRepoInfo( params.repoPath )
-        .done( function() {
-            cb({ ok: true })
-        }, function( err ) {
-            var info = extractRepoInfoFromPath( params.repoPath )
-            logger.err( logger.ERR.GIT_HTTP, info.userId, info.exerciseName, {
-                msg: err.message
-            })
-            cb({ ok: false, status: 404 })
-        })
-    }
-})
 
 // hard resets and checks out the updated HEAD after a push to a non-bare remote repo
 // this can't be done inside of the post-receive hook, for some reason
