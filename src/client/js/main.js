@@ -3,33 +3,42 @@
 var EVENTS_ENDPOINT = '/events',
     shoe = require('shoe'),
     $ = require('zeptojs'),
-    _ = require('lodash'),
+    _ = require('lodash'), // todo: replace? source: https://youmightnotneed.com/lodash
     hmac = require('crypto-js/hmac-sha1'),
     eventEmitter = require('event-emitter'),
     exercises = require('gitstream-exercises/viewers'),
     ExerciseViewer = require('./ExerciseViewer'),
-    events = require('duplex-emitter')( shoe( EVENTS_ENDPOINT ) ),
-    exerciseEvents = eventEmitter({}),
-    radio = eventEmitter({}),
-
+    events = require('duplex-emitter')( shoe( EVENTS_ENDPOINT ) ), // client <-> server communication
+    WebSocket = require('ws'),
+    exerciseEvents = eventEmitter({}), // internal client communication, with ExerciseViewer
+    radio = eventEmitter({}), // internal client communication, within this file only
     exerciseTmp = require('../templates/exercise.hbs'),
     indexTmp = require('../templates/index.hbs'),
 
     state = {},
     timer,
-    viewer
+    viewer 
+
+const EVENTS = {
+    sync: 'sync',
+    exerciseDone: 'exerciseDone',
+    exerciseChanged: 'exerciseChanged',
+    step: 'step',
+    ding: 'ding',
+    halt: 'halt'
+}
 
 $.get( '/user', function( userId ) {
     if (!userId) {
         document.location = "/login" + document.location.search;
     } else {
-        events.emit( 'sync', userId );
+        events.emit(EVENTS.sync, userId );
     }
 })
 
 
 /**
- * @param {String} eventType the type of event (step, halt, ding)
+ * @param {typeof EVENTS} eventType the type of event (step, halt, ding)
  * @param {Function} done the function to call when the transition has completed
  */
 function triggerExerciseEvent( eventType, done ) {
@@ -162,7 +171,7 @@ radio.on( 'exerciseChanged', function( changeTo ) {
     exerciseEvents = eventEmitter({})
 
     if ( !silent ) {
-        events.emit( 'exerciseChanged', newExercise )
+        events.emit(EVENTS.exerciseChanged, newExercise )
         delete state.exerciseState
     }
 
@@ -196,7 +205,7 @@ radio.on( 'exerciseChanged', function( changeTo ) {
 
 // $(window).on( 'hashchange', changeExercise )
 
-events.on( 'sync', function( newState ) {
+events.on( EVENTS.sync, function( newState ) {
     var hashExercise = window.location.search.substring(1)
 
     /* merge the server's state with the client state
@@ -219,9 +228,9 @@ events.on( 'sync', function( newState ) {
 })
 
 // forward exercise events to exercise machine emitter
-events.on( 'step', triggerExerciseEvent( 'step', function( newState, oldState, stepOutput ) {
+events.on(EVENTS.step, triggerExerciseEvent(EVENTS.step, function( newState, oldState, stepOutput ) {
     if (newState === 'done') {
-        events.emit( 'exerciseDone', state.currentExercise)
+        events.emit(EVENTS.exerciseDone, state.currentExercise)
     }
     var newStateStepView = selectViewStep( newState ),
         newStateFeedback = newStateStepView.find('.feedback'),
@@ -243,13 +252,17 @@ events.on( 'step', triggerExerciseEvent( 'step', function( newState, oldState, s
         }, 70 )
     }
 }) )
-events.on( 'halt', triggerExerciseEvent( 'halt', function() {
+
+// stops timer before expiration and resets timer state
+events.on( EVENTS.halt, triggerExerciseEvent( EVENTS.halt, function() {
     if ( timer ) {
         timer.stop()
     }
     state.endTime = undefined
 }) )
-events.on( 'ding', triggerExerciseEvent( 'ding', function() {
+
+// timer expiration: defocuses step and resets timer state
+events.on( EVENTS.ding, triggerExerciseEvent( EVENTS.ding, function() {
     if ( timer ) {
         timer.ding()
     }

@@ -67,8 +67,16 @@ function logDbErr (userId, exercise, data) {
     }
 }
 
-
 const exerciseEvents = new EventEmitter();
+
+const EVENTS = {
+    sync: 'sync',
+    exerciseDone: 'exerciseDone',
+    exerciseChanged: 'exerciseChanged',
+    step: 'step',
+    ding: 'ding',
+    halt: 'halt'
+}
 
 /**
  * Global map to store user progress. Methods encapsulated.
@@ -102,7 +110,7 @@ let userMap = {
             return callback(null);
           return
         }
-        // (not needed) report user data before expire was initialized
+        // report user data before expire was initialized
         logger.userMapMod(this, userID, 'expire');
 
         setTimeout(() => {
@@ -586,9 +594,9 @@ shoe( function( stream ) {
 
                 },
                 listeners = [
-                    { event: 'ding', helper: unsetExercise },
-                    { event: 'halt', helper: unsetExercise },
-                    { event: 'step', helper: function( newState ) { // step seems to be important, why?
+                    { event: EVENTS.ding, helper: unsetExercise },
+                    { event: EVENTS.halt, helper: unsetExercise },
+                    { event: EVENTS.step, helper: function( newState ) { // step seems to be important, why?
                         console.error('hset', userId, FIELD_EXERCISE_STATE, newState);
 
                         const updateState =  logDbErr( userId, exerciseName, {
@@ -622,7 +630,7 @@ shoe( function( stream ) {
     })
 
     // on connect, sync the client with the stored client state
-    clientEvents.on( 'sync', function( recvUserId ) {
+    clientEvents.on(EVENTS.sync, function( recvUserId ) {
         userId = recvUserId
 
         var userKeyPromise = user.getUserKey( userId )
@@ -685,7 +693,7 @@ shoe( function( stream ) {
                 clientState.timeRemaining = clientState.endTime - Date.now()
                 delete clientState[ FIELD_END_TIME ]
 
-                clientEvents.emit( 'sync', clientState )
+                clientEvents.emit(EVENTS.sync, clientState)
             })
         };
 
@@ -733,7 +741,7 @@ shoe( function( stream ) {
                 state.timeRemaining = exerciseMachine._timeLimit * 1000
                 delete state[ FIELD_END_TIME ]
 
-                clientEvents.emit( 'sync', state )
+                clientEvents.emit( EVENTS.sync, state )
 
                 exerciseMachine.init()
             }
@@ -745,7 +753,7 @@ shoe( function( stream ) {
             });
     }.bind( this ) )
 
-    clientEvents.on( 'exerciseChanged', function( newExercise ) {
+    clientEvents.on(EVENTS.exerciseChanged, function( newExercise ) {
         if ( exerciseMachine ) { // stop the old machine
             exerciseMachine.halt()
             exerciseMachine = null
@@ -765,7 +773,7 @@ shoe( function( stream ) {
         logger.log( logger.EVENT.CHANGE_EXERCISE, userId, newExercise )
     })
 
-    clientEvents.on( 'exerciseDone', function( doneExercise ) {
+    clientEvents.on(EVENTS.exerciseDone, function( doneExercise ) {
         utils.exportToOmnivore(userId, doneExercise,
                     logDbErr( userId, doneExercise, { desc: 'Omnivore POST error' } ));
     })
