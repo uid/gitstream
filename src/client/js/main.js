@@ -1,20 +1,26 @@
 'use strict'
 
-var EVENTS_ENDPOINT = '/events',
-    shoe = require('shoe'),
+// Global variables
+const EVENTS_ENDPOINT = '/events';
+
+// Imports -- EXTERNAL
+const shoe = require('shoe'),
     $ = require('zeptojs'),
     _ = require('lodash'), // todo: replace? source: https://youmightnotneed.com/lodash
     hmac = require('crypto-js/hmac-sha1'),
     eventEmitter = require('event-emitter'),
-    exercises = require('gitstream-exercises/viewers'),
-    ExerciseViewer = require('./ExerciseViewer'),
     events = require('duplex-emitter')( shoe( EVENTS_ENDPOINT ) ), // client <-> server communication
-    WebSocket = require('ws'),
-    exerciseEvents = eventEmitter({}), // internal client communication, with ExerciseViewer
-    radio = eventEmitter({}), // internal client communication, within this file only
-    exerciseTmp = require('../templates/exercise.hbs'),
-    indexTmp = require('../templates/index.hbs'),
+    WebSocket = require('ws');
 
+// Imports -- INTERNAL
+const exercises = require('gitstream-exercises/viewers'),
+    ExerciseViewer = require('./ExerciseViewer'),
+    exerciseTmp = require('../templates/exercise.hbs'),
+    indexTmp = require('../templates/index.hbs');
+
+// Other variables
+var exerciseEvents = eventEmitter({}), // internal client communication, with ExerciseViewer
+    radio = eventEmitter({}), // internal client communication, within this file only
     state = {},
     timer,
     viewer 
@@ -140,9 +146,9 @@ function selectViewStep( name ) {
     return $('.exercise-view').find( '[data-statename="' + name + '"]' )
 }
 
-function changeExercise() {
-    radio.emit( 'exerciseChanged', window.location.search.substring(1) )
-}
+// function changeExercise() {
+//     radio.emit( 'exerciseChanged', window.location.search.substring(1) )
+// }
 
 // function changeHashSilent( newHash ) {
 //     $(window).off( 'hashchange', changeExercise )
