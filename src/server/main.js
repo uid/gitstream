@@ -22,7 +22,7 @@ const ExerciseMachine = require('./ExerciseMachine'),
     exerciseConfs = require('gitstream-exercises'),
     settings = require('../../settings'),
     logger = require('./logger')({ dbcon: mongodb }), // LOGGING
-    user = require('./user')({ dbcon: mongodb })
+    user = require('./user')({ dbcon: mongodb });
 
 // Global variables -- CONSTANT
 const PATH_TO_REPOS = '/srv/repos',
@@ -30,7 +30,7 @@ const PATH_TO_REPOS = '/srv/repos',
     CLIENT_IDLE_TIMEOUT = 60 * 60 * 1000, // 1 hr before resting client state expires
     PORT = 4242,
     REPO_NAME_REGEX = /\/[a-z0-9_-]+\/[a-f0-9]{6,}\/.+.git$/,
-    gitHTTPMount = '/repos' // no trailing slash
+    gitHTTPMount = '/repos'; // no trailing slash
 
 // Global variables -- DYNAMIC
 var app = express(), // todo: might constant, but leaving here for now
@@ -549,78 +549,231 @@ configureApp().catch(err => console.error(err));
 
 server = app.listen( PORT )
 
-shoe( function( stream ) {
-    var clientEvents = duplexEmitter( stream ),
-        exerciseMachine,
-        userId,
-        userKey,
-        FIELD_EXERCISE_STATE = 'exerciseState',
-        FIELD_END_TIME = 'endTime',
-        FIELD_CURRENT_EXERCISE = 'currentExercise',
+// Shoe variables
+const FIELD_EXERCISE_STATE = 'exerciseState',
+    FIELD_END_TIME = 'endTime',
+    FIELD_CURRENT_EXERCISE = 'currentExercise'
 
-        createExerciseMachine = function( exerciseName ) {
-            var emConf = exerciseConfs.machines[ exerciseName ](),
-                repoMac = user.createMac( userKey, userId + exerciseName ),
-                exerciseRepo = createRepoShortPath({
-                    userId: userId,
-                    exerciseName: exerciseName,
-                    mac: repoMac
-                }),
-                repoPaths = {
-                    fsPath: path.join( PATH_TO_REPOS, exerciseRepo ), // repo fs path
-                    path: exerciseRepo // repo short path
-                },
-                exerciseDir = path.join( PATH_TO_EXERCISES, exerciseName ),
-                exerciseMachine = new ExerciseMachine( emConf, repoPaths, exerciseDir, eventBus ),
+var clientEvents,
+    exerciseMachine,
+    userId,
+    userKey
 
-                makeListenerFn = function( listenerDef ) {
-                    // called when a step happens and sends the event to the browser
-                    return function() {
-                        var args = Array.prototype.slice.call( arguments ),
-                            eventArgs = [ listenerDef.event ].concat( args )
-                        clientEvents.emit.apply( clientEvents, eventArgs )
+// Shoe functions
+function createExerciseMachine (exerciseName) {
+    var emConf = exerciseConfs.machines[ exerciseName ](),
+        repoMac = user.createMac( userKey, userId + exerciseName ),
+        exerciseRepo = createRepoShortPath({
+            userId: userId,
+            exerciseName: exerciseName,
+            mac: repoMac
+        }),
+        repoPaths = {
+            fsPath: path.join( PATH_TO_REPOS, exerciseRepo ), // repo fs path
+            path: exerciseRepo // repo short path
+        },
+        exerciseDir = path.join( PATH_TO_EXERCISES, exerciseName ),
+        exerciseMachine = new ExerciseMachine( emConf, repoPaths, exerciseDir, eventBus ),
 
-                        listenerDef.helper.apply( null, args )
+        makeListenerFn = function( listenerDef ) {
+            // called when a step happens and sends the event to the browser
+            return function() {
+                var args = Array.prototype.slice.call( arguments ),
+                    eventArgs = [ listenerDef.event ].concat( args )
+                clientEvents.emit.apply( clientEvents, eventArgs )
 
-                        // LOGGING
-                        logger.log( logger.EVENT.EM, userId, exerciseName, {
-                            type: listenerDef.event,
-                            info: args.slice( 1 )
-                        })
-                    }
-                },
-                unsetExercise = function() {
-                    userMap.delete(userId, [FIELD_EXERCISE_STATE, FIELD_END_TIME]);
+                listenerDef.helper.apply( null, args )
 
-                },
-                listeners = [
-                    { event: EVENTS.ding, helper: unsetExercise },
-                    { event: EVENTS.halt, helper: unsetExercise },
-                    { event: EVENTS.step, helper: function( newState ) { // step seems to be important, why?
-                        console.error('hset', userId, FIELD_EXERCISE_STATE, newState);
+                // LOGGING
+                logger.log( logger.EVENT.EM, userId, exerciseName, {
+                    type: listenerDef.event,
+                    info: args.slice( 1 )
+                })
+            }
+        },
+        unsetExercise = function() {
+            userMap.delete(userId, [FIELD_EXERCISE_STATE, FIELD_END_TIME]);
 
-                        const updateState =  logDbErr( userId, exerciseName, {
-                            desc: 'userMap step update exercise state',
-                            newState: newState
-                        });
+        },
+        listeners = [
+            { event: EVENTS.ding, helper: unsetExercise },
+            { event: EVENTS.halt, helper: unsetExercise },
+            { event: EVENTS.step, helper: function( newState ) { // step seems to be important, why?
+                console.error('hset', userId, FIELD_EXERCISE_STATE, newState);
 
-                        userMap.expire(userId, CLIENT_IDLE_TIMEOUT, updateState);
-                        userMap.set(userId, FIELD_EXERCISE_STATE, newState, updateState);
+                const updateState =  logDbErr( userId, exerciseName, {
+                    desc: 'userMap step update exercise state',
+                    newState: newState
+                });
 
-                    } }
-                ]
+                userMap.expire(userId, CLIENT_IDLE_TIMEOUT, updateState);
+                userMap.set(userId, FIELD_EXERCISE_STATE, newState, updateState);
 
-            // set up listeners to send events to browser and update saved exercise state
-            listeners.forEach( function( listener ) {
-                exerciseMachine.on( listener.event, makeListenerFn( listener ) )
+            } }
+        ]
+
+    // set up listeners to send events to browser and update saved exercise state
+    listeners.forEach( function( listener ) {
+        exerciseMachine.on( listener.event, makeListenerFn( listener ) )
+    })
+
+    return exerciseMachine
+}
+
+function handleClientSync(recvUserId) {
+    userId = recvUserId
+
+    var userKeyPromise = user.getUserKey( userId )
+
+    userKeyPromise.done( function( key ) { userKey = key }, function( err ) {
+        // LOGGING
+        logger.err( logger.ERR.DB, userId, null, { msg: err.message } )
+    })
+
+    const handleClientState = function( err, clientState ) {
+        if ( err ) {
+            console.error(err)
+
+            // LOGGING
+            logger.err( logger.ERR.DB, userId, null, {
+                desc: 'userMap get client state',
+                msg: err.message
+            })
+            
+            return clientEvents.emit( 'err', err )
+        }
+        console.error('hgetall', userId, clientState);
+        if ( !clientState ) { // Aka user is new and we want to initialize their data
+            console.error('hmset', FIELD_EXERCISE_STATE, null);
+            
+            const handleUnsetClientState = logDbErr( userId, null, {
+                desc: 'userMap unset client state'
             })
 
-            return exerciseMachine
+            userMap.set(userId, FIELD_EXERCISE_STATE, "", handleUnsetClientState)
         }
 
+        userKeyPromise.then( function( userKey ) {
+            var timeRemaining = clientState[ FIELD_END_TIME ] - Date.now() || undefined,
+                exerciseState = clientState[ FIELD_EXERCISE_STATE ],
+                currentExercise = clientState[ FIELD_CURRENT_EXERCISE ]
+
+            // LOGGING
+            logger.log( logger.EVENT.SYNC, userId, currentExercise, {
+                timeRemaining: timeRemaining,
+                exerciseState: exerciseState
+            })
+
+            if ( exerciseState && ( timeRemaining === undefined || timeRemaining > 0 ) ) {
+                // there's already an excercise running. reconnect to it
+                exerciseMachine = createExerciseMachine( currentExercise )
+                exerciseMachine.init( exerciseState, timeRemaining / 1000 )
+
+            } else if ( exerciseState ) { // last exercise has expired
+                userMap.delete(userId, FIELD_EXERCISE_STATE, FIELD_END_TIME);
+
+                delete clientState[ FIELD_EXERCISE_STATE ]
+                delete clientState[ FIELD_END_TIME ]
+            }
+
+            clientState.user = {
+                key: userKey,
+                id: userId
+            }
+            clientState.timeRemaining = clientState.endTime - Date.now()
+            delete clientState[ FIELD_END_TIME ]
+
+            clientEvents.emit(EVENTS.sync, clientState)
+        })
+    };
+
+    userMap.getAll(userId, handleClientState)
+
+    function processNewExercise( channel, exerciseName ) {
+        // LOGGING
+        logger.log( logger.EVENT.GO, userId, exerciseName )
+
+        const handleExerciseState = function( err, state ) {
+            var startState, endTime
+            
+            console.error('hgetall', userId, state);
+
+            // only start exercise if user is on the exercise page
+            if ( exerciseName !== state.currentExercise ) return
+
+            if ( exerciseMachine ) {
+                exerciseMachine.halt()
+            }
+
+            exerciseMachine = createExerciseMachine( exerciseName )
+            startState = exerciseMachine._states.startState
+            // set by EM during init, but init sends events. TODO: should probably be fixed
+            // note: time limit ultimately comes from parameter set in `gitstream-exercises>machines.js`
+            endTime = Date.now() + exerciseMachine._timeLimit * 1000
+
+            console.error('hmset', FIELD_EXERCISE_STATE, startState,
+                   FIELD_END_TIME, endTime );
+            
+            const handleError = function( err ) {
+                if ( err ) {
+                    // LOGGING
+                    logger.err( logger.ERR.DB, userId, exerciseName, {
+                        desc: 'userMap go',
+                        msg: err.message
+                    })
+                }
+            }
+            userMap.expire(userId, CLIENT_IDLE_TIMEOUT, handleError);
+            userMap.set(userId, FIELD_EXERCISE_STATE, startState, handleError);
+            userMap.set(userId, FIELD_END_TIME, endTime, handleError);
+
+            state[ FIELD_EXERCISE_STATE ] = startState
+            state.timeRemaining = exerciseMachine._timeLimit * 1000
+            delete state[ FIELD_END_TIME ]
+
+            clientEvents.emit( EVENTS.sync, state )
+
+            exerciseMachine.init()
+        }
+        userMap.getAll(userId, handleExerciseState)
+    }
+
+    exerciseEvents.on(userId + ':go', (exerciseName) => {
+        processNewExercise(null, exerciseName)
+    });
+}
+
+function handleExerciseChanged(newExercise) {
+    if (exerciseMachine) { // stop the old machine
+        exerciseMachine.halt()
+        exerciseMachine = null
+    }
+
+    console.error('hset', userId, FIELD_CURRENT_EXERCISE, newExercise);
+    
+    const handleNewExercise = logDbErr(userId, newExercise, {
+        desc: 'userMap change exercise'
+    })
+
+    userMap.expire(userId, CLIENT_IDLE_TIMEOUT, handleNewExercise);
+    userMap.delete(userId, [FIELD_EXERCISE_STATE, FIELD_END_TIME], handleNewExercise);
+    userMap.set(userId, FIELD_CURRENT_EXERCISE, newExercise, handleNewExercise);
+
+    // LOGGING
+    logger.log( logger.EVENT.CHANGE_EXERCISE, userId, newExercise )
+}
+
+function handlExerciseDone(doneExercise) {
+    utils.exportToOmnivore(userId, doneExercise,
+        logDbErr( userId, doneExercise, { desc: 'Omnivore POST error' } ));
+}
+
+shoe( function( stream ) {
+    clientEvents = duplexEmitter(stream)
+
     // once server dies
-    stream.on( 'close', function() {
-        if ( exerciseMachine ) {
+    stream.on('close', function() {
+        if (exerciseMachine) {
             exerciseMachine.removeAllListeners()
             exerciseMachine.halt()
         }
@@ -630,151 +783,10 @@ shoe( function( stream ) {
     })
 
     // on connect, sync the client with the stored client state
-    clientEvents.on(EVENTS.sync, function( recvUserId ) {
-        userId = recvUserId
+    clientEvents.on(EVENTS.sync, handleClientSync.bind( this ) ) // todo: do I need bind here?
 
-        var userKeyPromise = user.getUserKey( userId )
+    clientEvents.on(EVENTS.exerciseChanged, handleExerciseChanged);
 
-        userKeyPromise.done( function( key ) { userKey = key }, function( err ) {
-            // LOGGING
-            logger.err( logger.ERR.DB, userId, null, { msg: err.message } )
-        })
+    clientEvents.on(EVENTS.exerciseDone, handlExerciseDone);
 
-        const handleClientState = function( err, clientState ) {
-            if ( err ) {
-                console.error(err)
-
-                // LOGGING
-                logger.err( logger.ERR.DB, userId, null, {
-                    desc: 'userMap get client state',
-                    msg: err.message
-                })
-                
-                return clientEvents.emit( 'err', err )
-            }
-            console.error('hgetall', userId, clientState);
-            if ( !clientState ) { // Aka user is new and we want to initialize their data
-                console.error('hmset', FIELD_EXERCISE_STATE, null);
-                
-                const handleUnsetClientState = logDbErr( userId, null, {
-                    desc: 'userMap unset client state'
-                })
-
-                userMap.set(userId, FIELD_EXERCISE_STATE, "", handleUnsetClientState)
-            }
-
-            userKeyPromise.then( function( userKey ) {
-                var timeRemaining = clientState[ FIELD_END_TIME ] - Date.now() || undefined,
-                    exerciseState = clientState[ FIELD_EXERCISE_STATE ],
-                    currentExercise = clientState[ FIELD_CURRENT_EXERCISE ]
-
-                // LOGGING
-                logger.log( logger.EVENT.SYNC, userId, currentExercise, {
-                    timeRemaining: timeRemaining,
-                    exerciseState: exerciseState
-                })
-
-                if ( exerciseState && ( timeRemaining === undefined || timeRemaining > 0 ) ) {
-                    // there's already an excercise running. reconnect to it
-                    exerciseMachine = createExerciseMachine( currentExercise )
-                    exerciseMachine.init( exerciseState, timeRemaining / 1000 )
-
-                } else if ( exerciseState ) { // last exercise has expired
-                    userMap.delete(userId, FIELD_EXERCISE_STATE, FIELD_END_TIME);
-
-                    delete clientState[ FIELD_EXERCISE_STATE ]
-                    delete clientState[ FIELD_END_TIME ]
-                }
-
-                clientState.user = {
-                    key: userKey,
-                    id: userId
-                }
-                clientState.timeRemaining = clientState.endTime - Date.now()
-                delete clientState[ FIELD_END_TIME ]
-
-                clientEvents.emit(EVENTS.sync, clientState)
-            })
-        };
-
-        userMap.getAll(userId, handleClientState)
-
-        function processNewExercise( channel, exerciseName ) {
-            // LOGGING
-            logger.log( logger.EVENT.GO, userId, exerciseName )
-
-            const handleExerciseState = function( err, state ) {
-                var startState, endTime
-                
-                console.error('hgetall', userId, state);
-
-                // only start exercise if user is on the exercise page
-                if ( exerciseName !== state.currentExercise ) return
-
-                if ( exerciseMachine ) {
-                    exerciseMachine.halt()
-                }
-
-                exerciseMachine = createExerciseMachine( exerciseName )
-                startState = exerciseMachine._states.startState
-                // set by EM during init, but init sends events. TODO: should probably be fixed
-                // note: time limit ultimately comes from parameter set in `gitstream-exercises>machines.js`
-                endTime = Date.now() + exerciseMachine._timeLimit * 1000
-
-                console.error('hmset', FIELD_EXERCISE_STATE, startState,
-                       FIELD_END_TIME, endTime );
-                
-                const handleError = function( err ) {
-                    if ( err ) {
-                        // LOGGING
-                        logger.err( logger.ERR.DB, userId, exerciseName, {
-                            desc: 'userMap go',
-                            msg: err.message
-                        })
-                    }
-                }
-                userMap.expire(userId, CLIENT_IDLE_TIMEOUT, handleError);
-                userMap.set(userId, FIELD_EXERCISE_STATE, startState, handleError);
-                userMap.set(userId, FIELD_END_TIME, endTime, handleError);
-
-                state[ FIELD_EXERCISE_STATE ] = startState
-                state.timeRemaining = exerciseMachine._timeLimit * 1000
-                delete state[ FIELD_END_TIME ]
-
-                clientEvents.emit( EVENTS.sync, state )
-
-                exerciseMachine.init()
-            }
-            userMap.getAll(userId, handleExerciseState)
-        }
-
-        exerciseEvents.on(userId + ':go', (exerciseName) => {
-                processNewExercise(null, exerciseName)
-            });
-    }.bind( this ) )
-
-    clientEvents.on(EVENTS.exerciseChanged, function( newExercise ) {
-        if ( exerciseMachine ) { // stop the old machine
-            exerciseMachine.halt()
-            exerciseMachine = null
-        }
-
-        console.error('hset', userId, FIELD_CURRENT_EXERCISE, newExercise);
-        
-        const handleNewExercise = logDbErr(userId, newExercise, {
-            desc: 'userMap change exercise'
-        })
-
-        userMap.expire(userId, CLIENT_IDLE_TIMEOUT, handleNewExercise);
-        userMap.delete(userId, [FIELD_EXERCISE_STATE, FIELD_END_TIME], handleNewExercise);
-        userMap.set(userId, FIELD_CURRENT_EXERCISE, newExercise, handleNewExercise);
-
-        // LOGGING
-        logger.log( logger.EVENT.CHANGE_EXERCISE, userId, newExercise )
-    })
-
-    clientEvents.on(EVENTS.exerciseDone, function( doneExercise ) {
-        utils.exportToOmnivore(userId, doneExercise,
-                    logDbErr( userId, doneExercise, { desc: 'Omnivore POST error' } ));
-    })
 }).install( server, '/events' )
