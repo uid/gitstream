@@ -547,7 +547,66 @@ async function configureApp() {
 }
 configureApp().catch(err => console.error(err));
 
+// Start the server using the shorthand provided by Express
 server = app.listen( PORT )
+
+// ========= Start of WS =========
+
+// Create a WebSocket connection ontop of the Express app
+const EVENTS_ENDPOINT_WS = '/events_ws';
+const wss = new WebSocket.Server({ server: server, path: EVENTS_ENDPOINT_WS}); // todo: am I using server: server correctly? this and shoe are bound to the same app/server/port
+
+// New client -> new socket object
+wss.on('connection', (ws) => {
+    // Handle messages received
+    ws.onmessage = function(event) {
+        const msg = JSON.parse(event.data);
+        console.log('WS message received:', msg)
+        ws.send("Hi from Server!");
+
+        const eventType = msg.event;
+        const eventData = msg.data;
+
+        switch (eventType) {
+            case EVENTS.sync:
+                // todo
+            break;
+            
+            case EVENTS.exerciseDone:
+                // todo
+            break;
+
+            case EVENTS.exerciseChanged:
+                // todo
+            break;
+
+            case EVENTS.step:
+                // todo
+            break;
+
+            case EVENTS.ding:
+                // todo
+            break;
+
+            case EVENTS.halt:
+                // todo
+            break;
+            
+            default:
+                console.error("error: unknown eventType");
+        }
+    };
+
+    // todo: handling client connection error? handling what to do when clients disconnects from server?
+
+    // Once server dies
+    wss.onclose = function (event) {
+        handleClose();
+    };
+});
+
+// ========= End of WS =========
+
 
 // Shoe variables
 const FIELD_EXERCISE_STATE = 'exerciseState',
@@ -560,6 +619,16 @@ var clientEvents,
     userKey
 
 // Shoe functions
+function handleClose() {
+    if (exerciseMachine) {
+        exerciseMachine.removeAllListeners()
+        exerciseMachine.halt()
+    }
+
+    // LOGGING
+    logger.log( logger.EVENT.QUIT, userId, null )
+}
+
 function createExerciseMachine (exerciseName) {
     var emConf = exerciseConfs.machines[ exerciseName ](),
         repoMac = user.createMac( userKey, userId + exerciseName ),
@@ -772,15 +841,7 @@ shoe( function( stream ) {
     clientEvents = duplexEmitter(stream)
 
     // once server dies
-    stream.on('close', function() {
-        if (exerciseMachine) {
-            exerciseMachine.removeAllListeners()
-            exerciseMachine.halt()
-        }
-
-        // LOGGING
-        logger.log( logger.EVENT.QUIT, userId, null )
-    })
+    stream.on('close', handleClose);
 
     // on connect, sync the client with the stored client state
     clientEvents.on(EVENTS.sync, handleClientSync.bind( this ) ) // todo: do I need bind here?

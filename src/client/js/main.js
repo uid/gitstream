@@ -9,8 +9,7 @@ const shoe = require('shoe'),
     _ = require('lodash'), // todo: replace? source: https://youmightnotneed.com/lodash
     hmac = require('crypto-js/hmac-sha1'),
     eventEmitter = require('event-emitter'),
-    events = require('duplex-emitter')( shoe( EVENTS_ENDPOINT ) ), // client <-> server communication
-    WebSocket = require('ws');
+    events = require('duplex-emitter')( shoe( EVENTS_ENDPOINT ) ); // client <-> server communication
 
 // Imports -- INTERNAL
 const exercises = require('gitstream-exercises/viewers'),
@@ -33,6 +32,34 @@ const EVENTS = {
     ding: 'ding',
     halt: 'halt'
 }
+
+// ========= Start of WS =========
+const EVENTS_ENDPOINT_WS = '/events_ws';
+
+const ws_url = (document.location.protocol == 'https:' ? 'wss://' : 'ws://')
+    + document.location.host + 
+    EVENTS_ENDPOINT_WS; // note: URL must be absolute
+
+const events_WS = new WebSocket(ws_url);
+
+events_WS.onopen = (event) => {
+    const msg = {'event': 'test', 'data': 'Hi from Client!'};
+    events_WS.send(JSON.stringify(msg));
+};
+
+events_WS.onmessage = (event) => {
+    console.log('WS message received:', event.data);
+};
+
+events_WS.onclose = (event) => {
+    console.log('WS connection closed.', event.reason);
+};
+
+events_WS.onerror = (event) => {
+    console.error('WS Error:', event);
+};
+
+// ========= End of WS =========
 
 $.get( '/user', function( userId ) {
     if (!userId) {
