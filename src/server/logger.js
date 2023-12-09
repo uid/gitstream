@@ -4,6 +4,7 @@ const path = require('path');
 const CONFIG = {
     LOG_CONSOLE: false,
     LOG_FILE: false,
+    LOG_DIR: '/opt/gitstream/logs'
 }
 
 const CLI_COL = {
@@ -14,21 +15,28 @@ const CLI_COL = {
 };
 
 const colorCodeRegex = /\x1b\[\d{1,2}m/g;
-
-const now = new Date();
-const timestamp = {
-    date: now.toISOString().split('T')[0],
-    time: now.toLocaleTimeString('en-US', { hour12: false }),
-};
-
-const logsDir = '/opt/gitstream/logs' // prereq: should exist and have write permissions for all
-
 let allLogFiles = {};
 
-// save all log files from the same session under the same timestamped folder
-const sharedLogDir = path.join(logsDir, `${timestamp.date}_${timestamp.time}`);
-fs.mkdirSync(sharedLogDir);
-fs.chmodSync(sharedLogDir, 0o777);
+// Save all log files from the same session under the same timestamped folder
+if (CONFIG.LOG_FILE){
+    const now = new Date();
+    const timestamp = {
+        date: now.toISOString().split('T')[0],
+        time: now.toLocaleTimeString('en-US', { hour12: false }),
+    };
+
+    // todo: more graceful way to handle this edge case?
+    if (!fs.existsSync(CONFIG.LOG_DIR)) {
+        console.error(`[ERROR] Log directory ${CONFIG.LOG_DIR} does not exist.
+        To fix, run \`mkdir ${CONFIG.LOG_DIR}; chmod 777 ${CONFIG.LOG_DIR}\``);
+
+        process.exit(1); // exit
+    }
+
+    const sharedLogDir = path.join(CONFIG.LOG_DIR, `${timestamp.date}_${timestamp.time}`);
+    fs.mkdirSync(sharedLogDir);
+    fs.chmodSync(sharedLogDir, 0o777);
+}
 
 /**
  * Log content to a specified file.
@@ -155,6 +163,7 @@ module.exports = function( opts ) {
                 data: data
             })
         },
+        
         /**
          * Log the state of a user's data as it exists in memory.
          * 
@@ -177,16 +186,16 @@ module.exports = function( opts ) {
                 const formattedEntry = formatField(field, userInfo[field]);
                 contentAll += formattedEntry + '\n';
             });
-            contentAll += CLI_COL.RST
 
-            const output= `[User Map][${userID}]\n${location}\n${contentAll}`
+            contentAll += CLI_COL.RST;
+
+            const output = `[User Map][${userID}]\n${location}\n${contentAll}`;
             
-            if (CONFIG.LOG_CONSOLE){
+            if (CONFIG.LOG_CONSOLE)
                 console.log(`\n${output}`);
-            }
-            if (CONFIG.LOG_FILE){
-                logToFile(sharedLogDir, 'userMap', `${output.replace(colorCodeRegex, '')}\n`)
-            }
+            
+            if (CONFIG.LOG_FILE)
+                logToFile(sharedLogDir, 'userMap', `${output.replace(colorCodeRegex, '')}\n`);
         }
 
     }
