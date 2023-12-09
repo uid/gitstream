@@ -550,19 +550,40 @@ configureApp().catch(err => console.error(err));
 // Start the server using the shorthand provided by Express
 server = app.listen( PORT )
 
+
 // ========= Start of WS =========
 
 // Create a WebSocket connection ontop of the Express app
 const EVENTS_ENDPOINT_WS = '/events_ws';
-const wss = new WebSocket.Server({ server: server, path: EVENTS_ENDPOINT_WS}); // todo: am I using server: server correctly? this and shoe are bound to the same app/server/port
 
-// New client -> new socket object
-wss.on('connection', (ws) => {
-    // Handle messages received
+const wss = new WebSocket.Server({ // todo: this config might be sus but it works
+    server: server,
+    path: EVENTS_ENDPOINT_WS
+});
+
+const WS_DEBUG = true //todo: remove or place elsewhere
+
+/**
+ * Handle WebSocket debugging logs
+ * 
+ * @param {string} output 
+ */
+function ws_log(output){
+    const trueOutput = `\n[WS Debug][Server] ${output}\n`
+    if(WS_DEBUG) console.log(trueOutput);
+}
+
+wss.on('connection', function(ws) {
+    const sendMessage = (msgEvent, msgData) => {
+        ws.send(JSON.stringify({event: msgEvent, data: msgData}));
+    }
+
+    sendMessage('ws', 'Hi from server!');
+
     ws.onmessage = function(event) {
         const msg = JSON.parse(event.data);
-        console.log('WS message received:', msg)
-        ws.send("Hi from Server!");
+        
+        ws_log(JSON.stringify(msg));
 
         const eventType = msg.event;
         const eventData = msg.data;
@@ -591,13 +612,21 @@ wss.on('connection', (ws) => {
             case EVENTS.halt:
                 // todo
             break;
+         
+            case 'ws': // Special case to relay info about socket connection
+                console.log('ws message received:', msg)
+
+            break;
             
             default:
                 console.error("error: unknown eventType");
         }
     };
 
-    // todo: handling client connection error? handling what to do when clients disconnects from server?
+    ws.onerror = (event) => { // todo: gracefully handling client connection error?
+
+        console.error('WS Error:', event);
+    };
 
     // Once server dies
     wss.onclose = function (event) {

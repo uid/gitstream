@@ -1,6 +1,6 @@
 'use strict'
 
-// Global variables
+// Configs for imports
 const EVENTS_ENDPOINT = '/events';
 
 // Imports -- EXTERNAL
@@ -17,13 +17,7 @@ const exercises = require('gitstream-exercises/viewers'),
     exerciseTmp = require('../templates/exercise.hbs'),
     indexTmp = require('../templates/index.hbs');
 
-// Other variables
-var exerciseEvents = eventEmitter({}), // internal client communication, with ExerciseViewer
-    radio = eventEmitter({}), // internal client communication, within this file only
-    state = {},
-    timer,
-    viewer 
-
+// Global variables -- CONSTNAT
 const EVENTS = {
     sync: 'sync',
     exerciseDone: 'exerciseDone',
@@ -33,26 +27,107 @@ const EVENTS = {
     halt: 'halt'
 }
 
+// Global variables -- DYNAMIC
+
+var exerciseEvents = eventEmitter({}), // internal client communication, with ExerciseViewer
+    radio = eventEmitter({}), // internal client communication, within this file only
+    state = {},
+    timer,
+    viewer 
+
 // ========= Start of WS =========
+const WS_DEBUG = true //todo: remove or place elsewhere
+
+/**
+ * Handle WebSocket debugging logs
+ * 
+ * @param {string} output 
+ */
+function ws_log(output){
+    const trueOutput = `\n[WS Debug][Client] ${output}\n`
+    if(WS_DEBUG) console.log(trueOutput);
+}
+
 const EVENTS_ENDPOINT_WS = '/events_ws';
 
+// URL must be absolute
 const ws_url = (document.location.protocol == 'https:' ? 'wss://' : 'ws://')
-    + document.location.host + 
-    EVENTS_ENDPOINT_WS; // note: URL must be absolute
+    + document.location.host
+    + EVENTS_ENDPOINT_WS;
 
 const events_WS = new WebSocket(ws_url);
 
-events_WS.onopen = (event) => {
-    const msg = {'event': 'test', 'data': 'Hi from Client!'};
-    events_WS.send(JSON.stringify(msg));
+var msgs = [] // while awaiting for connection to establish. todo: in a cleaner way?
+
+/**
+ * Sends messages via WebSocket. Quues messages if connection not yet established.
+ * 
+ * @param {string} msgEvent
+ * @param {any} msgData
+ */
+function sendMessage(msgEvent, msgData) {
+    const rawMsg = JSON.stringify({event: msgEvent, data: msgData});
+
+    if (events_WS.readyState !== 1) { // connection not ready
+        msgs.push(rawMsg);
+    } else {
+        events_WS.send(rawMsg);
+    }
+}
+
+events_WS.onopen = function(event) {
+    if (WS_DEBUG) sendMessage('ws', 'Hi from Client!');
+
+    while (msgs.length > 0) {
+        ws_log("Waiting for WS connection...");
+        sendMessage(msgs.pop());
+    }
+
 };
 
-events_WS.onmessage = (event) => {
-    console.log('WS message received:', event.data);
+events_WS.onmessage = function(event) {
+    const msg = JSON.parse(event.data);
+    const eventType = msg.event;
+    const eventData = msg.data;
+
+    ws_log(JSON.stringify(msg));
+
+    switch (eventType) {
+        case EVENTS.sync:
+            // todo
+        break;
+        
+        case EVENTS.exerciseDone:
+            // todo
+        break;
+
+        case EVENTS.exerciseChanged:
+            // todo
+        break;
+
+        case EVENTS.step:
+            // todo
+        break;
+
+        case EVENTS.ding:
+            // todo
+        break;
+
+        case EVENTS.halt:
+            // todo
+        break;
+     
+        case 'ws': // Special case to output info about socket connection
+            console.log('ws message received:', msg)
+        break;
+        
+        default:
+            console.error("error: unknown event.");
+    }
 };
 
 events_WS.onclose = (event) => {
-    console.log('WS connection closed.', event.reason);
+    console.log('WS connection closed:', event.reason);
 };
 
 events_WS.onerror = (event) => {
@@ -65,7 +140,8 @@ $.get( '/user', function( userId ) {
     if (!userId) {
         document.location = "/login" + document.location.search;
     } else {
-        events.emit(EVENTS.sync, userId );
+        sendMessage(EVENTS.sync, userId);
+        events.emit(EVENTS.sync, userId); // todo: remove once WS refactoring done
     }
 })
 
