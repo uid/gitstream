@@ -38,15 +38,23 @@ var exerciseEvents = eventEmitter({}), // internal client communication, with Ex
 // ========= Start of WS =========
 const WS_DEBUG = true //todo: remove or place elsewhere
 
+const WS_TYPE = {
+    STATUS : 'Status',
+    SEND : 'Sent',
+    RECEIVE : "Received"
+}
+
 /**
  * Handle WebSocket debugging logs
  * 
- * @param {string} output 
+ * @param {string} type "Recieved" or "Sent" or "Status" (dictated by WS_TYPE)
+* @param {string} output 
  */
-function ws_log(output){
-    const trueOutput = `\n[WS Debug][Client] ${output}\n`
+function ws_log(type, output){
+    const trueOutput = `\n[WS][Client][${type}] ${output}\n`
     if(WS_DEBUG) console.log(trueOutput);
 }
+
 
 const EVENTS_ENDPOINT_WS = '/events_ws';
 
@@ -66,10 +74,13 @@ var msgs = [] // while awaiting for connection to establish. todo: in a cleaner 
  * @param {any} msgData
  */
 function sendMessage(msgEvent, msgData) {
-    const rawMsg = JSON.stringify({event: msgEvent, data: msgData});
+    const msg = {event: msgEvent, data: msgData};
+    const rawMsg = JSON.stringify(msg);
+
+    ws_log(rawMsg, WS_TYPE.SEND);
 
     if (events_WS.readyState !== 1) { // connection not ready
-        msgs.push(rawMsg);
+        msgs.push(msg);
     } else {
         events_WS.send(rawMsg);
     }
@@ -79,8 +90,10 @@ events_WS.onopen = function(event) {
     if (WS_DEBUG) sendMessage('ws', 'Hi from Client!');
 
     while (msgs.length > 0) {
-        ws_log("Waiting for WS connection...");
-        sendMessage(msgs.pop());
+        ws_log(WS_TYPE.STATUS, "Waiting for WS connection...");
+
+        const { event, data } = msgs.pop();
+        sendMessage(event, data);
     }
 
 };
@@ -90,7 +103,7 @@ events_WS.onmessage = function(event) {
     const eventType = msg.event;
     const eventData = msg.data;
 
-    ws_log(JSON.stringify(msg));
+    ws_log(WS_TYPE.RECEIVE, JSON.stringify(msg));
 
     switch (eventType) {
         case EVENTS.sync:
@@ -141,7 +154,7 @@ $.get( '/user', function( userId ) {
         document.location = "/login" + document.location.search;
     } else {
         sendMessage(EVENTS.sync, userId);
-        events.emit(EVENTS.sync, userId); // todo: remove once WS refactoring done
+        events.emit(EVENTS.sync, userId); // todo: remove (once WS refactoring done)
     }
 })
 
