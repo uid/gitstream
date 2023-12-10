@@ -569,16 +569,21 @@ const WS_DEBUG = true //todo: remove or place elsewhere
  * @param {string} output 
  */
 function ws_log(output){
+    // todo: make this func mirrow client one
     const trueOutput = `\n[WS Debug][Server] ${output}\n`
     if(WS_DEBUG) console.log(trueOutput);
 }
 
-wss.on('connection', function(ws) {
-    const sendMessage = (msgEvent, msgData) => {
-        ws.send(JSON.stringify({event: msgEvent, data: msgData}));
-    }
+// note: doesn't need to mirror similar client func b/c client is first to send data
+function sendMessage(ws, msgEvent, msgData) {
+    console.log('sent', {event: msgEvent, data: msgData});
+    ws.send(JSON.stringify({event: msgEvent, data: msgData}));
+}
 
-    sendMessage('ws', 'Hi from server!');
+
+wss.on('connection', function(ws) {
+
+    if (WS_DEBUG) sendMessage(ws, 'ws', 'Hi from server!');
 
     ws.onmessage = function(event) {
         const msg = JSON.parse(event.data);
@@ -590,7 +595,7 @@ wss.on('connection', function(ws) {
 
         switch (eventType) {
             case EVENTS.sync:
-                // todo
+                handleClientSync(ws, eventData); // todo: cleaner way besides passing WS connection object?
             break;
             
             case EVENTS.exerciseDone:
@@ -615,7 +620,6 @@ wss.on('connection', function(ws) {
          
             case 'ws': // Special case to relay info about socket connection
                 console.log('ws message received:', msg)
-
             break;
             
             default:
@@ -718,7 +722,7 @@ function createExerciseMachine (exerciseName) {
     return exerciseMachine
 }
 
-function handleClientSync(recvUserId) {
+function handleClientSync(ws, recvUserId) {
     userId = recvUserId
 
     var userKeyPromise = user.getUserKey( userId )
@@ -781,7 +785,8 @@ function handleClientSync(recvUserId) {
             clientState.timeRemaining = clientState.endTime - Date.now()
             delete clientState[ FIELD_END_TIME ]
 
-            clientEvents.emit(EVENTS.sync, clientState)
+            sendMessage(ws, EVENTS.sync, clientState);
+            // clientEvents.emit(EVENTS.sync, clientState);
         })
     };
 
@@ -829,7 +834,8 @@ function handleClientSync(recvUserId) {
             state.timeRemaining = exerciseMachine._timeLimit * 1000
             delete state[ FIELD_END_TIME ]
 
-            clientEvents.emit( EVENTS.sync, state )
+            sendMessage(ws, EVENTS.sync, state);
+            // clientEvents.emit( EVENTS.sync, state )
 
             exerciseMachine.init()
         }
@@ -873,7 +879,7 @@ shoe( function( stream ) {
     stream.on('close', handleClose);
 
     // on connect, sync the client with the stored client state
-    clientEvents.on(EVENTS.sync, handleClientSync.bind( this ) ) // todo: do I need bind here?
+    // clientEvents.on(EVENTS.sync, handleClientSync.bind( this ) )
 
     clientEvents.on(EVENTS.exerciseChanged, handleExerciseChanged);
 

@@ -36,22 +36,23 @@ var exerciseEvents = eventEmitter({}), // internal client communication, with Ex
     viewer 
 
 // ========= Start of WS =========
-const WS_DEBUG = true //todo: remove or place elsewhere
+const WS_DEBUG = true; //todo: remove or place elsewhere
 
 const WS_TYPE = {
-    STATUS : 'Status',
-    SEND : 'Sent',
-    RECEIVE : "Received"
+    STATUS: 'Status',
+    SENT: 'Sent',
+    RECEIVED: "Received"
 }
 
 /**
  * Handle WebSocket debugging logs
  * 
  * @param {string} type "Recieved" or "Sent" or "Status" (dictated by WS_TYPE)
-* @param {string} output 
+ * @param {string} output
+ * @returns nothing
  */
 function ws_log(type, output){
-    const trueOutput = `\n[WS][Client][${type}] ${output}\n`
+    const trueOutput = `\n[WS][Client][${type}] ${output}\n`;
     if(WS_DEBUG) console.log(trueOutput);
 }
 
@@ -68,28 +69,28 @@ const events_WS = new WebSocket(ws_url);
 var msgs = [] // while awaiting for connection to establish. todo: in a cleaner way?
 
 /**
- * Sends messages via WebSocket. Quues messages if connection not yet established.
+ * Sends messages via WebSocket. Queues messages if connection is not yet established.
  * 
  * @param {string} msgEvent
  * @param {any} msgData
  */
 function sendMessage(msgEvent, msgData) {
     const msg = {event: msgEvent, data: msgData};
-    const rawMsg = JSON.stringify(msg);
+    const strMsg = JSON.stringify(msg);
 
-    ws_log(rawMsg, WS_TYPE.SEND);
+    ws_log(WS_TYPE.SENT, strMsg);
 
     if (events_WS.readyState !== 1) { // connection not ready
         msgs.push(msg);
     } else {
-        events_WS.send(rawMsg);
+        events_WS.send(strMsg);
     }
 }
 
 events_WS.onopen = function(event) {
     if (WS_DEBUG) sendMessage('ws', 'Hi from Client!');
 
-    while (msgs.length > 0) {
+    while (msgs.length > 0) { // send queued messages
         ws_log(WS_TYPE.STATUS, "Waiting for WS connection...");
 
         const { event, data } = msgs.pop();
@@ -101,33 +102,33 @@ events_WS.onopen = function(event) {
 events_WS.onmessage = function(event) {
     const msg = JSON.parse(event.data);
     const eventType = msg.event;
-    const eventData = msg.data;
+    const data = msg.data;
 
-    ws_log(WS_TYPE.RECEIVE, JSON.stringify(msg));
+    ws_log(WS_TYPE.RECEIVED, JSON.stringify(msg));
 
     switch (eventType) {
         case EVENTS.sync:
-            // todo
+            handleSync(data);
         break;
         
         case EVENTS.exerciseDone:
-            // todo
+            // todo: 12/10
         break;
 
         case EVENTS.exerciseChanged:
-            // todo
+            // todo: 12/10
         break;
 
         case EVENTS.step:
-            // todo
+            // todo: 12/11
         break;
 
         case EVENTS.ding:
-            // todo
+            // todo: 12/11
         break;
 
         case EVENTS.halt:
-            // todo
+            // todo: 12/11
         break;
      
         case 'ws': // Special case to output info about socket connection
@@ -139,11 +140,11 @@ events_WS.onmessage = function(event) {
     }
 };
 
-events_WS.onclose = (event) => {
+events_WS.onclose = function(event) {
     console.log('WS connection closed:', event.reason);
 };
 
-events_WS.onerror = (event) => {
+events_WS.onerror = function(event) {
     console.error('WS Error:', event);
 };
 
@@ -154,7 +155,7 @@ $.get( '/user', function( userId ) {
         document.location = "/login" + document.location.search;
     } else {
         sendMessage(EVENTS.sync, userId);
-        events.emit(EVENTS.sync, userId); // todo: remove (once WS refactoring done)
+        // events.emit(EVENTS.sync, userId);
     }
 })
 
@@ -327,7 +328,7 @@ radio.on( 'exerciseChanged', function( changeTo ) {
 
 // $(window).on( 'hashchange', changeExercise )
 
-events.on( EVENTS.sync, function( newState ) {
+function handleSync(newState) {
     var hashExercise = window.location.search.substring(1)
 
     /* merge the server's state with the client state
@@ -347,7 +348,9 @@ events.on( EVENTS.sync, function( newState ) {
     })
 
     setTimeout( function() { window.synchronized = true}, 0 )
-})
+}
+
+// events.on( EVENTS.sync, handleSync);
 
 // forward exercise events to exercise machine emitter
 events.on(EVENTS.step, triggerExerciseEvent(EVENTS.step, function( newState, oldState, stepOutput ) {
