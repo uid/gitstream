@@ -406,14 +406,19 @@ app.use(sessionParser);
 // session cookie information or by authenticating the user using the authentication method selected in settings.js.
 //
 // By default there is no authentication method, so this method authenticates as a guest user with a randomly-generated username.
-let setUserAuthenticateIfNecessary = function(req,res,next) {
+let setUser = function(req,res,next) {
     if ( ! req.user ) {
-        req.user = req.session.guest_user = { username: user.createRandomId(), fullname: "Guest User" }
+        if (req.session.guest_user){
+            req.user = req.session.guest_user;
+        } else {
+            req.user = req.session.guest_user = { username: user.createRandomId(), fullname: "Guest User" }
+        }
     }
     console.log('guest user connected as', req.user);
     next();
 };
 
+let setUserAuthenticateIfNecessary = setUser; 
 
 async function configureApp() {
     // // if we have settings for OpenID authentication, configure it
@@ -479,7 +484,12 @@ async function configureApp() {
                     ) (req, res, next);
                 }
         );
-
+        
+        setUser = function(req, res, next) {
+            console.log('OpenID authenticated as', req.user);
+            next();
+        }
+        
         setUserAuthenticateIfNecessary = function(req, res, next) {
             if ( ! req.user ) {
                 req.session.returnTo = req.originalUrl;
@@ -539,7 +549,7 @@ async function configureApp() {
         res.redirect(req.originalUrl.replace(/^\/login/, '/'));
     })
 
-    app.use( '/user', function( req, res ) {
+    app.use( '/user', setUser, function( req, res ) {
         var userId = ( req.user && req.user.username ) || "";
         res.writeHead( 200, { 'Content-Type': 'text/plain' } )
         res.end( userId )
@@ -646,9 +656,8 @@ const FIELD_EXERCISE_STATE = 'exerciseState',
     FIELD_END_TIME = 'endTime',
     FIELD_CURRENT_EXERCISE = 'currentExercise'
 
-var clientEvents,
-    exerciseMachine,
-    userId,
+var exerciseMachine,
+    userId, 
     userKey
 
 // Shoe functions
@@ -723,7 +732,7 @@ function createExerciseMachine (exerciseName) {
 }
 
 function handleClientSync(ws, recvUserId) {
-    userId = recvUserId
+    userId = recvUserId // initial and sole assignment
 
     var userKeyPromise = user.getUserKey( userId )
 
@@ -873,7 +882,7 @@ function handlExerciseDone(doneExercise) {
 }
 
 shoe( function( stream ) {
-    clientEvents = duplexEmitter(stream)
+    let clientEvents = duplexEmitter(stream) // good
 
     // once server dies
     stream.on('close', handleClose);

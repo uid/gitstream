@@ -55,7 +55,8 @@ place inside the root folder of GitStream.
 
 ### Test
 
-Run test cases via `npm test`.
+* Run test cases via `npm test`.
+* To locally test multiple users, pomit `openid` config in `settings.js`. 
 
 ### Run
 
