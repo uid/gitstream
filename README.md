@@ -4,7 +4,7 @@
 
 ### Ubuntu
 
-Note: this section will soon be deprecated.
+\[WARNING\] THIS PART WILL SOON BE DEPRECATED.
 
 ```
 sudo add-apt-repository ppa:gitstream/gitstream
@@ -12,8 +12,10 @@ sudo apt-get update && sudo apt-get install gitstream
 ```
 
 ### General
+\[NOTE\] These instructions may be outdated.
 
-Download and access gitstream repository:
+
+Download and access GitStream repository:
 ```sh
 git clone https://github.com/uid/gitstream.git
 cd gitstream
@@ -30,7 +32,7 @@ sudo apt-get -y install git nginx nodejs make
 Install [MongoDB Community Edition](https://docs.mongodb.com/manual/administration/install-community/).
 
 
-Install gitstream's dependencies:
+Install GitStream's dependencies:
 ```sh
 make
 sudo make install
@@ -43,8 +45,6 @@ sudo service nginx reload
 sudo -u gitstream pm2 start dist/server/main.js
 ```
 
-Now you're all set!
-
 ## Development
 
 ### Install Dependencies
@@ -52,6 +52,9 @@ Now you're all set!
 place inside the root folder of GitStream.
 2. Install [Vagrant](https://www.vagrantup.com/).
 3. Add a new Vagrant box to your machine: `vagrant box add ubuntu/focal64`.
+4. Ensure special configuration files are in the main directory: `gistream.perm`, `settings.js`
+
+Now you're all set!
 
 ### Test
 
@@ -70,4 +73,4 @@ place inside the root folder of GitStream.
 e.g.: [http://localhost:8000?theGitGo](http://localhost:8000?theGitGo).
 
 ### Misc. Debugging
-* MIT's OpenID is not friendly with VPNs. Make sure your VPN is disabled when using the app.
+* MIT's OpenID is not friendly with VPNs. Make sure your VPN is disabled when accessing the GitStream webpage.
