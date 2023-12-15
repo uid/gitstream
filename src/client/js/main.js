@@ -45,15 +45,16 @@ const WS_TYPE = {
 }
 
 /**
- * Handle WebSocket debugging logs
+ * Log WebSocket events
  * 
- * @param {string} type "Recieved" or "Sent" or "Status" (dictated by WS_TYPE)
+ * @param {typeof WS_TYPE} type
  * @param {string} output
  * @returns nothing
  */
 function ws_log(type, output){
     const trueOutput = `\n[WS][Client][${type}] ${output}\n`;
-    if(WS_DEBUG) console.log(trueOutput);
+    if(WS_DEBUG)
+        console.log(trueOutput);
 }
 
 
@@ -76,6 +77,7 @@ var msgs = [] // while awaiting for connection to establish. todo: in a cleaner 
  */
 function sendMessage(msgEvent, msgData) {
     const msg = {event: msgEvent, data: msgData};
+    
     const strMsg = JSON.stringify(msg);
 
     ws_log(WS_TYPE.SENT, strMsg);
@@ -101,14 +103,13 @@ events_WS.onopen = function(event) {
 
 events_WS.onmessage = function(event) {
     const msg = JSON.parse(event.data);
-    const eventType = msg.event;
-    const data = msg.data;
+    const {event: msgEvent, data: msgData} = msg;
 
     ws_log(WS_TYPE.RECEIVED, JSON.stringify(msg));
 
-    switch (eventType) {
+    switch (msgEvent) {
         case EVENTS.sync:
-            handleSync(data);
+            handleSync(msgData);
         break;
         
         case EVENTS.exerciseDone:
@@ -131,12 +132,13 @@ events_WS.onmessage = function(event) {
             // todo: 12/11
         break;
      
-        case 'ws': // Special case to output info about socket connection
+        // Special case to relay info about socket connection
+        case 'ws':
             console.log('ws message received:', msg)
         break;
         
         default:
-            console.error("error: unknown event.");
+            console.error("error: unknown event: ", msgEvent);
     }
 };
 

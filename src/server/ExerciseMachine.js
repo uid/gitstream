@@ -11,7 +11,7 @@ var util = require('util'),
 /**
  * A state machine that represents multi-step exercises as states.
  *
- * This class is an EventEmitter:
+ * This class is an extension of EventEmitter:
  *  Event `step`: (newState, oldState, data)
  *  Event `halt`: (haltState)`
  *  If a time limit is specified, a `ding` event will be emitted when the timer runs out
@@ -43,7 +43,7 @@ function ExerciseMachine( config, repoPaths, exerciseDir, eventBus ) {
     this.halted = true
 }
 
-util.inherits( ExerciseMachine, EventEmitter )
+util.inherits(ExerciseMachine, EventEmitter) // (EventEmitter (ExerciseMachine))
 
 _.extend( ExerciseMachine.prototype, {
     /**

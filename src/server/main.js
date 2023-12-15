@@ -32,6 +32,10 @@ const PATH_TO_REPOS = '/srv/repos',
     REPO_NAME_REGEX = /\/[a-z0-9_-]+\/[a-f0-9]{6,}\/.+.git$/,
     gitHTTPMount = '/repos'; // no trailing slash
 
+const FIELD_EXERCISE_STATE = 'exerciseState',
+    FIELD_END_TIME = 'endTime',
+    FIELD_CURRENT_EXERCISE = 'currentExercise'
+
 // Global variables -- DYNAMIC
 var app = express(), // todo: might constant, but leaving here for now
     eventBus = new angler.EventBus(), // todo: might constant, but leaving here for now
@@ -58,7 +62,7 @@ var backend = angler.gitHttpBackend({ // todo: might constant, but leaving here 
     }
 })
 
-function logDbErr (userId, exercise, data) {
+function logDbErr(userId, exercise, data) {
     return (err) => {
         if (!err) return
         data.msg = err.message
@@ -354,7 +358,6 @@ eventBus.setHandler( '*', '404', function( repoName, _, data, clonable ) {
     })
 })
 
-
 // hard resets and checks out the updated HEAD after a push to a non-bare remote repo
 // this can't be done inside of the post-receive hook, for some reason
 // NOTE: when Git >= 2.3.0 is in APT, look into `receive.denyCurrentBranch updateInstead`
@@ -391,7 +394,6 @@ eventBus.setHandler( '*', 'receive', function( repo, action, updates, done ) {
         done()
     })
 })
-
 
 // set up a session cookie to hold the user's identity after authentication
 const sessionParser = session({
@@ -586,7 +588,6 @@ function ws_log(output){
 
 // note: doesn't need to mirror similar client func b/c client is first to send data
 function sendMessage(ws, msgEvent, msgData) {
-    console.log('sent', {event: msgEvent, data: msgData});
     ws.send(JSON.stringify({event: msgEvent, data: msgData}));
 }
 
@@ -600,12 +601,11 @@ wss.on('connection', function(ws) {
         
         ws_log(JSON.stringify(msg));
 
-        const eventType = msg.event;
-        const eventData = msg.data;
+        const {event: msgEvent, data: msgData} = msg;
 
-        switch (eventType) {
+        switch (msgEvent) {
             case EVENTS.sync:
-                handleClientSync(ws, eventData); // todo: cleaner way besides passing WS connection object?
+                handleClientSync(ws, msgData); // todo: cleaner way besides passing WS connection object?
             break;
             
             case EVENTS.exerciseDone:
@@ -628,13 +628,14 @@ wss.on('connection', function(ws) {
                 // todo
             break;
          
-            case 'ws': // Special case to relay info about socket connection
+            // Special case to relay info about socket connection
+            case 'ws':
                 console.log('ws message received:', msg)
             break;
             
             default:
-                console.error("error: unknown eventType");
-        }
+                console.error("error: unknown event: ", msgEvent);
+            }
     };
 
     ws.onerror = (event) => { // todo: gracefully handling client connection error?
@@ -650,17 +651,15 @@ wss.on('connection', function(ws) {
 
 // ========= End of WS =========
 
-// Shoe variables
-const FIELD_EXERCISE_STATE = 'exerciseState',
-    FIELD_END_TIME = 'endTime',
-    FIELD_CURRENT_EXERCISE = 'currentExercise'
-
+// State variables
 var exerciseMachine,
     userId, 
     userKey,
     clientEvents
 
-// Shoe functions
+/**
+ * Handling server death
+ */
 function handleClose() {
     if (exerciseMachine) {
         exerciseMachine.removeAllListeners()
@@ -671,7 +670,7 @@ function handleClose() {
     logger.log( logger.EVENT.QUIT, userId, null )
 }
 
-function createExerciseMachine (exerciseName) {
+function createExerciseMachine(exerciseName) {
     var emConf = exerciseConfs.machines[ exerciseName ](),
         repoMac = user.createMac( userKey, userId + exerciseName ),
         exerciseRepo = createRepoShortPath({
@@ -731,6 +730,11 @@ function createExerciseMachine (exerciseName) {
     return exerciseMachine
 }
 
+/**
+ * Sync the client with the stored client state
+ * @param {*} ws 
+ * @param {*} recvUserId 
+ */
 function handleClientSync(ws, recvUserId) {
     userId = recvUserId // initial and sole assignment
 
@@ -882,16 +886,13 @@ function handlExerciseDone(doneExercise) {
 }
 
 shoe( function( stream ) {
-    clientEvents = duplexEmitter(stream)
+    clientEvents = duplexEmitter(stream);
 
-    // once server dies
     stream.on('close', handleClose);
 
-    // on connect, sync the client with the stored client state
-    // clientEvents.on(EVENTS.sync, handleClientSync.bind( this ) )
-
     clientEvents.on(EVENTS.exerciseChanged, handleExerciseChanged);
-
     clientEvents.on(EVENTS.exerciseDone, handlExerciseDone);
 
+    // todo: remove these shoe events
+    // clientEvents.on(EVENTS.sync, handleClientSync.bind( this ) )
 }).install( server, '/events' )
