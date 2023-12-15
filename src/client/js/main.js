@@ -16,6 +16,7 @@ const exercises = require('gitstream-exercises/viewers'),
     ExerciseViewer = require('./ExerciseViewer'),
     exerciseTmp = require('../templates/exercise.hbs'),
     indexTmp = require('../templates/index.hbs');
+const { send } = require('q');
 
 // Global variables -- CONSTNAT
 const EVENTS = {
@@ -117,7 +118,7 @@ events_WS.onmessage = function(event) {
         break;
 
         case EVENTS.exerciseChanged:
-            // todo: 12/10
+            // (empty on purpose)
         break;
 
         case EVENTS.step:
@@ -278,7 +279,7 @@ function selectViewStep( name ) {
 //     }, 0 )
 // }
 
-radio.on( 'exerciseChanged', function( changeTo ) {
+radio.on( EVENTS.exerciseChanged, function( changeTo ) {
     var exerciseViewerConf,
         exerciseView,
         newExercise,
@@ -297,7 +298,9 @@ radio.on( 'exerciseChanged', function( changeTo ) {
     exerciseEvents = eventEmitter({})
 
     if ( !silent ) {
-        events.emit(EVENTS.exerciseChanged, newExercise )
+        // events.emit(EVENTS.exerciseChanged, newExercise ) // todo: remove with shoe
+        sendMessage(EVENTS.exerciseChanged, newExercise);
+
         delete state.exerciseState
     }
 
@@ -344,7 +347,7 @@ function handleSync(newState) {
         }
     })
 
-    radio.emit( 'exerciseChanged', {
+    radio.emit( EVENTS.exerciseChanged, {
         newExercise: hashExercise,
         silent: state.currentExercise === hashExercise || window.synchronized,
         setHash: true

@@ -606,7 +606,7 @@ wss.on('connection', function(ws) {
             break;
 
             case EVENTS.exerciseChanged:
-                // todo
+                handleExerciseChanged(msgData);
             break;
 
             case EVENTS.step:
@@ -881,11 +881,9 @@ shoe( function( stream ) {
 
     stream.on('close', handleClose);
 
-    clientEvents.on(EVENTS.exerciseChanged, handleExerciseChanged);
-
     // todo: remove these shoe events
-
     // clientEvents.on(EVENTS.sync, handleClientSync.bind( this ) )
     // clientEvents.on(EVENTS.exerciseDone, handlExerciseDone);
+    // clientEvents.on(EVENTS.exerciseChanged, handleExerciseChanged);
 
 }).install( server, '/events' )
