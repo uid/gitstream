@@ -21,7 +21,7 @@ const ExerciseMachine = require('./ExerciseMachine'),
     angler = require('git-angler'),
     exerciseConfs = require('gitstream-exercises'),
     settings = require('../../settings'),
-    logger = require('./logger')({ dbcon: mongodb }), // LOGGING
+    { WS_TYPE, ...logger } = require('./logger')({ dbcon: mongodb }), // LOGGING
     user = require('./user')({ dbcon: mongodb });
 
 // Global variables -- CONSTANT
@@ -573,33 +573,23 @@ const wss = new WebSocket.Server({ // todo: this config might be sus but it work
     path: EVENTS_ENDPOINT_WS
 });
 
-const WS_DEBUG = true //todo: remove or place elsewhere
 
-/**
- * Handle WebSocket debugging logs
- * 
- * @param {string} output 
- */
-function ws_log(output){
-    // todo: make this func mirrow client one
-    const trueOutput = `\n[WS Debug][Server] ${output}\n`
-    if(WS_DEBUG) console.log(trueOutput);
-}
-
-// note: doesn't need to mirror similar client func b/c client is first to send data
 function sendMessage(ws, msgEvent, msgData) {
-    ws.send(JSON.stringify({event: msgEvent, data: msgData}));
+    const msg = {event: msgEvent, data: msgData};
+    const strMsg = JSON.stringify(msg);
+
+    logger.ws(WS_TYPE.SENT, strMsg);
+    ws.send(strMsg);
 }
 
 
 wss.on('connection', function(ws) {
-
-    if (WS_DEBUG) sendMessage(ws, 'ws', 'Hi from server!');
+    if (logger.CONFIG.WS_DEBUG) sendMessage(ws, 'ws', 'Hi from server!');
 
     ws.onmessage = function(event) {
         const msg = JSON.parse(event.data);
         
-        ws_log(JSON.stringify(msg));
+        logger.ws(WS_TYPE.RECEIVED, JSON.stringify(msg));
 
         const {event: msgEvent, data: msgData} = msg;
 

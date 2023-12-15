@@ -4,7 +4,14 @@ const path = require('path');
 const CONFIG = {
     LOG_CONSOLE: false,
     LOG_FILE: false,
-    LOG_DIR: '/opt/gitstream/logs'
+    LOG_DIR: '/opt/gitstream/logs',
+    WS_DEBUG: true
+}
+
+const WS_TYPE = {
+    STATUS: 'Status',
+    SENT: 'Sent',
+    RECEIVED: "Received"
 }
 
 const CLI_COL = {
@@ -108,6 +115,9 @@ module.exports = function( opts ) {
     var dbcon = opts.dbcon
 
     return {
+        CONFIG,
+        WS_TYPE,
+
         EVENT: {
             NEW_USER: 'NEW_USER',
             INIT_CLONE: 'INIT_CLONE',
@@ -118,6 +128,7 @@ module.exports = function( opts ) {
             SYNC: 'SYNC',
             ERROR: 'ERROR'
         },
+
         ERR: {
             GIT_HTTP: 'GIT_HTTP',
             CREATE_REPO: 'LOG_ERR',
@@ -196,7 +207,20 @@ module.exports = function( opts ) {
             
             if (CONFIG.LOG_FILE)
                 logToFile(sharedLogDir, 'userMap', `${output.replace(colorCodeRegex, '')}\n`);
-        }
+        },
 
+        /**
+         * Log WebSocket events
+         * 
+         * @param {typeof WS_TYPE} type
+         * @param {string} output
+         * @returns nothing
+         */
+        ws: function(type, output){
+            if (CONFIG.WS_DEBUG) {
+                const trueOutput = `\n[WS][Server][${type}] ${output}\n`;
+                console.log(trueOutput);
+            }
+        }
     }
 }
