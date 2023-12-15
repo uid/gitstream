@@ -573,18 +573,21 @@ const wss = new WebSocket.Server({ // todo: this config might be sus but it work
     path: EVENTS_ENDPOINT_WS
 });
 
+let one_socket;
 
-function sendMessage(ws, msgEvent, msgData) {
+function sendMessage(msgEvent, msgData) {
     const msg = {event: msgEvent, data: msgData};
     const strMsg = JSON.stringify(msg);
 
     logger.ws(WS_TYPE.SENT, strMsg);
-    ws.send(strMsg);
+    one_socket.send(strMsg);
 }
 
 
 wss.on('connection', function(ws) {
-    if (logger.CONFIG.WS_DEBUG) sendMessage(ws, 'ws', 'Hi from server!');
+    one_socket = ws;
+
+    if (logger.CONFIG.WS_DEBUG) sendMessage('ws', 'Hi from server!');
 
     ws.onmessage = function(event) {
         const msg = JSON.parse(event.data);
@@ -595,7 +598,7 @@ wss.on('connection', function(ws) {
 
         switch (msgEvent) {
             case EVENTS.sync:
-                handleClientSync(ws, msgData); // todo: cleaner way besides passing WS connection object?
+                handleClientSync(msgData); // todo: cleaner way besides passing WS connection object?
             break;
             
             case EVENTS.exerciseDone:
@@ -629,12 +632,10 @@ wss.on('connection', function(ws) {
     };
 
     ws.onerror = (event) => { // todo: gracefully handling client connection error?
-
         console.error('WS Error:', event);
     };
 
-    // Once server dies
-    wss.onclose = function (event) {
+    wss.onclose = function(event) {
         handleClose();
     };
 });
@@ -725,7 +726,7 @@ function createExerciseMachine(exerciseName) {
  * @param {*} ws 
  * @param {*} recvUserId 
  */
-function handleClientSync(ws, recvUserId) {
+function handleClientSync(recvUserId) {
     userId = recvUserId // initial and sole assignment
 
     var userKeyPromise = user.getUserKey( userId )
@@ -788,7 +789,7 @@ function handleClientSync(ws, recvUserId) {
             clientState.timeRemaining = clientState.endTime - Date.now()
             delete clientState[ FIELD_END_TIME ]
 
-            sendMessage(ws, EVENTS.sync, clientState);
+            sendMessage(EVENTS.sync, clientState);
             // clientEvents.emit(EVENTS.sync, clientState);
         })
     };
@@ -837,7 +838,7 @@ function handleClientSync(ws, recvUserId) {
             state.timeRemaining = exerciseMachine._timeLimit * 1000
             delete state[ FIELD_END_TIME ]
 
-            sendMessage(ws, EVENTS.sync, state);
+            sendMessage(EVENTS.sync, state);
             // clientEvents.emit( EVENTS.sync, state )
 
             exerciseMachine.init()
