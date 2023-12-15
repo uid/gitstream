@@ -598,11 +598,11 @@ wss.on('connection', function(ws) {
 
         switch (msgEvent) {
             case EVENTS.sync:
-                handleClientSync(msgData); // todo: cleaner way besides passing WS connection object?
+                handleClientSync(msgData);
             break;
             
             case EVENTS.exerciseDone:
-                // todo
+                handlExerciseDone(msgData);
             break;
 
             case EVENTS.exerciseChanged:
@@ -882,8 +882,10 @@ shoe( function( stream ) {
     stream.on('close', handleClose);
 
     clientEvents.on(EVENTS.exerciseChanged, handleExerciseChanged);
-    clientEvents.on(EVENTS.exerciseDone, handlExerciseDone);
 
     // todo: remove these shoe events
+
     // clientEvents.on(EVENTS.sync, handleClientSync.bind( this ) )
+    // clientEvents.on(EVENTS.exerciseDone, handlExerciseDone);
+
 }).install( server, '/events' )

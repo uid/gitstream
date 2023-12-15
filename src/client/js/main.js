@@ -28,7 +28,6 @@ const EVENTS = {
 }
 
 // Global variables -- DYNAMIC
-
 var exerciseEvents = eventEmitter({}), // internal client communication, with ExerciseViewer
     radio = eventEmitter({}), // internal client communication, within this file only
     state = {},
@@ -36,12 +35,13 @@ var exerciseEvents = eventEmitter({}), // internal client communication, with Ex
     viewer 
 
 // ========= Start of WS =========
-const WS_DEBUG = true; //todo: remove or place elsewhere
+ //todo: remove or place elsewhere
+const WS_DEBUG = true;
 
 const WS_TYPE = {
     STATUS: 'Status',
     SENT: 'Sent',
-    RECEIVED: "Received"
+    RECEIVED: 'Received'
 }
 
 /**
@@ -113,7 +113,7 @@ events_WS.onmessage = function(event) {
         break;
         
         case EVENTS.exerciseDone:
-            // todo: 12/10
+            sendMessage(EVENTS.exerciseDone, state.currentExercise);
         break;
 
         case EVENTS.exerciseChanged:
@@ -157,6 +157,7 @@ $.get( '/user', function( userId ) {
         document.location = "/login" + document.location.search;
     } else {
         sendMessage(EVENTS.sync, userId);
+        // todo: remove w/ shoe
         // events.emit(EVENTS.sync, userId);
     }
 })
@@ -352,12 +353,16 @@ function handleSync(newState) {
     setTimeout( function() { window.synchronized = true}, 0 )
 }
 
+// todo: remove w/ shoe
 // events.on( EVENTS.sync, handleSync);
 
 // forward exercise events to exercise machine emitter
 events.on(EVENTS.step, triggerExerciseEvent(EVENTS.step, function( newState, oldState, stepOutput ) {
     if (newState === 'done') {
-        events.emit(EVENTS.exerciseDone, state.currentExercise)
+        // todo: remove w/ shoe
+        // events.emit(EVENTS.exerciseDone, state.currentExercise);
+        
+        sendMessage(EVENTS.exerciseDone, state.currentExercise);
     }
     var newStateStepView = selectViewStep( newState ),
         newStateFeedback = newStateStepView.find('.feedback'),
