@@ -650,7 +650,6 @@ wss.on('connection', function(ws) {
 
 // ========= End of WS =========
 
-
 // Shoe variables
 const FIELD_EXERCISE_STATE = 'exerciseState',
     FIELD_END_TIME = 'endTime',
@@ -658,7 +657,8 @@ const FIELD_EXERCISE_STATE = 'exerciseState',
 
 var exerciseMachine,
     userId, 
-    userKey
+    userKey,
+    clientEvents
 
 // Shoe functions
 function handleClose() {
@@ -882,7 +882,7 @@ function handlExerciseDone(doneExercise) {
 }
 
 shoe( function( stream ) {
-    let clientEvents = duplexEmitter(stream) // good
+    clientEvents = duplexEmitter(stream)
 
     // once server dies
     stream.on('close', handleClose);
