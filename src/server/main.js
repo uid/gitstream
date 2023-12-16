@@ -578,7 +578,7 @@ let one_socket;
 /**
  * 
  * @param {typeof EVENTS | 'ws' | 'err'} msgEvent
- * @param {string} msgData 
+ * @param {any} msgData whatever you gotta send
  */
 function sendMessage(msgEvent, msgData) {
     const msg = {event: msgEvent, data: msgData};
@@ -706,15 +706,14 @@ function createExerciseMachine(exerciseName) {
 
     // called when a step happens and sends the event to the browser
     // todo: refactor this function
-    function makeListenerFn(listenerDef) {
-        console.log('makelistenerfn', listenerDef);
-        
-        return function(...args) {
-            const eventArgs = [listenerDef.event, ...args];
-            console.log('eventArgs',eventArgs);
-            console.log('args',args);
+    function makeListenerFn(listenerDef) {       
+        return (...args) => {
+            // const eventArgs = [listenerDef.event, ...args];
 
-            clientEvents.emit(...eventArgs);
+            // clientEvents.emit(listenerDef.event, ...args);
+            // console.log('args', JSON.stringify(args))
+            sendMessage(listenerDef.event, args);
+
             // insert websocket stuff
 
             listenerDef.helper(...args);
@@ -763,8 +762,8 @@ function handleClientSync(recvUserId) {
                 msg: err.message
             })
             
-            return clientEvents.emit( 'err', err )
-            // return sendMessage('err', err) // todo: stringify the error?
+            // return clientEvents.emit( 'err', err ) // todo: remove
+            return sendMessage('err', err) // todo: stringify the error?
         }
         console.error('hgetall', userId, clientState);
         if ( !clientState ) { // Aka user is new and we want to initialize their data

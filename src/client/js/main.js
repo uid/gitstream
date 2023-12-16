@@ -104,7 +104,10 @@ events_WS.onmessage = function(event) {
     const msg = JSON.parse(event.data);
     const {event: msgEvent, data: msgData} = msg;
 
+
     ws_log(WS_TYPE.RECEIVED, JSON.stringify(msg));
+
+    let eventHandler;
 
     switch (msgEvent) {
         case EVENTS.sync:
@@ -115,18 +118,24 @@ events_WS.onmessage = function(event) {
             sendMessage(EVENTS.exerciseDone, state.currentExercise);
         break;
 
+        // Forward exercise events to exercise machine emitter
         case EVENTS.step:
-            // todo: 12/11
+            eventHandler = triggerExerciseEvent(EVENTS.step, handleStepEvent);
+            eventHandler(...msgData);
         break;
 
-        case EVENTS.ding:
-            // todo: 12/11
-        break;
-
+        // Stop timer before expiration and reset timer state
         case EVENTS.halt:
-            // todo: 12/11
+            eventHandler = triggerExerciseEvent(EVENTS.halt, handleHaltEvent);
+            eventHandler(...msgData);
         break;
-     
+             
+        // Timer expiration: defocuses step and resets timer state
+        case EVENTS.ding:
+            eventHandler = triggerExerciseEvent(EVENTS.ding, handleDingEvent);
+            eventHandler(...msgData);
+        break;
+
         // Special case to share info about socket connection
         case 'ws':
             console.log('ws message received:', msg)
@@ -356,6 +365,7 @@ function handleSync(newState) {
 // events.on( EVENTS.sync, handleSync);
 
 function handleStepEvent(newState, oldState, stepOutput) {
+    // note: from what I can tell, we only care when newState == 'done'.
     if (newState === 'done') {
 
         // todo: remove w/ shoe
@@ -391,20 +401,14 @@ function handleHaltEvent() {
 
 function handleDingEvent() {
     if (timer) timer.ding();
-
     $('.exercise-view').find('.exercise-step').removeClass('focused');
     state.endTime = undefined;
 }
 
-
-// Forward exercise events to exercise machine emitter
-events.on(EVENTS.step, triggerExerciseEvent(EVENTS.step, handleStepEvent));
-
-// Stop timer before expiration and reset timer state
-events.on(EVENTS.halt, triggerExerciseEvent(EVENTS.halt, handleHaltEvent));
-
-// Timer expiration: defocuses step and resets timer state
-events.on(EVENTS.ding, triggerExerciseEvent(EVENTS.ding, handleDingEvent));
+// todo: remove
+// events.on(EVENTS.step, triggerExerciseEvent(EVENTS.step, handleStepEvent));
+// events.on(EVENTS.halt, triggerExerciseEvent(EVENTS.halt, handleHaltEvent));
+// events.on(EVENTS.ding, triggerExerciseEvent(EVENTS.ding, handleDingEvent));
 
 
 window.resetId = function() {
