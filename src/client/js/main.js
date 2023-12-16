@@ -16,7 +16,6 @@ const exercises = require('gitstream-exercises/viewers'),
     ExerciseViewer = require('./ExerciseViewer'),
     exerciseTmp = require('../templates/exercise.hbs'),
     indexTmp = require('../templates/index.hbs');
-const { send } = require('q');
 
 // Global variables -- CONSTNAT
 const EVENTS = {
@@ -168,7 +167,7 @@ $.get( '/user', function( userId ) {
  * @param {typeof EVENTS} eventType the type of event (step, halt, ding)
  * @param {Function} done the function to call when the transition has completed
  */
-function triggerExerciseEvent( eventType, done ) {
+function triggerExerciseEvent(eventType, done ) {
     return (...args) => exerciseEvents.emit(eventType, ...args, done);
 }
 
@@ -356,9 +355,9 @@ function handleSync(newState) {
 // todo: remove w/ shoe
 // events.on( EVENTS.sync, handleSync);
 
-// forward exercise events to exercise machine emitter
-events.on(EVENTS.step, triggerExerciseEvent(EVENTS.step, function( newState, oldState, stepOutput ) {
+function handleStepEvent(newState, oldState, stepOutput) {
     if (newState === 'done') {
+
         // todo: remove w/ shoe
         // events.emit(EVENTS.exerciseDone, state.currentExercise);
         
@@ -383,24 +382,30 @@ events.on(EVENTS.step, triggerExerciseEvent(EVENTS.step, function( newState, old
             newStateFeedback.removeClass('flash')
         }, 70 )
     }
-}) )
+}
 
-// stops timer before expiration and resets timer state
-events.on( EVENTS.halt, triggerExerciseEvent( EVENTS.halt, function() {
-    if ( timer ) {
-        timer.stop()
-    }
-    state.endTime = undefined
-}) )
+function handleHaltEvent() {
+    if (timer) timer.stop();
+    state.endTime = undefined;
+}
 
-// timer expiration: defocuses step and resets timer state
-events.on( EVENTS.ding, triggerExerciseEvent( EVENTS.ding, function() {
-    if ( timer ) {
-        timer.ding()
-    }
-    $('.exercise-view').find('.exercise-step').removeClass('focused')
-    state.endTime = undefined
-}) )
+function handleDingEvent() {
+    if (timer) timer.ding();
+
+    $('.exercise-view').find('.exercise-step').removeClass('focused');
+    state.endTime = undefined;
+}
+
+
+// Forward exercise events to exercise machine emitter
+events.on(EVENTS.step, triggerExerciseEvent(EVENTS.step, handleStepEvent));
+
+// Stop timer before expiration and reset timer state
+events.on(EVENTS.halt, triggerExerciseEvent(EVENTS.halt, handleHaltEvent));
+
+// Timer expiration: defocuses step and resets timer state
+events.on(EVENTS.ding, triggerExerciseEvent(EVENTS.ding, handleDingEvent));
+
 
 window.resetId = function() {
     // localStorage.clear('userId')
