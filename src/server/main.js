@@ -5,7 +5,6 @@ const compression = require('compression'),
     path = require('path'),
     q = require('q'),
     rimraf = require('rimraf'),
-    shoe = require('shoe'),
     WebSocket = require('ws'),
     session = require('cookie-session'),
     { Passport } = require('passport'),
@@ -656,8 +655,7 @@ wss.on('connection', function(ws) {
 // unique variables per user
 var exerciseMachine,
     userId, 
-    userKey,
-    clientEvents
+    userKey
 
 /**
  * Handling server death
@@ -708,13 +706,7 @@ function createExerciseMachine(exerciseName) {
     // todo: refactor this function
     function makeListenerFn(listenerDef) {       
         return (...args) => {
-            // const eventArgs = [listenerDef.event, ...args];
-
-            // clientEvents.emit(listenerDef.event, ...args);
-            // console.log('args', JSON.stringify(args))
-            sendMessage(listenerDef.event, args);
-
-            // insert websocket stuff
+            sendMessage(listenerDef.event, args); // handling EVENTS.ding, EVENTS.halt, EVENTS.step
 
             listenerDef.helper(...args);
 
@@ -762,7 +754,6 @@ function handleClientSync(recvUserId) {
                 msg: err.message
             })
             
-            // return clientEvents.emit( 'err', err ) // todo: remove
             return sendMessage('err', err) // todo: stringify the error?
         }
         console.error('hgetall', userId, clientState);
@@ -807,7 +798,6 @@ function handleClientSync(recvUserId) {
             delete clientState[ FIELD_END_TIME ]
 
             sendMessage(EVENTS.sync, clientState);
-            // clientEvents.emit(EVENTS.sync, clientState);
         })
     };
 
@@ -856,7 +846,6 @@ function handleClientSync(recvUserId) {
             delete state[ FIELD_END_TIME ]
 
             sendMessage(EVENTS.sync, state);
-            // clientEvents.emit( EVENTS.sync, state )
 
             exerciseMachine.init()
         }
@@ -892,15 +881,3 @@ function handlExerciseDone(doneExercise) {
     utils.exportToOmnivore(userId, doneExercise,
         logDbErr( userId, doneExercise, { desc: 'Omnivore POST error' } ));
 }
-
-shoe( function( stream ) {
-    clientEvents = duplexEmitter(stream);
-
-    stream.on('close', handleClose);
-
-    // todo: remove these shoe events
-    // clientEvents.on(EVENTS.sync, handleClientSync.bind( this ) )
-    // clientEvents.on(EVENTS.exerciseDone, handlExerciseDone);
-    // clientEvents.on(EVENTS.exerciseChanged, handleExerciseChanged);
-
-}).install( server, '/events' )

@@ -4,13 +4,11 @@
 const EVENTS_ENDPOINT = '/events';
 
 // Imports -- EXTERNAL
-const shoe = require('shoe'),
-    $ = require('zeptojs'),
+const $ = require('zeptojs'),
     _ = require('lodash'), // todo: replace? source: https://youmightnotneed.com/lodash
     hmac = require('crypto-js/hmac-sha1'),
-    eventEmitter = require('event-emitter'),
-    events = require('duplex-emitter')( shoe( EVENTS_ENDPOINT ) ); // client <-> server communication
-
+    eventEmitter = require('event-emitter')
+    
 // Imports -- INTERNAL
 const exercises = require('gitstream-exercises/viewers'),
     ExerciseViewer = require('./ExerciseViewer'),
@@ -166,8 +164,6 @@ $.get( '/user', function( userId ) {
         document.location = "/login" + document.location.search;
     } else {
         sendMessage(EVENTS.sync, userId);
-        // todo: remove w/ shoe
-        // events.emit(EVENTS.sync, userId);
     }
 })
 
@@ -303,7 +299,6 @@ radio.on( EVENTS.exerciseChanged, function( changeTo ) {
     exerciseEvents = eventEmitter({})
 
     if ( !silent ) {
-        // events.emit(EVENTS.exerciseChanged, newExercise ) // todo: remove with shoe
         sendMessage(EVENTS.exerciseChanged, newExercise);
 
         delete state.exerciseState
@@ -361,16 +356,10 @@ function handleSync(newState) {
     setTimeout( function() { window.synchronized = true}, 0 )
 }
 
-// todo: remove w/ shoe
-// events.on( EVENTS.sync, handleSync);
 
 function handleStepEvent(newState, oldState, stepOutput) {
     // note: from what I can tell, we only care when newState == 'done'.
     if (newState === 'done') {
-
-        // todo: remove w/ shoe
-        // events.emit(EVENTS.exerciseDone, state.currentExercise);
-        
         sendMessage(EVENTS.exerciseDone, state.currentExercise);
     }
     var newStateStepView = selectViewStep( newState ),
@@ -404,12 +393,6 @@ function handleDingEvent() {
     $('.exercise-view').find('.exercise-step').removeClass('focused');
     state.endTime = undefined;
 }
-
-// todo: remove
-// events.on(EVENTS.step, triggerExerciseEvent(EVENTS.step, handleStepEvent));
-// events.on(EVENTS.halt, triggerExerciseEvent(EVENTS.halt, handleHaltEvent));
-// events.on(EVENTS.ding, triggerExerciseEvent(EVENTS.ding, handleDingEvent));
-
 
 window.resetId = function() {
     // localStorage.clear('userId')
