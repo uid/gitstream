@@ -687,11 +687,32 @@ function createExerciseMachine(exerciseName) {
         exerciseDir = path.join( PATH_TO_EXERCISES, exerciseName ),
         exerciseMachine = new ExerciseMachine( emConf, repoPaths, exerciseDir, eventBus )
 
+    function unsetExercise() {
+        userMap.delete(userId, [FIELD_EXERCISE_STATE, FIELD_END_TIME]);
+    }
+
+    function stepHelper(newState) {
+        console.error('hset', userId, FIELD_EXERCISE_STATE, newState);
+
+        const updateState =  logDbErr( userId, exerciseName, {
+            desc: 'userMap step update exercise state',
+            newState: newState
+        });
+
+        userMap.expire(userId, CLIENT_IDLE_TIMEOUT, updateState);
+        userMap.set(userId, FIELD_EXERCISE_STATE, newState, updateState);
+
+    }
+
     // called when a step happens and sends the event to the browser
+    // todo: refactor this function
     function makeListenerFn(listenerDef) {
+        console.log('makelistenerfn', listenerDef);
+        
         return function(...args) {
             const eventArgs = [listenerDef.event, ...args];
             console.log('eventArgs',eventArgs);
+            console.log('args',args);
 
             clientEvents.emit(...eventArgs);
             // insert websocket stuff
@@ -706,61 +727,14 @@ function createExerciseMachine(exerciseName) {
         }
     }
 
-    // ===== testing feature =====
-
-    // called when a step happens and sends the event to the browser
-    function makeListenerFn2(eventType, helper) {
-        return function(...args) {
-            const [eventType, ...remainingArgs] = args;
-            clientEvents.emit(...args);
-            // todo: ^ replace with websocket stuff
-
-            helper(...remainingArgs);
-
-            logger.log(logger.EVENT.EM, userId, exerciseName, {
-                    type: listenerDef.event,
-                    info: args.slice( 1 )
-                }
-            )
-        }
-    }
-
     function registerListener(eventType, helper) {
-        exerciseMachine.on(eventType, makeListenerFn(eventType, helper));
+        exerciseMachine.on(eventType, makeListenerFn({ event: eventType, helper: helper}));
     }
-
-    // registerListener(EVENTS.ding, unsetExercise);
-    // registerListener(EVENTS.halt, unsetExercise);
-    // registerListener(EVENTS.step, stepHelper);
-
-    // ===== end of testing feature ========
-
-    function unsetExercise(){
-        userMap.delete(userId, [FIELD_EXERCISE_STATE, FIELD_END_TIME]);
-    }
-
-    function stepHelper( newState ) {
-        console.error('hset', userId, FIELD_EXERCISE_STATE, newState);
-
-        const updateState =  logDbErr( userId, exerciseName, {
-            desc: 'userMap step update exercise state',
-            newState: newState
-        });
-
-        userMap.expire(userId, CLIENT_IDLE_TIMEOUT, updateState);
-        userMap.set(userId, FIELD_EXERCISE_STATE, newState, updateState);
-
-    }
-
-    let ding_listener = { event: EVENTS.ding, helper: unsetExercise };
-    let halt_listener = { event: EVENTS.halt, helper: unsetExercise };
-    let step_listener = { event: EVENTS.step, helper: stepHelper};
 
     // set up listeners to send events to browser and update saved exercise state
-    exerciseMachine.on( EVENTS.ding, makeListenerFn( ding_listener ) )
-    exerciseMachine.on( EVENTS.halt, makeListenerFn( halt_listener ) )
-    exerciseMachine.on( EVENTS.step, makeListenerFn( step_listener ) )
-
+    registerListener(EVENTS.ding, unsetExercise);
+    registerListener(EVENTS.halt, unsetExercise);
+    registerListener(EVENTS.step, stepHelper);
 
     return exerciseMachine
 }
