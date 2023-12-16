@@ -28,6 +28,7 @@ function ExerciseViewer( config, eventEmitter ) {
         }
     }
 
+    // note: cb stands for callback, which is `done` in triggerExerciseEvent
     eventEmitter.on( 'step', function( newState, oldState, output, cb ) {
         var oldStateDef = this._states[ oldState ],
             newStateDef = this._states[ newState ],

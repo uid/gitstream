@@ -1,7 +1,6 @@
 // Imported libraries -- EXTERNAL
 const compression = require('compression'),
     express = require('express'),
-    duplexEmitter = require('duplex-emitter'),
     path = require('path'),
     q = require('q'),
     rimraf = require('rimraf'),
@@ -27,7 +26,7 @@ const ExerciseMachine = require('./ExerciseMachine'),
 const PATH_TO_REPOS = '/srv/repos',
     PATH_TO_EXERCISES = __dirname + '/exercises/',
     CLIENT_IDLE_TIMEOUT = 60 * 60 * 1000, // 1 hr before resting client state expires
-    PORT = 4242,
+    PORT = 4242, // for websocket server
     REPO_NAME_REGEX = /\/[a-z0-9_-]+\/[a-f0-9]{6,}\/.+.git$/,
     gitHTTPMount = '/repos'; // no trailing slash
 
@@ -35,6 +34,14 @@ const FIELD_EXERCISE_STATE = 'exerciseState',
     FIELD_END_TIME = 'endTime',
     FIELD_CURRENT_EXERCISE = 'currentExercise'
 
+const EVENTS = {
+    sync: 'sync',
+    exerciseDone: 'exerciseDone',
+    exerciseChanged: 'exerciseChanged',
+    step: 'step',
+    ding: 'ding',
+    halt: 'halt'
+}
 // Global variables -- DYNAMIC
 var app = express(), // todo: might constant, but leaving here for now
     eventBus = new angler.EventBus(), // todo: might constant, but leaving here for now
@@ -71,15 +78,6 @@ function logDbErr(userId, exercise, data) {
 }
 
 const exerciseEvents = new EventEmitter();
-
-const EVENTS = {
-    sync: 'sync',
-    exerciseDone: 'exerciseDone',
-    exerciseChanged: 'exerciseChanged',
-    step: 'step',
-    ding: 'ding',
-    halt: 'halt'
-}
 
 /**
  * Global map to store user progress. Methods encapsulated.
@@ -559,10 +557,7 @@ async function configureApp() {
 configureApp().catch(err => console.error(err));
 
 // Start the server using the shorthand provided by Express
-server = app.listen( PORT )
-
-
-// ========= Start of WS =========
+server = app.listen(PORT)
 
 // Create a WebSocket connection ontop of the Express app
 const EVENTS_ENDPOINT_WS = '/events_ws';
@@ -612,19 +607,7 @@ wss.on('connection', function(ws) {
             case EVENTS.exerciseChanged:
                 handleExerciseChanged(msgData);
             break;
-
-            case EVENTS.step:
-                // todo
-            break;
-
-            case EVENTS.ding:
-                // todo
-            break;
-
-            case EVENTS.halt:
-                // todo
-            break;
-         
+        
             // Special case to relay info about socket connection
             case 'ws':
                 console.log('ws message received: ', msg)
@@ -649,8 +632,6 @@ wss.on('connection', function(ws) {
         handleClose();
     };
 });
-
-// ========= End of WS =========
 
 // unique variables per user
 var exerciseMachine,
@@ -702,11 +683,17 @@ function createExerciseMachine(exerciseName) {
 
     }
 
-    // called when a step happens and sends the event to the browser
-    // todo: refactor this function
+    /**
+     * Called when one of 3 events happen (EVENTS.ding, EVENTS.halt, EVENTS.step)
+     * and sends said event to the browser
+     * todo: refactor this function
+     * 
+     * @param {*} listenerDef 
+     * @returns function
+     */
     function makeListenerFn(listenerDef) {       
         return (...args) => {
-            sendMessage(listenerDef.event, args); // handling EVENTS.ding, EVENTS.halt, EVENTS.step
+            sendMessage(listenerDef.event, args);
 
             listenerDef.helper(...args);
 

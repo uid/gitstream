@@ -8,7 +8,7 @@ const $ = require('zeptojs'),
     _ = require('lodash'), // todo: replace? source: https://youmightnotneed.com/lodash
     hmac = require('crypto-js/hmac-sha1'),
     eventEmitter = require('event-emitter')
-    
+
 // Imports -- INTERNAL
 const exercises = require('gitstream-exercises/viewers'),
     ExerciseViewer = require('./ExerciseViewer'),
@@ -32,8 +32,7 @@ var exerciseEvents = eventEmitter({}), // internal client communication, with Ex
     timer,
     viewer 
 
-// ========= Start of WS =========
- //todo: remove or place elsewhere
+// ========= For Debugging Purposes =========
 const WS_DEBUG = true;
 
 const WS_TYPE = {
@@ -54,6 +53,8 @@ function ws_log(type, output){
     if (WS_DEBUG)
         console.log(trueOutput);
 }
+// ========= X =========
+
 
 const EVENTS_ENDPOINT_WS = '/events_ws';
 
@@ -64,12 +65,12 @@ const ws_url = (document.location.protocol == 'https:' ? 'wss://' : 'ws://')
 
 const events_WS = new WebSocket(ws_url);
 
-var msgs = [] // while awaiting for connection to establish. todo: in a cleaner way?
+var msgs = [] // while awaiting for connection to establish
 
 /**
  * Sends messages via WebSocket. Queues messages if connection is not yet established.
  * 
- * @param {typeof EVENTS | 'ws'} msgEvent
+ * @param {typeof EVENTS | 'ws' | 'err'} msgEvent
  * @param {any} msgData
  */
 function sendMessage(msgEvent, msgData) {
@@ -157,7 +158,6 @@ events_WS.onerror = function(event) {
     console.error('ws connection error:', event);
 };
 
-// ========= End of WS =========
 
 $.get( '/user', function( userId ) {
     if (!userId) {
@@ -166,7 +166,6 @@ $.get( '/user', function( userId ) {
         sendMessage(EVENTS.sync, userId);
     }
 })
-
 
 /**
  * @param {typeof EVENTS} eventType the type of event (step, halt, ding)
