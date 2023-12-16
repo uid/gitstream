@@ -169,10 +169,7 @@ $.get( '/user', function( userId ) {
  * @param {Function} done the function to call when the transition has completed
  */
 function triggerExerciseEvent( eventType, done ) {
-    return function() {
-        var args = Array.prototype.slice.call( arguments )
-        exerciseEvents.emit.apply( exerciseEvents, [ eventType ].concat( args, done ) )
-    }
+    return (...args) => exerciseEvents.emit(eventType, ...args, done);
 }
 
 function toTimeStr( msec ) {
