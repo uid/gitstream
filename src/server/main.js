@@ -642,7 +642,7 @@ wss.on('connection', function(ws) {
 
 // ========= End of WS =========
 
-// State variables
+// unique variables per user
 var exerciseMachine,
     userId, 
     userKey,
@@ -674,49 +674,51 @@ function createExerciseMachine(exerciseName) {
             path: exerciseRepo // repo short path
         },
         exerciseDir = path.join( PATH_TO_EXERCISES, exerciseName ),
-        exerciseMachine = new ExerciseMachine( emConf, repoPaths, exerciseDir, eventBus ),
+        exerciseMachine = new ExerciseMachine( emConf, repoPaths, exerciseDir, eventBus )
 
-        makeListenerFn = function( listenerDef ) {
-            // called when a step happens and sends the event to the browser
-            return function() {
-                var args = Array.prototype.slice.call( arguments ),
-                    eventArgs = [ listenerDef.event ].concat( args )
-                clientEvents.emit.apply( clientEvents, eventArgs )
+    // called when a step happens and sends the event to the browser
+    function makeListenerFn(listenerDef) {
+        return function(...args) {
+            const eventArgs = [listenerDef.event, ...args];
 
-                listenerDef.helper.apply( null, args )
+            clientEvents.emit(...eventArgs);
 
-                // LOGGING
-                logger.log( logger.EVENT.EM, userId, exerciseName, {
+            listenerDef.helper(...args);
+
+            logger.log(logger.EVENT.EM, userId, exerciseName, {
                     type: listenerDef.event,
                     info: args.slice( 1 )
-                })
-            }
-        },
-        unsetExercise = function() {
-            userMap.delete(userId, [FIELD_EXERCISE_STATE, FIELD_END_TIME]);
+                }
+            )
+        }
+    }
 
-        },
-        listeners = [
-            { event: EVENTS.ding, helper: unsetExercise },
-            { event: EVENTS.halt, helper: unsetExercise },
-            { event: EVENTS.step, helper: function( newState ) { // step seems to be important, why?
-                console.error('hset', userId, FIELD_EXERCISE_STATE, newState);
+    function unsetExercise(){
+        userMap.delete(userId, [FIELD_EXERCISE_STATE, FIELD_END_TIME]);
+    }
 
-                const updateState =  logDbErr( userId, exerciseName, {
-                    desc: 'userMap step update exercise state',
-                    newState: newState
-                });
 
-                userMap.expire(userId, CLIENT_IDLE_TIMEOUT, updateState);
-                userMap.set(userId, FIELD_EXERCISE_STATE, newState, updateState);
+    let ding_listener = { event: EVENTS.ding, helper: unsetExercise };
+    let halt_listener = { event: EVENTS.halt, helper: unsetExercise };
+    let step_listener = { event: EVENTS.step, helper: function( newState ) {
+            console.error('hset', userId, FIELD_EXERCISE_STATE, newState);
 
-            } }
-        ]
+            const updateState =  logDbErr( userId, exerciseName, {
+                desc: 'userMap step update exercise state',
+                newState: newState
+            });
+
+            userMap.expire(userId, CLIENT_IDLE_TIMEOUT, updateState);
+            userMap.set(userId, FIELD_EXERCISE_STATE, newState, updateState);
+
+           }
+        }
 
     // set up listeners to send events to browser and update saved exercise state
-    listeners.forEach( function( listener ) {
-        exerciseMachine.on( listener.event, makeListenerFn( listener ) )
-    })
+    exerciseMachine.on( ding_listener.event, makeListenerFn( ding_listener ) )
+    exerciseMachine.on( halt_listener.event, makeListenerFn( halt_listener ) )
+    exerciseMachine.on( step_listener.event, makeListenerFn( step_listener ) )
+
 
     return exerciseMachine
 }
