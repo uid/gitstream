@@ -25,8 +25,7 @@ const EVENTS = {
     exerciseChanged: 'exerciseChanged',
     step: 'step',
     ding: 'ding',
-    halt: 'halt',
-    ws: 'ws'
+    halt: 'halt'
 }
 
 // Global variables -- DYNAMIC
@@ -73,7 +72,7 @@ var msgs = [] // while awaiting for connection to establish. todo: in a cleaner 
 /**
  * Sends messages via WebSocket. Queues messages if connection is not yet established.
  * 
- * @param {typeof EVENTS} msgEvent
+ * @param {typeof EVENTS | 'ws'} msgEvent
  * @param {any} msgData
  */
 function sendMessage(msgEvent, msgData) {
@@ -91,7 +90,7 @@ function sendMessage(msgEvent, msgData) {
 }
 
 events_WS.onopen = function(event) {
-    if (WS_DEBUG) sendMessage(EVENTS.ws, 'Hi from Client!');
+    if (WS_DEBUG) sendMessage('ws', 'Hi from Client!');
 
     while (msgs.length > 0) { // send queued messages
         ws_log(WS_TYPE.STATUS, "Waiting for WS connection...");
@@ -129,22 +128,27 @@ events_WS.onmessage = function(event) {
             // todo: 12/11
         break;
      
-        // Special case to relay info about socket connection
-        case EVENTS.ws:
+        // Special case to share info about socket connection
+        case 'ws':
             console.log('ws message received:', msg)
         break;
-        
+
+        // Special case to handle errors
+        case 'err':
+            console.log('err event received:', msg)
+        break;
+
         default:
             console.error("error: unknown event: ", msgEvent);
     }
 };
 
 events_WS.onclose = function(event) {
-    console.log('WS connection closed:', event.reason);
+    console.log('ws connection closed:', event.reason);
 };
 
 events_WS.onerror = function(event) {
-    console.error('WS Error:', event);
+    console.error('ws connection error:', event);
 };
 
 // ========= End of WS =========

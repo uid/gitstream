@@ -79,8 +79,7 @@ const EVENTS = {
     exerciseChanged: 'exerciseChanged',
     step: 'step',
     ding: 'ding',
-    halt: 'halt',
-    ws: 'ws'
+    halt: 'halt'
 }
 
 /**
@@ -578,7 +577,7 @@ let one_socket;
 
 /**
  * 
- * @param {typeof EVENTS} msgEvent 
+ * @param {typeof EVENTS | 'ws' | 'err'} msgEvent
  * @param {string} msgData 
  */
 function sendMessage(msgEvent, msgData) {
@@ -593,7 +592,7 @@ function sendMessage(msgEvent, msgData) {
 wss.on('connection', function(ws) {
     one_socket = ws;
 
-    if (logger.CONFIG.WS_DEBUG) sendMessage(EVENTS.ws, 'Hi from Server!');
+    if (logger.CONFIG.WS_DEBUG) sendMessage('ws', 'Hi from Server!');
 
     ws.onmessage = function(event) {
         const msg = JSON.parse(event.data);
@@ -628,10 +627,15 @@ wss.on('connection', function(ws) {
             break;
          
             // Special case to relay info about socket connection
-            case EVENTS.ws:
+            case 'ws':
                 console.log('ws message received: ', msg)
             break;
             
+            // Special case to handle errors
+            case 'err':
+                console.log('error event received:', msg)
+            break;
+
             default:
                 console.error("error, unknown event: ", msgEvent);
             }
@@ -639,7 +643,7 @@ wss.on('connection', function(ws) {
 
     // todo: gracefully handling client connection error?
     ws.onerror = function(event) {
-        console.error('WS Error:', event);
+        console.error('ws connection error:', event);
     };
 
     wss.onclose = function(event) {
@@ -702,13 +706,12 @@ function createExerciseMachine(exerciseName) {
         }
     }
 
-    // begin expirement =====
+    // ===== testing feature =====
 
     // called when a step happens and sends the event to the browser
     function makeListenerFn2(eventType, helper) {
         return function(...args) {
             const [eventType, ...remainingArgs] = args;
-
             clientEvents.emit(...args);
             // todo: ^ replace with websocket stuff
 
@@ -730,33 +733,33 @@ function createExerciseMachine(exerciseName) {
     // registerListener(EVENTS.halt, unsetExercise);
     // registerListener(EVENTS.step, stepHelper);
 
-    // end of expirement ========
+    // ===== end of testing feature ========
 
     function unsetExercise(){
         userMap.delete(userId, [FIELD_EXERCISE_STATE, FIELD_END_TIME]);
     }
 
+    function stepHelper( newState ) {
+        console.error('hset', userId, FIELD_EXERCISE_STATE, newState);
+
+        const updateState =  logDbErr( userId, exerciseName, {
+            desc: 'userMap step update exercise state',
+            newState: newState
+        });
+
+        userMap.expire(userId, CLIENT_IDLE_TIMEOUT, updateState);
+        userMap.set(userId, FIELD_EXERCISE_STATE, newState, updateState);
+
+    }
 
     let ding_listener = { event: EVENTS.ding, helper: unsetExercise };
     let halt_listener = { event: EVENTS.halt, helper: unsetExercise };
-    let step_listener = { event: EVENTS.step, helper: function( newState ) {
-            console.error('hset', userId, FIELD_EXERCISE_STATE, newState);
-
-            const updateState =  logDbErr( userId, exerciseName, {
-                desc: 'userMap step update exercise state',
-                newState: newState
-            });
-
-            userMap.expire(userId, CLIENT_IDLE_TIMEOUT, updateState);
-            userMap.set(userId, FIELD_EXERCISE_STATE, newState, updateState);
-
-           }
-        }
+    let step_listener = { event: EVENTS.step, helper: stepHelper};
 
     // set up listeners to send events to browser and update saved exercise state
-    exerciseMachine.on( ding_listener.event, makeListenerFn( ding_listener ) )
-    exerciseMachine.on( halt_listener.event, makeListenerFn( halt_listener ) )
-    exerciseMachine.on( step_listener.event, makeListenerFn( step_listener ) )
+    exerciseMachine.on( EVENTS.ding, makeListenerFn( ding_listener ) )
+    exerciseMachine.on( EVENTS.halt, makeListenerFn( halt_listener ) )
+    exerciseMachine.on( EVENTS.step, makeListenerFn( step_listener ) )
 
 
     return exerciseMachine
@@ -764,7 +767,6 @@ function createExerciseMachine(exerciseName) {
 
 /**
  * Sync the client with the stored client state
- * @param {*} ws 
  * @param {*} recvUserId 
  */
 function handleClientSync(recvUserId) {
@@ -788,6 +790,7 @@ function handleClientSync(recvUserId) {
             })
             
             return clientEvents.emit( 'err', err )
+            // return sendMessage('err', err) // todo: stringify the error?
         }
         console.error('hgetall', userId, clientState);
         if ( !clientState ) { // Aka user is new and we want to initialize their data
