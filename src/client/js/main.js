@@ -25,7 +25,8 @@ const EVENTS = {
     exerciseChanged: 'exerciseChanged',
     step: 'step',
     ding: 'ding',
-    halt: 'halt'
+    halt: 'halt',
+    ws: 'ws'
 }
 
 // Global variables -- DYNAMIC
@@ -54,10 +55,9 @@ const WS_TYPE = {
  */
 function ws_log(type, output){
     const trueOutput = `\n[WS][Client][${type}] ${output}\n`;
-    if(WS_DEBUG)
+    if (WS_DEBUG)
         console.log(trueOutput);
 }
-
 
 const EVENTS_ENDPOINT_WS = '/events_ws';
 
@@ -73,7 +73,7 @@ var msgs = [] // while awaiting for connection to establish. todo: in a cleaner 
 /**
  * Sends messages via WebSocket. Queues messages if connection is not yet established.
  * 
- * @param {string} msgEvent
+ * @param {typeof EVENTS} msgEvent
  * @param {any} msgData
  */
 function sendMessage(msgEvent, msgData) {
@@ -91,7 +91,7 @@ function sendMessage(msgEvent, msgData) {
 }
 
 events_WS.onopen = function(event) {
-    if (WS_DEBUG) sendMessage('ws', 'Hi from Client!');
+    if (WS_DEBUG) sendMessage(EVENTS.ws, 'Hi from Client!');
 
     while (msgs.length > 0) { // send queued messages
         ws_log(WS_TYPE.STATUS, "Waiting for WS connection...");
@@ -117,10 +117,6 @@ events_WS.onmessage = function(event) {
             sendMessage(EVENTS.exerciseDone, state.currentExercise);
         break;
 
-        case EVENTS.exerciseChanged:
-            // (empty on purpose)
-        break;
-
         case EVENTS.step:
             // todo: 12/11
         break;
@@ -134,7 +130,7 @@ events_WS.onmessage = function(event) {
         break;
      
         // Special case to relay info about socket connection
-        case 'ws':
+        case EVENTS.ws:
             console.log('ws message received:', msg)
         break;
         

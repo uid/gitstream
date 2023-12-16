@@ -79,7 +79,8 @@ const EVENTS = {
     exerciseChanged: 'exerciseChanged',
     step: 'step',
     ding: 'ding',
-    halt: 'halt'
+    halt: 'halt',
+    ws: 'ws'
 }
 
 /**
@@ -575,11 +576,16 @@ const wss = new WebSocket.Server({ // todo: this config might be sus but it work
 
 let one_socket;
 
+/**
+ * 
+ * @param {typeof EVENTS} msgEvent 
+ * @param {string} msgData 
+ */
 function sendMessage(msgEvent, msgData) {
     const msg = {event: msgEvent, data: msgData};
     const strMsg = JSON.stringify(msg);
 
-    logger.ws(WS_TYPE.SENT, strMsg);
+    logger.ws(WS_TYPE.SENT, msg);
     one_socket.send(strMsg);
 }
 
@@ -587,12 +593,12 @@ function sendMessage(msgEvent, msgData) {
 wss.on('connection', function(ws) {
     one_socket = ws;
 
-    if (logger.CONFIG.WS_DEBUG) sendMessage('ws', 'Hi from server!');
+    if (logger.CONFIG.WS_DEBUG) sendMessage(EVENTS.ws, 'Hi from Server!');
 
     ws.onmessage = function(event) {
         const msg = JSON.parse(event.data);
         
-        logger.ws(WS_TYPE.RECEIVED, JSON.stringify(msg));
+        logger.ws(WS_TYPE.RECEIVED, msg);
 
         const {event: msgEvent, data: msgData} = msg;
 
@@ -622,16 +628,17 @@ wss.on('connection', function(ws) {
             break;
          
             // Special case to relay info about socket connection
-            case 'ws':
-                console.log('ws message received:', msg)
+            case EVENTS.ws:
+                console.log('ws message received: ', msg)
             break;
             
             default:
-                console.error("error: unknown event: ", msgEvent);
+                console.error("error, unknown event: ", msgEvent);
             }
     };
 
-    ws.onerror = (event) => { // todo: gracefully handling client connection error?
+    // todo: gracefully handling client connection error?
+    ws.onerror = function(event) {
         console.error('WS Error:', event);
     };
 
@@ -680,8 +687,10 @@ function createExerciseMachine(exerciseName) {
     function makeListenerFn(listenerDef) {
         return function(...args) {
             const eventArgs = [listenerDef.event, ...args];
+            console.log('eventArgs',eventArgs);
 
             clientEvents.emit(...eventArgs);
+            // insert websocket stuff
 
             listenerDef.helper(...args);
 
@@ -692,6 +701,36 @@ function createExerciseMachine(exerciseName) {
             )
         }
     }
+
+    // begin expirement =====
+
+    // called when a step happens and sends the event to the browser
+    function makeListenerFn2(eventType, helper) {
+        return function(...args) {
+            const [eventType, ...remainingArgs] = args;
+
+            clientEvents.emit(...args);
+            // todo: ^ replace with websocket stuff
+
+            helper(...remainingArgs);
+
+            logger.log(logger.EVENT.EM, userId, exerciseName, {
+                    type: listenerDef.event,
+                    info: args.slice( 1 )
+                }
+            )
+        }
+    }
+
+    function registerListener(eventType, helper) {
+        exerciseMachine.on(eventType, makeListenerFn(eventType, helper));
+    }
+
+    // registerListener(EVENTS.ding, unsetExercise);
+    // registerListener(EVENTS.halt, unsetExercise);
+    // registerListener(EVENTS.step, stepHelper);
+
+    // end of expirement ========
 
     function unsetExercise(){
         userMap.delete(userId, [FIELD_EXERCISE_STATE, FIELD_END_TIME]);

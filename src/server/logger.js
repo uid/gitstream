@@ -11,7 +11,7 @@ const CONFIG = {
 const WS_TYPE = {
     STATUS: 'Status',
     SENT: 'Sent',
-    RECEIVED: "Received"
+    RECEIVED: 'Received'
 }
 
 const CLI_COL = {
@@ -212,13 +212,17 @@ module.exports = function( opts ) {
         /**
          * Log WebSocket events
          * 
-         * @param {typeof WS_TYPE} type
-         * @param {string} output
+         * @param {typeof WS_TYPE} type of WebSocket
+         * @param {object} output any JSON object
          * @returns nothing
          */
         ws: function(type, output){
             if (CONFIG.WS_DEBUG) {
-                const trueOutput = `\n[WS][Server][${type}] ${output}\n`;
+                const strOutput = JSON.stringify(output);
+                strOutput.replace(/\"/g, "");
+
+                const trueOutput = `\n[WS][Server][${type}] ${strOutput}\n`;
+                
                 console.log(trueOutput);
             }
         }
