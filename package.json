@@ -20,11 +20,9 @@
     ]
   },
   "dependencies": {
-    "caniuse-lite": "^1.0.30001446",
     "compression": "^1.7.4",
     "cookie-session": "^2.0.0",
     "diff": "^5.1.0",
-    "duplex-emitter": "^2.1.2",
     "express": "^4.18.1",
     "git-angler": "file:git-angler",
     "git-http-backend": "file:git-http-backend",
@@ -38,8 +36,6 @@
     "passport": "^0.5.3",
     "q": "^1.5.1",
     "rimraf": "^3.0.2",
-    "shoe": "^0.0.15",
-    "sockjs": "^0.3.24",
     "ws": "^8.14.2"
   },
   "devDependencies": {
