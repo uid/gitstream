@@ -568,94 +568,124 @@ configureApp().catch(err => console.error(err));
 server = app.listen(PORT)
 
 // Create a WebSocket connection ontop of the Express app
-const wss = new WebSocket.Server({ // todo: this config might be sus but it works
+// todo: this config might need additional tweaks, but it works
+const wss = new WebSocket.Server({
     server: server,
     path: EVENTS_ENDPOINT
 });
 
-let one_socket;
-
-/**
- * 
- * @param {typeof EVENTS | 'ws' | 'err'} msgEvent
- * @param {any} msgData whatever you gotta send
- */
-function sendMessage(msgEvent, msgData) {
-    const msg = {event: msgEvent, data: msgData};
-    const strMsg = JSON.stringify(msg);
-
-    logger.ws(WS_TYPE.SENT, msg);
-    one_socket.send(strMsg);
-}
 
 
-wss.on('connection', function(ws) {
-    one_socket = ws;
 
-    if (logger.CONFIG.WS_DEBUG) sendMessage('ws', 'Hi from Server!');
 
-    ws.onmessage = function(event) {
+
+
+
+
+
+class ClientConnection {
+    constructor(ws) {
+        this.ws = ws;
+
+        // Shared state variables
+        this.exerciseMachine = null;
+        this.userId = null;
+        this.userKey = null;
+
+        // Shared socket listeners
+        this.ws.onmessage = this.handleMessage.bind(this);;
+        this.ws.onerror = this.handleError.bind(this);;
+        this.ws.onclose = this.handleClose.bind(this);;
+
+        if (logger.CONFIG.WS_DEBUG) this.sendMessage('ws', 'Hi from Server!');
+    }
+
+    /**
+     * Sends messages to established client.
+     * 
+     * @param {typeof EVENTS | 'ws' | 'err'} msgEvent
+     * @param {any} msgData whatever you gotta send
+     */
+    sendMessage(msgEvent, msgData) {
+        const msg = {event: msgEvent, data: msgData};
+        const strMsg = JSON.stringify(msg);
+
+        try {
+            this.ws.send(strMsg);
+            logger.ws(WS_TYPE.SENT, msg);
+        } catch (error) { // todo: more graceful error handling?
+            console.error('Error sending message:', error);
+        }
+
+    }
+
+    handleMessage(event) {
+
         const msg = JSON.parse(event.data);
+        const {event: msgEvent, data: msgData} = msg;
         
         logger.ws(WS_TYPE.RECEIVED, msg);
 
-        const {event: msgEvent, data: msgData} = msg;
-
         switch (msgEvent) {
             case EVENTS.sync:
-                handleClientSync(msgData);
-            break;
+                handleClientSync(msgData); //todo: make into .this
+                break;
             
             case EVENTS.exerciseDone:
                 handlExerciseDone(msgData);
-            break;
+                break;
 
             case EVENTS.exerciseChanged:
                 handleExerciseChanged(msgData);
-            break;
+                break;
         
             // Special case to relay info about socket connection
             case 'ws':
                 console.log('ws message received: ', msg)
-            break;
+                break;
             
             // Special case to handle errors
             case 'err':
                 console.log('error event received:', msg)
-            break;
+                break;
 
             default:
                 console.error("error, unknown event: ", msgEvent);
-            }
-    };
+        }
+    }
 
-    // todo: gracefully handling client connection error?
-    ws.onerror = function(event) {
+    // per socket
+    handleError(event) {
         console.error('ws connection error:', event);
-    };
+    }
+    
+    // per socket
+    handleClose(event) {
+        if (exerciseMachine) { //todo: make into `this`
+            exerciseMachine.removeAllListeners()
+            exerciseMachine.halt()
+        }
+    
+        logger.log(logger.EVENT.QUIT, userId, null)
+    }
 
-    wss.onclose = function(event) {
-        handleClose();
-    };
-});
+}
 
-// unique variables per user
-var exerciseMachine,
+// temo global variables to track state of one user
+var sendMessage,
+    exerciseMachine,
     userId, 
     userKey
 
-/**
- * Handling server death
- */
-function handleClose() {
-    if (exerciseMachine) {
-        exerciseMachine.removeAllListeners()
-        exerciseMachine.halt()
-    }
+wss.on('connection', function(ws) {
+    // todo: maintain list of active connections
+    const one_connection = new ClientConnection(ws);
+    sendMessage = one_connection.sendMessage.bind(one_connection);
+});
 
-    // LOGGING
-    logger.log( logger.EVENT.QUIT, userId, null )
-}
+
+
+
 
 function createExerciseMachine(exerciseName) {
     var emConf = exerciseConfs.machines[ exerciseName ](),
@@ -790,6 +820,7 @@ function handleClientSync(recvUserId) {
             clientState.timeRemaining = clientState.endTime - Date.now()
             delete clientState[ FIELD_END_TIME ]
 
+            console.log('clientState',clientState);
             sendMessage(EVENTS.sync, clientState);
         })
     };
