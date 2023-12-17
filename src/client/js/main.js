@@ -1,8 +1,5 @@
 'use strict'
 
-// Configs for imports
-const EVENTS_ENDPOINT = '/events';
-
 // Imports -- EXTERNAL
 const $ = require('zeptojs'),
     _ = require('lodash'), // todo: replace? source: https://youmightnotneed.com/lodash
@@ -25,6 +22,8 @@ const EVENTS = {
     halt: 'halt'
 }
 
+const EVENTS_ENDPOINT = '/events'; // must be the same as server!
+
 // Global variables -- DYNAMIC
 var exerciseEvents = eventEmitter({}), // internal client communication, with ExerciseViewer
     radio = eventEmitter({}), // internal client communication, within this file only
@@ -32,7 +31,7 @@ var exerciseEvents = eventEmitter({}), // internal client communication, with Ex
     timer,
     viewer 
 
-// ========= For Debugging Purposes =========
+// ========= For Debugging =========
 const WS_DEBUG = true;
 
 const WS_TYPE = {
@@ -55,13 +54,10 @@ function ws_log(type, output){
 }
 // ========= X =========
 
-
-const EVENTS_ENDPOINT_WS = '/events_ws';
-
 // URL must be absolute
 const ws_url = (document.location.protocol == 'https:' ? 'wss://' : 'ws://')
     + document.location.host
-    + EVENTS_ENDPOINT_WS;
+    + EVENTS_ENDPOINT;
 
 const events_WS = new WebSocket(ws_url);
 

@@ -1,4 +1,4 @@
-// Imported libraries -- EXTERNAL
+// Imported Libraries -- EXTERNAL
 const compression = require('compression'),
     express = require('express'),
     path = require('path'),
@@ -11,9 +11,11 @@ const compression = require('compression'),
     crypto = require('crypto'),
     EventEmitter = require('events'),
     { spawn } = require('child_process'),
-    mongodb = q.nfcall( require('mongodb').MongoClient.connect, 'mongodb://localhost/gitstream' ).then(client => client.db());
-
-// Imported libraries -- INTERNAL
+    MongoClient = require('mongodb').MongoClient,
+    mongodb = q.nfcall(MongoClient.connect, 'mongodb://localhost/gitstream')
+        .then(client => client.db());
+  
+// Imported Libraries -- INTERNAL
 const ExerciseMachine = require('./ExerciseMachine'),
     utils = require('./utils'),
     angler = require('git-angler'),
@@ -25,8 +27,8 @@ const ExerciseMachine = require('./ExerciseMachine'),
 // Global variables -- CONSTANT
 const PATH_TO_REPOS = '/srv/repos',
     PATH_TO_EXERCISES = __dirname + '/exercises/',
-    CLIENT_IDLE_TIMEOUT = 60 * 60 * 1000, // 1 hr before resting client state expires
-    PORT = 4242, // for websocket server
+    CLIENT_IDLE_TIMEOUT = 60 * 60 * 1000, // 1 hr before
+    PORT = 4242, // for WebSocket connection
     REPO_NAME_REGEX = /\/[a-z0-9_-]+\/[a-f0-9]{6,}\/.+.git$/,
     gitHTTPMount = '/repos'; // no trailing slash
 
@@ -42,8 +44,12 @@ const EVENTS = {
     ding: 'ding',
     halt: 'halt'
 }
-// Global variables -- DYNAMIC
-var app = express(), // todo: might constant, but leaving here for now
+
+const EVENTS_ENDPOINT = '/events'; // configured with nginx
+
+
+// Global Variables -- DYNAMIC
+var app = express(), // todo: these might constant, change?
     eventBus = new angler.EventBus(), // todo: might constant, but leaving here for now
     githookEndpoint = angler.githookEndpoint({
         pathToRepos: PATH_TO_REPOS,
@@ -260,12 +266,14 @@ function createRepoShortPath( info ) {
 function verifyAndGetRepoInfo( repoPath ) {
     var repoInfo = extractRepoInfoFromPath( repoPath )
 
-    if ( !repoInfo ) { throw Error('Could not get repo info') }
+    if (!repoInfo) {
+        throw Error('Could not get repo info')
+    }
 
     return user.verifyMac( repoInfo.userId, repoInfo.mac, repoInfo.macMsg )
-    .then( function() {
-        return repoInfo
-    })
+        .then(function() {
+            return repoInfo
+        })
 }
 
 /**
@@ -560,11 +568,9 @@ configureApp().catch(err => console.error(err));
 server = app.listen(PORT)
 
 // Create a WebSocket connection ontop of the Express app
-const EVENTS_ENDPOINT_WS = '/events_ws';
-
 const wss = new WebSocket.Server({ // todo: this config might be sus but it works
     server: server,
-    path: EVENTS_ENDPOINT_WS
+    path: EVENTS_ENDPOINT
 });
 
 let one_socket;
