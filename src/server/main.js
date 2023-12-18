@@ -901,8 +901,38 @@ class ClientConnection {
 
 }
 
-wss.on('connection', function(ws) {
-    // todo: maintain a list of active connections
-    const one_connection = new ClientConnection(ws);
+let activeConnections = [];
 
+wss.on('connection', function(ws) {
+    // Create a new websocket connection
+    const new_ws = new ClientConnection(ws);
+
+
+    // === Expiremental feature to maintain list of active connections ===
+
+    // Add the new connection to the array of active connections
+    activeConnections.push(new_ws.userId);
+
+    // Check every second if userId is not null
+    const intervalId = setInterval(() => {
+        if (new_ws.userId !== null) {
+            // Add the new connection to the array of active connections
+            activeConnections.push(new_ws.userId);
+
+            // Log the number of active connections
+            console.log(`\n[New connection] List of Active Users:\n${activeConnections.join('\n')}`);
+
+            // Clear the interval
+            clearInterval(intervalId);
+        }
+    }, 1000);
+
+    // Handle connection close
+    ws.on('close', function() {
+        // Remove the connection from the array of active connections
+        activeConnections = activeConnections.filter(userId => userId !== new_ws.userId);
+
+        // Log the number of active connections
+        console.log(`[Connection Closed] List of Active Users:\n${activeConnections.join('\n')}`);
+    });
 });
