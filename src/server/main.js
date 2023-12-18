@@ -591,6 +591,13 @@ class ClientConnection {
         this.ws.onerror = this.handleError.bind(this);
         this.ws.onclose = this.handleClose.bind(this);    
 
+        // Heartbeat with client (temporary measure to ensure connection persists)
+        this.heartbeat = setInterval(() => {
+            if (this.ws.readyState === this.ws.OPEN) {
+                this.ws.ping();
+            }
+        }, 55000); // 55 seconds (< the default connection halt, 60 seconds)
+
         if (logger.CONFIG.WS_DEBUG) this.sendMessage('ws', 'Hi from Server!');
     }
 
@@ -658,6 +665,9 @@ class ClientConnection {
             this.exerciseMachine.removeAllListeners()
             this.exerciseMachine.halt()
         }
+
+        // Stop the heartbeat when the connection is closed
+        clearInterval(this.heartbeat);
     
         logger.log(logger.EVENT.QUIT, this.userId, null)
     }
