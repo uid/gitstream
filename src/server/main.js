@@ -591,14 +591,22 @@ class ClientConnection {
         this.ws.onerror = this.handleError.bind(this);
         this.ws.onclose = this.handleClose.bind(this);    
 
-        // Heartbeat with client (temporary measure to ensure connection persists)
-        this.heartbeat = setInterval(() => {
-            if (this.ws.readyState === this.ws.OPEN) {
-                this.ws.ping();
-            }
-        }, 55000); // 55 seconds (< the default connection halt, 60 seconds)
+        // Start heartbeat with client (temporary measure to ensure connection persists)
+        this.startHeartbeat();
 
         if (logger.CONFIG.WS_DEBUG) this.sendMessage('ws', 'Hi from Server!');
+    }
+
+    /**
+     * Pings client every 55 seconds (< the default connection halt of 60 seconds).
+     * If no response, connection presumed dead
+     */
+    startHeartbeat() {
+        const hb_time = 55*1000;
+
+        this.heartbeat = setInterval(() => {
+            this.ws.ping();
+        }, hb_time);
     }
 
     /**
@@ -668,8 +676,32 @@ class ClientConnection {
 
         // Stop the heartbeat when the connection is closed
         clearInterval(this.heartbeat);
+
+        this.removeFromActiveList();
     
         logger.log(logger.EVENT.QUIT, this.userId, null)
+    }
+
+    // === Expiremental feature to maintain list of active connections ===
+
+    addToActiveList() {
+        // Add the new connection to the array of active connections
+        activeConnections.push(this.userId);
+
+        // Log the number of active connections
+        if (logger.CONFIG.WS_DEBUG) {
+            console.log(`\n[New connection] List of Active Users:\n${activeConnections.join('\n')}\n`);
+        }        
+    }
+
+    removeFromActiveList() {
+        // Remove the connection from the array of active connections
+        activeConnections = activeConnections.filter(userId => userId !== this.userId);
+
+        if (logger.CONFIG.WS_DEBUG) {
+            // Log the number of active connections
+            console.log(`\n[Connection Closed] List of Active Users:\n${activeConnections.join('\n')}\n`);
+        }
     }
 
 
@@ -681,8 +713,9 @@ class ClientConnection {
      * @param {*} recvUserId 
      */
     handleClientSync(recvUserId) {
-        this.userId = recvUserId // initial and sole assignment
-    
+        this.userId = recvUserId; // initial and sole assignment
+        this.addToActiveList();
+
         var userKeyPromise = user.getUserKey( this.userId )
     
         userKeyPromise.done( ( key ) => { this.userKey = key }, ( err ) => {
@@ -905,34 +938,6 @@ let activeConnections = [];
 
 wss.on('connection', function(ws) {
     // Create a new websocket connection
-    const new_ws = new ClientConnection(ws);
-
-
-    // === Expiremental feature to maintain list of active connections ===
-
-    // Add the new connection to the array of active connections
-    activeConnections.push(new_ws.userId);
-
-    // Check every second if userId is not null
-    const intervalId = setInterval(() => {
-        if (new_ws.userId !== null) {
-            // Add the new connection to the array of active connections
-            activeConnections.push(new_ws.userId);
-
-            // Log the number of active connections
-            console.log(`\n[New connection] List of Active Users:\n${activeConnections.join('\n')}`);
-
-            // Clear the interval
-            clearInterval(intervalId);
-        }
-    }, 1000);
-
-    // Handle connection close
-    ws.on('close', function() {
-        // Remove the connection from the array of active connections
-        activeConnections = activeConnections.filter(userId => userId !== new_ws.userId);
-
-        // Log the number of active connections
-        console.log(`[Connection Closed] List of Active Users:\n${activeConnections.join('\n')}`);
-    });
+    // bug: handling multiple users from the same source (eg userId)
+    new ClientConnection(ws);
 });
