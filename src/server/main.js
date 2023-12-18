@@ -214,6 +214,7 @@ let userMap = {
 
             // Return a shallow copy of the userInfo object
             const userInfoCopy = Object.assign({}, userInfo);
+
             return callback(null, userInfoCopy);
         } catch (error) {
             return callback(error, null);
@@ -557,7 +558,7 @@ async function configureApp() {
     })
 
     app.use( '/user', setUser, function( req, res ) {
-        var userId = ( req.user && req.user.username ) || "";
+        const userId = ( req.user && req.user.username ) || "";
         res.writeHead( 200, { 'Content-Type': 'text/plain' } )
         res.end( userId )
     })
@@ -568,23 +569,16 @@ configureApp().catch(err => console.error(err));
 server = app.listen(PORT)
 
 // Create a WebSocket connection ontop of the Express app
-// todo: this config might need additional tweaks, but it works
+// todo: this config might need additional tweaks (though, it does work rn)
 const wss = new WebSocket.Server({
     server: server,
     path: EVENTS_ENDPOINT
 });
 
 
-
-
-
-
-
-
-
-
 class ClientConnection {
     constructor(ws) {
+        // one client = one socket
         this.ws = ws;
 
         // Shared state variables
@@ -593,9 +587,9 @@ class ClientConnection {
         this.userKey = null;
 
         // Shared socket listeners
-        this.ws.onmessage = this.handleMessage.bind(this);;
-        this.ws.onerror = this.handleError.bind(this);;
-        this.ws.onclose = this.handleClose.bind(this);;
+        this.ws.onmessage = this.handleMessage.bind(this);
+        this.ws.onerror = this.handleError.bind(this);
+        this.ws.onclose = this.handleClose.bind(this);    
 
         if (logger.CONFIG.WS_DEBUG) this.sendMessage('ws', 'Hi from Server!');
     }
@@ -620,7 +614,6 @@ class ClientConnection {
     }
 
     handleMessage(event) {
-
         const msg = JSON.parse(event.data);
         const {event: msgEvent, data: msgData} = msg;
         
@@ -628,15 +621,15 @@ class ClientConnection {
 
         switch (msgEvent) {
             case EVENTS.sync:
-                handleClientSync(msgData); //todo: make into .this
+                this.handleClientSync(msgData);
                 break;
             
             case EVENTS.exerciseDone:
-                handlExerciseDone(msgData);
+                this.handleExerciseDone(msgData);
                 break;
 
             case EVENTS.exerciseChanged:
-                handleExerciseChanged(msgData);
+                this.handleExerciseChanged(msgData);
                 break;
         
             // Special case to relay info about socket connection
@@ -661,247 +654,245 @@ class ClientConnection {
     
     // per socket
     handleClose(event) {
-        if (exerciseMachine) { //todo: make into `this`
-            exerciseMachine.removeAllListeners()
-            exerciseMachine.halt()
+        if (this.exerciseMachine) {
+            this.exerciseMachine.removeAllListeners()
+            this.exerciseMachine.halt()
         }
     
-        logger.log(logger.EVENT.QUIT, userId, null)
+        logger.log(logger.EVENT.QUIT, this.userId, null)
     }
 
-}
 
-// temo global variables to track state of one user
-var sendMessage,
-    exerciseMachine,
-    userId, 
-    userKey
-
-wss.on('connection', function(ws) {
-    // todo: maintain list of active connections
-    const one_connection = new ClientConnection(ws);
-    sendMessage = one_connection.sendMessage.bind(one_connection);
-});
-
-
-
-
-
-function createExerciseMachine(exerciseName) {
-    var emConf = exerciseConfs.machines[ exerciseName ](),
-        repoMac = user.createMac( userKey, userId + exerciseName ),
-        exerciseRepo = createRepoShortPath({
-            userId: userId,
-            exerciseName: exerciseName,
-            mac: repoMac
-        }),
-        repoPaths = {
-            fsPath: path.join( PATH_TO_REPOS, exerciseRepo ), // repo fs path
-            path: exerciseRepo // repo short path
-        },
-        exerciseDir = path.join( PATH_TO_EXERCISES, exerciseName ),
-        exerciseMachine = new ExerciseMachine( emConf, repoPaths, exerciseDir, eventBus )
-
-    function unsetExercise() {
-        userMap.delete(userId, [FIELD_EXERCISE_STATE, FIELD_END_TIME]);
-    }
-
-    function stepHelper(newState) {
-        console.error('hset', userId, FIELD_EXERCISE_STATE, newState);
-
-        const updateState =  logDbErr( userId, exerciseName, {
-            desc: 'userMap step update exercise state',
-            newState: newState
-        });
-
-        userMap.expire(userId, CLIENT_IDLE_TIMEOUT, updateState);
-        userMap.set(userId, FIELD_EXERCISE_STATE, newState, updateState);
-
-    }
+    // ======= Shared Event Handlers =======
 
     /**
-     * Called when one of 3 events happen (EVENTS.ding, EVENTS.halt, EVENTS.step)
-     * and sends said event to the browser
-     * todo: refactor this function
+     * Sync the client with the stored client state
      * 
-     * @param {*} listenerDef 
-     * @returns function
+     * @param {*} recvUserId 
      */
-    function makeListenerFn(listenerDef) {       
-        return (...args) => {
-            sendMessage(listenerDef.event, args);
-
-            listenerDef.helper(...args);
-
-            logger.log(logger.EVENT.EM, userId, exerciseName, {
-                    type: listenerDef.event,
-                    info: args.slice( 1 )
-                }
-            )
-        }
-    }
-
-    function registerListener(eventType, helper) {
-        exerciseMachine.on(eventType, makeListenerFn({ event: eventType, helper: helper}));
-    }
-
-    // set up listeners to send events to browser and update saved exercise state
-    registerListener(EVENTS.ding, unsetExercise);
-    registerListener(EVENTS.halt, unsetExercise);
-    registerListener(EVENTS.step, stepHelper);
-
-    return exerciseMachine
-}
-
-/**
- * Sync the client with the stored client state
- * @param {*} recvUserId 
- */
-function handleClientSync(recvUserId) {
-    userId = recvUserId // initial and sole assignment
-
-    var userKeyPromise = user.getUserKey( userId )
-
-    userKeyPromise.done( function( key ) { userKey = key }, function( err ) {
-        // LOGGING
-        logger.err( logger.ERR.DB, userId, null, { msg: err.message } )
-    })
-
-    const handleClientState = function( err, clientState ) {
-        if ( err ) {
-            console.error(err)
-
-            // LOGGING
-            logger.err( logger.ERR.DB, userId, null, {
-                desc: 'userMap get client state',
-                msg: err.message
-            })
-            
-            return sendMessage('err', err) // todo: stringify the error?
-        }
-        console.error('hgetall', userId, clientState);
-        if ( !clientState ) { // Aka user is new and we want to initialize their data
-            console.error('hmset', FIELD_EXERCISE_STATE, null);
-            
-            const handleUnsetClientState = logDbErr( userId, null, {
-                desc: 'userMap unset client state'
-            })
-
-            userMap.set(userId, FIELD_EXERCISE_STATE, "", handleUnsetClientState)
-        }
-
-        userKeyPromise.then( function( userKey ) {
-            var timeRemaining = clientState[ FIELD_END_TIME ] - Date.now() || undefined,
-                exerciseState = clientState[ FIELD_EXERCISE_STATE ],
-                currentExercise = clientState[ FIELD_CURRENT_EXERCISE ]
-
-            // LOGGING
-            logger.log( logger.EVENT.SYNC, userId, currentExercise, {
-                timeRemaining: timeRemaining,
-                exerciseState: exerciseState
-            })
-
-            if ( exerciseState && ( timeRemaining === undefined || timeRemaining > 0 ) ) {
-                // there's already an excercise running. reconnect to it
-                exerciseMachine = createExerciseMachine( currentExercise )
-                exerciseMachine.init( exerciseState, timeRemaining / 1000 )
-
-            } else if ( exerciseState ) { // last exercise has expired
-                userMap.delete(userId, FIELD_EXERCISE_STATE, FIELD_END_TIME);
-
-                delete clientState[ FIELD_EXERCISE_STATE ]
-                delete clientState[ FIELD_END_TIME ]
-            }
-
-            clientState.user = {
-                key: userKey,
-                id: userId
-            }
-            clientState.timeRemaining = clientState.endTime - Date.now()
-            delete clientState[ FIELD_END_TIME ]
-
-            console.log('clientState',clientState);
-            sendMessage(EVENTS.sync, clientState);
-        })
-    };
-
-    userMap.getAll(userId, handleClientState)
-
-    function processNewExercise( channel, exerciseName ) {
-        // LOGGING
-        logger.log( logger.EVENT.GO, userId, exerciseName )
-
-        const handleExerciseState = function( err, state ) {
-            var startState, endTime
-            
-            console.error('hgetall', userId, state);
-
-            // only start exercise if user is on the exercise page
-            if ( exerciseName !== state.currentExercise ) return
-
-            if ( exerciseMachine ) {
-                exerciseMachine.halt()
-            }
-
-            exerciseMachine = createExerciseMachine( exerciseName )
-            startState = exerciseMachine._states.startState
-            // set by EM during init, but init sends events. TODO: should probably be fixed
-            // note: time limit ultimately comes from parameter set in `gitstream-exercises>machines.js`
-            endTime = Date.now() + exerciseMachine._timeLimit * 1000
-
-            console.error('hmset', FIELD_EXERCISE_STATE, startState,
-                   FIELD_END_TIME, endTime );
-            
-            const handleError = function( err ) {
-                if ( err ) {
-                    // LOGGING
-                    logger.err( logger.ERR.DB, userId, exerciseName, {
-                        desc: 'userMap go',
-                        msg: err.message
-                    })
-                }
-            }
-            userMap.expire(userId, CLIENT_IDLE_TIMEOUT, handleError);
-            userMap.set(userId, FIELD_EXERCISE_STATE, startState, handleError);
-            userMap.set(userId, FIELD_END_TIME, endTime, handleError);
-
-            state[ FIELD_EXERCISE_STATE ] = startState
-            state.timeRemaining = exerciseMachine._timeLimit * 1000
-            delete state[ FIELD_END_TIME ]
-
-            sendMessage(EVENTS.sync, state);
-
-            exerciseMachine.init()
-        }
-        userMap.getAll(userId, handleExerciseState)
-    }
-
-    exerciseEvents.on(userId + ':go', (exerciseName) => {
-        processNewExercise(null, exerciseName)
-    });
-}
-
-function handleExerciseChanged(newExercise) {
-    if (exerciseMachine) { // stop the old machine
-        exerciseMachine.halt()
-        exerciseMachine = null
-    }
-
-    console.error('hset', userId, FIELD_CURRENT_EXERCISE, newExercise);
+    handleClientSync(recvUserId) {
+        this.userId = recvUserId // initial and sole assignment
     
-    const handleNewExercise = logDbErr(userId, newExercise, {
-        desc: 'userMap change exercise'
-    })
+        var userKeyPromise = user.getUserKey( this.userId )
+    
+        userKeyPromise.done( ( key ) => { this.userKey = key }, ( err ) => {
+            // LOGGING
+            logger.err(logger.ERR.DB, this.userId, null, {msg: err.message})
+        })
+    
+        const handleClientState = ( err, clientState ) => {
+            if ( err ) {
+                console.error(err)
+    
+                // LOGGING
+                logger.err( logger.ERR.DB, this.userId, null, {
+                    desc: 'userMap get client state',
+                    msg: err.message
+                })
+    
+                return this.sendMessage('err', err) // todo: stringify the error?
+            }
 
-    userMap.expire(userId, CLIENT_IDLE_TIMEOUT, handleNewExercise);
-    userMap.delete(userId, [FIELD_EXERCISE_STATE, FIELD_END_TIME], handleNewExercise);
-    userMap.set(userId, FIELD_CURRENT_EXERCISE, newExercise, handleNewExercise);
+            if ( !clientState ) { // Aka user is new and we want to initialize their data
 
-    // LOGGING
-    logger.log( logger.EVENT.CHANGE_EXERCISE, userId, newExercise )
+                console.error('hmset', FIELD_EXERCISE_STATE, null);
+                
+                const handleUnsetClientState = logDbErr( this.userId, null, {
+                    desc: 'userMap unset client state'
+                })
+    
+                userMap.set(this.userId, FIELD_EXERCISE_STATE, "", handleUnsetClientState)
+            }
+    
+            userKeyPromise.then( ( userKey ) => { // not used because is the same as `this.userKey`
+                var timeRemaining = clientState[ FIELD_END_TIME ] - Date.now() || undefined,
+                    exerciseState = clientState[ FIELD_EXERCISE_STATE ],
+                    currentExercise = clientState[ FIELD_CURRENT_EXERCISE ]
+    
+                // LOGGING
+                logger.log( logger.EVENT.SYNC, this.userId, currentExercise, {
+                    timeRemaining: timeRemaining,
+                    exerciseState: exerciseState
+                })
+    
+                if ( exerciseState && ( timeRemaining === undefined || timeRemaining > 0 ) ) {
+                    // there's already an excercise running. reconnect to it
+                    this.exerciseMachine = this.createExerciseMachine( currentExercise )
+                    this.exerciseMachine.init( exerciseState, timeRemaining / 1000 )
+    
+                } else if ( exerciseState ) { // last exercise has expired
+                    userMap.delete(this.userId, FIELD_EXERCISE_STATE, FIELD_END_TIME);
+    
+                    delete clientState[ FIELD_EXERCISE_STATE ]
+                    delete clientState[ FIELD_END_TIME ]
+                }
+                
+                clientState.user = {
+                    key: this.userKey,
+                    id: this.userId
+                }
+                clientState.timeRemaining = clientState.endTime - Date.now()
+                delete clientState[ FIELD_END_TIME ]
+    
+                this.sendMessage(EVENTS.sync, clientState);
+            })
+        };
+        
+
+        userMap.getAll(this.userId, handleClientState);
+    
+        const processNewExercise = ( channel, exerciseName ) => {
+            // LOGGING
+            logger.log( logger.EVENT.GO, this.userId, exerciseName )
+    
+            const handleExerciseState = ( err, state ) => {
+                var startState, endTime
+                
+                console.error('hgetall', this.userId, state);
+    
+                // only start exercise if user is on the exercise page
+                if (exerciseName !== state.currentExercise) return
+    
+                if (this.exerciseMachine) {
+                    this.exerciseMachine.halt()
+                }
+    
+                this.exerciseMachine = this.createExerciseMachine( exerciseName )
+                startState = this.exerciseMachine._states.startState
+                // set by EM during init, but init sends events. TODO: should probably be fixed
+                // note: time limit ultimately comes from parameter set in `gitstream-exercises>machines.js`
+                endTime = Date.now() + this.exerciseMachine._timeLimit * 1000
+    
+                console.error('hmset', FIELD_EXERCISE_STATE, startState,
+                       FIELD_END_TIME, endTime );
+                
+                const handleError = function( err ) {
+                    if ( err ) {
+                        // LOGGING
+                        logger.err( logger.ERR.DB, this.userId, exerciseName, {
+                            desc: 'userMap go',
+                            msg: err.message
+                        })
+                    }
+                }
+                userMap.expire(this.userId, CLIENT_IDLE_TIMEOUT, handleError);
+                userMap.set(this.userId, FIELD_EXERCISE_STATE, startState, handleError);
+                userMap.set(this.userId, FIELD_END_TIME, endTime, handleError);
+    
+                state[ FIELD_EXERCISE_STATE ] = startState
+                state.timeRemaining = this.exerciseMachine._timeLimit * 1000
+                delete state[ FIELD_END_TIME ]
+    
+                this.sendMessage(EVENTS.sync, state);
+    
+                this.exerciseMachine.init()
+            }
+            userMap.getAll(this.userId, handleExerciseState)
+        }
+    
+        exerciseEvents.on(this.userId + ':go', (exerciseName) => {
+            processNewExercise(null, exerciseName)
+        });
+    }
+
+
+    handleExerciseChanged(newExercise) {
+        if (this.exerciseMachine) { // stop the old machine
+            this.exerciseMachine.halt()
+            this.exerciseMachine = null
+        }
+    
+        console.error('hset', this.userId, FIELD_CURRENT_EXERCISE, newExercise);
+        
+        const handleNewExercise = logDbErr(this.userId, newExercise, {
+            desc: 'userMap change exercise'
+        })
+    
+        userMap.expire(this.userId, CLIENT_IDLE_TIMEOUT, handleNewExercise);
+        userMap.delete(this.userId, [FIELD_EXERCISE_STATE, FIELD_END_TIME], handleNewExercise);
+        userMap.set(this.userId, FIELD_CURRENT_EXERCISE, newExercise, handleNewExercise);
+    
+        // LOGGING
+        logger.log( logger.EVENT.CHANGE_EXERCISE, this.userId, newExercise )
+    }
+
+    handleExerciseDone(doneExercise) {
+        utils.exportToOmnivore(this.userId, doneExercise,
+            logDbErr( this.userId, doneExercise, { desc: 'Omnivore POST error' } ));
+    }
+
+
+    createExerciseMachine(exerciseName) {
+        var emConf = exerciseConfs.machines[ exerciseName ](),
+            repoMac = user.createMac( this.userKey, this.userId + exerciseName ),
+            exerciseRepo = createRepoShortPath({
+                userId: this.userId,
+                exerciseName: exerciseName,
+                mac: repoMac
+            }),
+            repoPaths = {
+                fsPath: path.join( PATH_TO_REPOS, exerciseRepo ), // repo fs path
+                path: exerciseRepo // repo short path
+            },
+            exerciseDir = path.join( PATH_TO_EXERCISES, exerciseName )
+    
+        let exerciseMachine = new ExerciseMachine( emConf, repoPaths, exerciseDir, eventBus ) // local
+    
+        const unsetExercise = () => {
+            userMap.delete(this.userId, [FIELD_EXERCISE_STATE, FIELD_END_TIME]);
+        }
+    
+        const stepHelper = (newState) => {
+            console.error('hset', this.userId, FIELD_EXERCISE_STATE, newState);
+    
+            const updateState =  logDbErr( this.userId, exerciseName, {
+                desc: 'userMap step update exercise state',
+                newState: newState
+            });
+    
+            userMap.expire(this.userId, CLIENT_IDLE_TIMEOUT, updateState);
+            userMap.set(this.userId, FIELD_EXERCISE_STATE, newState, updateState);
+    
+        }
+    
+        /**
+         * Called when one of 3 events happen (EVENTS.ding, EVENTS.halt, EVENTS.step)
+         * and sends said event to the browser
+         *  
+         * @param {*} listenerDef 
+         * @returns function
+         */
+        const makeListenerFn = (listenerDef) => {      
+            // todo: refactor this function 
+            return (...args) => {
+                this.sendMessage(listenerDef.event, args);
+    
+                listenerDef.helper(...args);
+    
+                logger.log(logger.EVENT.EM, this.userId, exerciseName, {
+                        type: listenerDef.event,
+                        info: args.slice( 1 )
+                    }
+                )
+            }
+        }
+    
+        const registerListener = (eventType, helper) => {
+            exerciseMachine.on(eventType, makeListenerFn({ event: eventType, helper: helper}));
+        }
+    
+        // set up listeners to send events to browser and update saved exercise state
+        registerListener(EVENTS.ding, unsetExercise);
+        registerListener(EVENTS.halt, unsetExercise);
+        registerListener(EVENTS.step, stepHelper);
+    
+        return exerciseMachine;
+    }
+
 }
 
-function handlExerciseDone(doneExercise) {
-    utils.exportToOmnivore(userId, doneExercise,
-        logDbErr( userId, doneExercise, { desc: 'Omnivore POST error' } ));
-}
+wss.on('connection', function(ws) {
+    // todo: maintain a list of active connections
+    const one_connection = new ClientConnection(ws);
+
+});
