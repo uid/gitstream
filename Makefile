@@ -31,7 +31,6 @@ ifneq ($(DEST), $(SRC))
 	cp -R node_modules $(DEST)
 	cp nginx-deployed.conf $(DEST)
 	cp -R gitstream-exercises git-angler git-http-backend $(DEST)
-	cp redis.conf $(DEST)
 	cp gitstream.pem $(DEST)
 	cp settings.js $(DEST)
 endif
