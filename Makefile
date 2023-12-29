@@ -20,6 +20,8 @@ endif
 	# linkexercises
 	ln -srf $(SRC_EXERCISES) $(DIST_EXERCISES)
 
+	npm test
+
 run: build
 	sudo -u gitstream node dist/server/main
 
