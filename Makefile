@@ -25,7 +25,7 @@ run: build
 
 install:
 	npm prune --omit=dev
-	mkdir -p $(GSDIRS) $(NGINXLOGS)
+	mkdir -p $(DEST) $(REPOS) $(MONGO) $(NGINXLOGS)
 ifneq ($(DEST), $(SRC))
 	cp -R dist $(DEST)
 	cp -R node_modules $(DEST)
@@ -42,12 +42,13 @@ ifeq ($(GITSTREAM_USER), 1)
 	su gitstream -lc 'git config --global user.email "gitstream@gitstream.csail.mit.edu"'
 	su gitstream -lc 'git config --global user.name "GitStream"'
 endif
-	chown -R gitstream:gitstream $(GSDIRS) $(GSLOGS)
+	chown -R gitstream:gitstream $(DEST)
+	chown gitstream:gitstream $(REPOS) $(MONGO) $(GSLOGS)
 	ln -sf /opt/gitstream/nginx-deployed.conf /etc/nginx/nginx.conf
 endif
 
 uninstall:
-	rm -rf $(GSDIRS) $(GSLOGS) $(DESTDIR)/var/opt/gitstream
+	rm -rf $(DEST) $(REPOS) $(GSLOGS) $(DESTDIR)/var/opt/gitstream
 	sudo su gitstream -lc 'kill -15 -1'
 	-userdel -r gitstream > /dev/null 2>&1
 
