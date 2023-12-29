@@ -24,7 +24,7 @@ run: build
 	sudo -u gitstream node dist/server/main
 
 install:
-	npm prune --production
+	npm prune --omit=dev
 	mkdir -p $(GSDIRS) $(NGINXLOGS)
 ifneq ($(DEST), $(SRC))
 	cp -R dist $(DEST)
