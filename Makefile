@@ -24,7 +24,11 @@ run: build
 	sudo -u gitstream node dist/server/main
 
 install:
-	npm prune --omit=dev
+	# since this is run with "sudo make install", but we want to keep 
+	# node_modules/ and gitstream-exercises/ owned by the original user,
+	# temporarily pop out to the original user
+	sudo -u $(SUDO_USER) npm prune --omit=dev
+	
 	mkdir -p $(DEST) $(REPOS) $(MONGO) $(NGINXLOGS)
 ifneq ($(DEST), $(SRC))
 	cp -R dist $(DEST)
