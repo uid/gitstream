@@ -52,14 +52,14 @@ sudo -u gitstream pm2 start dist/server/main.js
 place inside the root folder of GitStream.
 2. Install [Vagrant](https://www.vagrantup.com/).
 3. Add a new Vagrant box to your machine: `vagrant box add ubuntu/focal64`.
-4. Ensure special configuration files are in the main directory: `gistream.perm`, `settings.js`
+4. Ensure special configuration files are in the main directory: `gistream.pem`, `settings.js`
 
 Now you're all set!
 
 ### Test
 
 * Run test cases via `npm test`.
-* To locally test multiple users, pomit `openid` config in `settings.js`. 
+* To locally test multiple users, comment out `openid` config in `settings.js`. 
 
 ### Run
 
