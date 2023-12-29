@@ -32,11 +32,9 @@ sudo apt-get -y install git nginx nodejs make
 Install [MongoDB Community Edition](https://docs.mongodb.com/manual/administration/install-community/).
 
 
-Install GitStream's dependencies:
+Build and install GitStream:
 ```sh
-make
-sudo make install
-cd /opt/gitstream
+make install
 ```
 
 Make sure certs are in their appropriate locations (see nginx-deployed.conf for the locations):

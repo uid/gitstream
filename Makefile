@@ -23,38 +23,34 @@ endif
 run: build
 	sudo -u gitstream node dist/server/main
 
-install:
-	# since this is run with "sudo make install", but we want to keep 
-	# node_modules/ and gitstream-exercises/ owned by the original user,
-	# temporarily pop out to the original user
-	sudo -u $(SUDO_USER) npm prune --omit=dev
-	
-	mkdir -p $(DEST) $(REPOS) $(MONGO) $(NGINXLOGS)
+install: build
+	npm prune --omit=dev
+	sudo mkdir -p $(DEST) $(REPOS) $(MONGO) $(NGINXLOGS)
 ifneq ($(DEST), $(SRC))
-	cp -R dist $(DEST)
-	cp -R node_modules $(DEST)
-	cp nginx-deployed.conf $(DEST)
-	cp -R gitstream-exercises git-angler git-http-backend $(DEST)
-	cp gitstream.pem $(DEST)
-	cp settings.js $(DEST)
+	sudo cp -R dist $(DEST)
+	sudo cp -R node_modules $(DEST)
+	sudo cp nginx-deployed.conf $(DEST)
+	sudo cp -R gitstream-exercises git-angler git-http-backend $(DEST)
+	sudo cp gitstream.pem $(DEST)
+	sudo cp settings.js $(DEST)
 endif
-	touch $(GSLOGS)
+	sudo touch $(GSLOGS)
 
 ifeq ($(PACKAGING),)
 ifeq ($(GITSTREAM_USER), 1)
-	useradd -m gitstream
-	su gitstream -lc 'git config --global user.email "gitstream@gitstream.csail.mit.edu"'
-	su gitstream -lc 'git config --global user.name "GitStream"'
+	sudo useradd -m gitstream
+	sudo -u gitstream git config --global user.email "gitstream@gitstream.csail.mit.edu"
+	sudo -u gitstream git config --global user.name "GitStream"
 endif
-	chown -R gitstream:gitstream $(DEST)
-	chown gitstream:gitstream $(REPOS) $(MONGO) $(GSLOGS)
-	ln -sf /opt/gitstream/nginx-deployed.conf /etc/nginx/nginx.conf
+	sudo chown -R gitstream:gitstream $(DEST)
+	sudo chown gitstream:gitstream $(REPOS) $(MONGO) $(GSLOGS)
+	sudo ln -sf /opt/gitstream/nginx-deployed.conf /etc/nginx/nginx.conf
 endif
 
 uninstall:
-	rm -rf $(DEST) $(REPOS) $(GSLOGS) $(DESTDIR)/var/opt/gitstream
-	sudo su gitstream -lc 'kill -15 -1'
-	-userdel -r gitstream > /dev/null 2>&1
+	sudo rm -rf $(DEST) $(REPOS) $(GSLOGS) $(DESTDIR)/var/opt/gitstream
+	sudo -u gitstream kill -15 -1
+	-sudo userdel -r gitstream > /dev/null 2>&1
 
 clean:
 	rm -rf dist
