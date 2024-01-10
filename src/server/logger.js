@@ -213,13 +213,13 @@ module.exports = function( opts ) {
          * Log WebSocket events
          * 
          * @param {typeof WS_TYPE} type of WebSocket
-         * @param {object} output any JSON object
+         * @param {object} output any object
          * @returns nothing
          */
         ws: function(type, output){
             if (CONFIG.WS_DEBUG) {
                 const strOutput = JSON.stringify(output);
-                strOutput.replace(/\"/g, "");
+                strOutput.replace(/\"/g, ""); // remove extra quotation marks
 
                 const trueOutput = `\n[WS][Server][${type}] ${strOutput}\n`;
                 

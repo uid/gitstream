@@ -32,6 +32,8 @@ const PATH_TO_REPOS = '/srv/repos',
     REPO_NAME_REGEX = /\/[a-z0-9_-]+\/[a-f0-9]{6,}\/.+.git$/,
     gitHTTPMount = '/repos'; // no trailing slash
 
+const app = express();
+
 const FIELD_EXERCISE_STATE = 'exerciseState',
     FIELD_END_TIME = 'endTime',
     FIELD_CURRENT_EXERCISE = 'currentExercise'
@@ -49,8 +51,7 @@ const EVENTS_ENDPOINT = '/events'; // configured with nginx
 
 
 // Global Variables -- DYNAMIC
-var app = express(), // todo: these might constant, change?
-    eventBus = new angler.EventBus(), // todo: might constant, but leaving here for now
+var eventBus = new angler.EventBus(), // todo: might constant, but leaving here for now
     githookEndpoint = angler.githookEndpoint({
         pathToRepos: PATH_TO_REPOS,
         eventBus: eventBus,
@@ -613,7 +614,7 @@ class ClientConnection {
      * Sends messages to established client.
      * 
      * @param {typeof EVENTS | 'ws' | 'err'} msgEvent
-     * @param {any} msgData whatever you gotta send
+     * @param {any} msgData the object to be transmitted
      */
     sendMessage(msgEvent, msgData) {
         const msg = {event: msgEvent, data: msgData};
@@ -936,8 +937,8 @@ class ClientConnection {
 
 let activeConnections = [];
 
+// Create a new websocket connection
 wss.on('connection', function(ws) {
-    // Create a new websocket connection
     // bug: handling multiple users from the same source (eg userId)
     new ClientConnection(ws);
 });

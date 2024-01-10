@@ -41,16 +41,20 @@ const WS_TYPE = {
 }
 
 /**
- * Log WebSocket events
+ * Log WebSocket events to console
  * 
- * @param {typeof WS_TYPE} type
- * @param {string} output
+ * @param {typeof WS_TYPE} type of WebSocket event
+ * @param {object} output any object
  * @returns nothing
  */
 function ws_log(type, output){
-    const trueOutput = `\n[WS][Client][${type}] ${output}\n`;
-    if (WS_DEBUG)
+    if (WS_DEBUG) {
+        const strOutput = JSON.stringify(output);
+        strOutput.replace(/\"/g, ""); // remove extra quotation marks
+
+        const trueOutput = `\n[WS][Client][${type}] ${strOutput}\n`;
         console.log(trueOutput);
+    }
 }
 // ========= X =========
 
@@ -61,7 +65,7 @@ const ws_url = (document.location.protocol == 'https:' ? 'wss://' : 'ws://')
 
 const events_WS = new WebSocket(ws_url);
 
-var msgs = [] // while awaiting for connection to establish
+let msgs = []; // awaiting connection to establish
 
 /**
  * Sends messages via WebSocket. Queues messages if connection is not yet established.
@@ -72,13 +76,13 @@ var msgs = [] // while awaiting for connection to establish
 function sendMessage(msgEvent, msgData) {
     const msg = {event: msgEvent, data: msgData};
     
-    const strMsg = JSON.stringify(msg);
 
-    ws_log(WS_TYPE.SENT, strMsg);
+    ws_log(WS_TYPE.SENT, msg);
 
-    if (events_WS.readyState !== 1) { // connection not ready
+    if (events_WS.readyState !== 1) { // (connection not ready)
         msgs.push(msg);
     } else {
+        const strMsg = JSON.stringify(msg);
         events_WS.send(strMsg);
     }
 }
@@ -100,58 +104,64 @@ events_WS.onmessage = function(event) {
     const {event: msgEvent, data: msgData} = msg;
 
 
-    ws_log(WS_TYPE.RECEIVED, JSON.stringify(msg));
+    ws_log(WS_TYPE.RECEIVED, msg);
 
     let eventHandler;
 
     switch (msgEvent) {
         case EVENTS.sync:
             handleSync(msgData);
-        break;
+            break;
         
         case EVENTS.exerciseDone:
             sendMessage(EVENTS.exerciseDone, state.currentExercise);
-        break;
+            break;
 
         // Forward exercise events to exercise machine emitter
         case EVENTS.step:
             eventHandler = triggerExerciseEvent(EVENTS.step, handleStepEvent);
             eventHandler(...msgData);
-        break;
+            break;
 
         // Stop timer before expiration and reset timer state
         case EVENTS.halt:
             eventHandler = triggerExerciseEvent(EVENTS.halt, handleHaltEvent);
             eventHandler(...msgData);
-        break;
+            break;
              
         // Timer expiration: defocuses step and resets timer state
         case EVENTS.ding:
             eventHandler = triggerExerciseEvent(EVENTS.ding, handleDingEvent);
             eventHandler(...msgData);
-        break;
+            break;
 
         // Special case to share info about socket connection
         case 'ws':
-            console.log('ws message received:', msg)
-        break;
+            if (WS_DEBUG)
+                console.log('ws message received:', msg)
+            break;
 
         // Special case to handle errors
         case 'err':
-            console.log('err event received:', msg)
-        break;
+            if (WS_DEBUG)
+                console.log('err event received:', msg)
+            break;
 
+        // Edge cases
         default:
-            console.error("error: unknown event: ", msgEvent);
+            if (WS_DEBUG)
+                console.error("error: unknown event: ", msgEvent);
     }
 };
 
 events_WS.onclose = function(event) {
-    console.log('ws connection closed:', event.reason);
+    if (WS_DEBUG)
+        console.log('ws connection closed:', event.reason);
 };
 
 events_WS.onerror = function(event) {
-    console.error('ws connection error:', event);
+    if (WS_DEBUG)
+        console.error('ws connection error:', event);
 };
 
 
