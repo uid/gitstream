@@ -18,8 +18,7 @@ const EVENTS = {
     exerciseDone: 'exerciseDone',
     exerciseChanged: 'exerciseChanged',
     step: 'step',
-    ding: 'ding',
-    halt: 'halt'
+    ding: 'ding'
 }
 
 const EVENTS_ENDPOINT = '/events'; // must be the same as server!
@@ -122,12 +121,6 @@ events_WS.onmessage = function(event) {
             eventHandler = triggerExerciseEvent(EVENTS.step, handleStepEvent);
             eventHandler(...msgData);
             break;
-
-        // Stop timer before expiration and reset timer state
-        case EVENTS.halt:
-            eventHandler = triggerExerciseEvent(EVENTS.halt, handleHaltEvent);
-            eventHandler(...msgData);
-            break;
              
         // Timer expiration: defocuses step and resets timer state
         case EVENTS.ding:
@@ -174,7 +167,7 @@ $.get( '/user', function( userId ) {
 })
 
 /**
- * @param {typeof EVENTS} eventType the type of event (step, halt, ding)
+ * @param {typeof EVENTS} eventType the type of event: step, ding
  * @param {Function} done the function to call when the transition has completed
  */
 function triggerExerciseEvent(eventType, done ) {
@@ -221,20 +214,12 @@ Timer.prototype = {
         }
         this._timer.addClass('active')
     },
-    /** actually stops the timer */
-    _stop: function() {
-        this._stopped = true
-        clearInterval( this.timerInterval )
-    },
-    /** these two stop the timer and add the appropriate styles */
-    stop: function() {
-        if ( !this._stopped ) {
-            this._stop()
-            this._timer.removeClass('active').addClass('stopped')
-        }
-    },
+    /** stop the timer and add the appropriate styles */
     ding: function() {
-        this._timer.html('0:00').addClass('stress').addClass('dinged')
+        this._timer.html('0:00').addClass('stress').addClass('dinged');
+
+        this._stopped = true;
+        clearInterval( this.timerInterval );
     }
 }
 
@@ -385,11 +370,6 @@ function handleStepEvent(newState, oldState, stepOutput) {
             newStateFeedback.removeClass('flash')
         }, 70 )
     }
-}
-
-function handleHaltEvent() {
-    if (timer) timer.stop();
-    state.endTime = undefined;
 }
 
 function handleDingEvent() {
