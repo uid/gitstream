@@ -8,7 +8,7 @@ function propIsFn( thing, prop ) {
  * A Mealy machine that represents multi-step exercises as states.
  * This class is intended to be connected to an ExerciseMachine via an EventEmitter
  *
- * @param {Object} config @see ExerciseViewerConfigExample.js for configuration parameters
+ * @param {Object} config see `gitstream-exercises/README.md` > Configuration File Format > `machine`
  * @param {EventEmitter} eventEmitter the emitter of ExerciseMachine eventEmitter
  */
 function ExerciseViewer( config, eventEmitter ) {
@@ -52,7 +52,7 @@ function ExerciseViewer( config, eventEmitter ) {
         if ( cb ) { cb( haltState ) }
     }.bind( this ) )
 
-    eventEmitter.on( 'ding', function( cb ) {
+    eventEmitter.on( 'ding', function( cb ) { // todo: remove
         onDing.call( config, this._currentState )
         if ( cb ) { cb( this._currentState ) }
     }.bind( this ) )

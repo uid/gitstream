@@ -28,7 +28,7 @@ const EVENTS_ENDPOINT = '/events'; // must be the same as server!
 var exerciseEvents = eventEmitter({}), // internal client communication, with ExerciseViewer
     radio = eventEmitter({}), // internal client communication, within this file only
     state = {},
-    timer,
+    timer, // todo: remove
     viewer 
 
 // ========= For Debugging =========
@@ -201,7 +201,7 @@ function Timer() {}
 Timer.prototype = {
     _update: function() {
         if ( this.timeRemaining === 0 ) {
-            return this.ding()
+            return this.ding();
         }
 
         if ( this.timeRemaining <= 10 * 1000 ) {
@@ -213,7 +213,7 @@ Timer.prototype = {
     },
     start: function( timeRemaining ) {
         this._stopped = false
-        this._timer = $('.timer')
+        this._timer = $('.timer') // CSS class linked to timer button
         this.timeRemaining = timeRemaining || Infinity
         this._update()
         if ( this.timeRemaining < Infinity ) {
@@ -234,7 +234,6 @@ Timer.prototype = {
         }
     },
     ding: function() {
-        this._stop()
         this._timer.html('0:00').addClass('stress').addClass('dinged')
     }
 }
@@ -395,7 +394,6 @@ function handleHaltEvent() {
 
 function handleDingEvent() {
     if (timer) timer.ding();
-    $('.exercise-view').find('.exercise-step').removeClass('focused');
     state.endTime = undefined;
 }
 
