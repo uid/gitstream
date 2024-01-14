@@ -18,7 +18,8 @@ const EVENTS = {
     exerciseDone: 'exerciseDone',
     exerciseChanged: 'exerciseChanged',
     step: 'step',
-    ding: 'ding'
+    ding: 'ding',
+    halt: 'halt'
 }
 
 const EVENTS_ENDPOINT = '/events'; // must be the same as server!
@@ -28,7 +29,7 @@ var exerciseEvents = eventEmitter({}), // internal client communication, with Ex
     radio = eventEmitter({}), // internal client communication, within this file only
     state = {},
     timer, // todo: remove
-    viewer 
+    viewer
 
 // ========= For Debugging =========
 const WS_DEBUG = true;
@@ -134,6 +135,12 @@ events_WS.onmessage = function(event) {
                 console.log('ws message received:', msg)
             break;
 
+        // Stop timer before expiration and reset timer state
+        case EVENTS.halt:
+            eventHandler = triggerExerciseEvent(EVENTS.halt, handleHaltEvent);
+            eventHandler(...msgData);
+            break;
+
         // Special case to handle errors
         case 'err':
             if (WS_DEBUG)
@@ -167,7 +174,7 @@ $.get( '/user', function( userId ) {
 })
 
 /**
- * @param {typeof EVENTS} eventType the type of event: step, ding
+ * @param {typeof EVENTS} eventType the type of event: step, halt, ding
  * @param {Function} done the function to call when the transition has completed
  */
 function triggerExerciseEvent(eventType, done ) {
@@ -357,19 +364,26 @@ function handleStepEvent(newState, oldState, stepOutput) {
 
     if ( !newStateStepView.length ) { return }
 
+    // here we unfocus all previous steps (hide them somewhat by turning text gray)
     exerciseSteps.removeClass('focused issue').find('.feedback').html('')
 
+    // view next step
     newStateStepView.addClass('focused')
     if ( stepOutput ) {
         if ( newState !== 'done' ) {
             newStateStepView.addClass('issue')
         }
         newStateFeedback.html( stepOutput )
-        newStateFeedback.addClass('flash')
+        newStateFeedback.addClass('flash') // todo: not sure what flash is, might be redundant
         setTimeout( function() {
             newStateFeedback.removeClass('flash')
         }, 70 )
     }
+}
+
+function handleHaltEvent() {
+    if (timer) timer.ding();
+    state.endTime = undefined;
 }
 
 function handleDingEvent() {
