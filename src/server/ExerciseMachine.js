@@ -14,9 +14,9 @@ var util = require('util'),
  * This class is an extension of EventEmitter:
  *  Event `step`: (newState, oldState, data)
  *  Event `halt`: (haltState)`
- *  If a time limit is specified, a `ding` event will be emitted when the timer runs out
+ *  If a time limit is specified, a `ding` event will be emitted when the timer runs out.
  *
- * @param {Object} config @see ExerciseMachineConfigExample.js for configuration parameters
+ * @param {Object} config see `gitstream-exercises/README.md` > Configuration File Format > `machine`
  * @param {String} repoPaths { String path: the repo short path, String fsPath: the fs path }
  * @param {String} exercisePath the path to the exercise directory
  * @param {EventBus} eventBus the EventBus on which to listen for repo events
@@ -50,7 +50,7 @@ _.extend( ExerciseMachine.prototype, {
      * Initializes this ExerciseMachine with the provided start state and starts the clock
      * This method is idempotent once the machine has been started
      * @param {String} startState the start state. Default: startState specified by config
-     * @param {Number} timeLimit the exercise time limit in seconds.
+     * @param {Number} timeLimit the exercise time limit in seconds. todo: remove
      *  Default: timeLimit specified by config
      * @return {ExerciseMachine} the current ExerciseMachine
      */
@@ -66,8 +66,7 @@ _.extend( ExerciseMachine.prototype, {
             })
             setTimeout( function() {
                 if ( !this.halted ) {
-                    this.emit('ding')
-                    this.halt()
+                    this.emit('ding') // todo: remove
                 }
             }.bind( this ), this._timeLimit * 1000 )
         }
