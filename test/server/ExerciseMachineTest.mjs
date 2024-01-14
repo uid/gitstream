@@ -294,43 +294,48 @@ describe('ExcerciseMachine', function() {
 
   // tests that the ding/timer done event is called when passed a timeLimit in the config
   it('testDingConfig', function (){
-    const em = new ExerciseMachine({
-      startState: 'test',
-      timeLimit: 0.1, // seconds
-      test: {}
-      }, repoPaths, exerciseDir, eventBus )
-
-    let failTimeout = setTimeout( function() {
-      assert( false )
-    }, 111 )
-
-    em.init()
-    assert( Math.abs( em.endTime - ( Date.now() + 0.1 * 1000 ) ) <= 1 )
-
-    em.on( 'ding', function() {
-      clearTimeout( failTimeout )
-      assert( true )
-    })
-  })
+    return new Promise((resolve, reject) => {
+      const em = new ExerciseMachine({
+        startState: 'test',
+        timeLimit: 0.1, // seconds
+        test: {}
+      }, repoPaths, exerciseDir, eventBus );
+  
+      let failTimeout = setTimeout( () => {
+        reject(new Error('Ding event did not fire in time'));
+      }, 111 );
+  
+      em.init();
+      assert( Math.abs(em.endTime - (Date.now() + 0.1 * 1000)) <= 1 );
+  
+      em.on('ding', function() {
+        clearTimeout(failTimeout);
+        resolve(); // Resolve the promise when the event is received
+      });
+    });
+  });
+  
 
 
   // tests that the ding/timer done event is called when passed a timeLimit in init
   it('testDingInit', function (){
-    const em = new ExerciseMachine({
-      timeLimit: 0.2, // seconds
-      test: {}
-    }, repoPaths, exerciseDir, eventBus )
-
-    let failTimeout = setTimeout( function() {
-      assert( false )
-    }, 111 )
-
-    em.init( 'test', 0.1 )
-    assert( Math.abs( em.endTime - ( Date.now() + 0.1 * 1000 ) ) <= 1 )
-
-    em.on( 'ding', function() {
-      clearTimeout( failTimeout )
-      assert( true )
-    })
-  })
+    return new Promise((resolve, reject) => {
+      const em = new ExerciseMachine({
+        timeLimit: 0.2, // seconds
+        test: {}
+      }, repoPaths, exerciseDir, eventBus );
+  
+      let failTimeout = setTimeout( () => {
+        reject(new Error('Ding event did not fire in time'));
+      }, 111 );
+  
+      em.init('test', 0.1);
+      assert( Math.abs(em.endTime - (Date.now() + 0.1 * 1000)) <= 1 );
+  
+      em.on('ding', function() {
+        clearTimeout(failTimeout);
+        resolve(); // Resolve the promise when the event is received
+      });
+    });
+  });
 })
