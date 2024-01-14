@@ -21,6 +21,11 @@ const EVENTS = {
     halt: 'halt'
 }
 
+const TIMELIMIT = 30 * 1000; // todo: remove
+// setting initial timeRemaining and timeLimit to be a default of 30 seconds, this is to disconnect it from 
+// being initiated by config setting. artifact of this is that client refresh = 30 seconds restarts
+
+
 const EVENTS_ENDPOINT = '/events'; // must be the same as server!
 
 // Global variables -- DYNAMIC
@@ -204,10 +209,11 @@ Timer.prototype = {
         this._timer.html( toTimeStr( Math.max( this.timeRemaining, 0 ) ) )
         this.timeRemaining = Math.max( this.timeRemaining - 1000, 0 )
     },
-    start: function( timeRemaining ) {
+    start: function() {
         this._stopped = false
         this._timer = $('.timer') // CSS class linked to timer button
-        this.timeRemaining = timeRemaining || Infinity
+        this.timeRemaining = TIMELIMIT
+
         this._update()
 
         // attempting to take care of what ding event does, without server having to ding for us
@@ -215,7 +221,6 @@ Timer.prototype = {
             console.log('times up!');
 
             if (timer) timer.timesUp();
-            state.endTime = undefined;
 
         }, this.timeRemaining); // although this value updates over time, this is 
         // fine because its the initial time given by server
@@ -236,6 +241,7 @@ Timer.prototype = {
     }
 }
 
+// html/css edits
 function renderExerciseView( exerciseName, conf, user ) {
     var stepIndex = 1,
         steps = _.map( conf.steps, function( stateDesc, stateName ) {
@@ -254,14 +260,12 @@ function renderExerciseView( exerciseName, conf, user ) {
             stepIndex: function() {
                 return stepIndex++
             },
-            timeLimit: toTimeStr( conf.timeLimit * 1000 ), // sec -> msec
+            timeLimit: TIMELIMIT,
             exerciseName: exerciseName
         },
         $rendered = $( exerciseTmp( templateParams ) )
 
-    if ( conf.timeLimit === undefined || conf.timeLimit === Infinity ) {
-        $rendered.find('.timer-wrap').css('display', 'none')
-    }
+    // always show time button, for now // todo: remove
 
     return $rendered
 }
@@ -309,7 +313,7 @@ radio.on( EVENTS.exerciseChanged, function( changeTo ) {
     // if ( setHash ) { changeHashSilent( newExercise ) }
 
     if ( exercises[ newExercise ] ) {
-        exerciseViewerConf = exercises[ newExercise ]()
+        exerciseViewerConf = exercises[ newExercise ]() // config from gitstream-exercises/exercises folder
         exerciseView = renderExerciseView( newExercise, exerciseViewerConf, state.user )
 
         $('.main-content').html( exerciseView )
@@ -317,7 +321,7 @@ radio.on( EVENTS.exerciseChanged, function( changeTo ) {
         if ( state.exerciseState ) {
             selectViewStep( state.exerciseState, exerciseView ).addClass('focused')
             timer = new Timer()
-            timer.start( state.timeRemaining )
+            timer.start()
             $('.exercise-steps').toggleClass( 'focused', true )
             $('.step-number').toggleClass( 'blurred', true )
             $('.step-desc').toggleClass( 'blurred', true )
@@ -339,14 +343,10 @@ radio.on( EVENTS.exerciseChanged, function( changeTo ) {
 function handleSync(newState) {
     var hashExercise = window.location.search.substring(1)
 
-    /* merge the server's state with the client state
-       only overwriting if new (non-null) value, endTime,
-       or timeRemaining is received */
-    _.forOwn( newState, function( v, k ) {
-        state[k] = ( v === 'null' || !v ? state[k] : v )
-        if ( k === 'endTime' || k === 'timeRemaining' ) {
-            state[k] = v
-        }
+    // Merge the server's state with the client's state.
+    _.forOwn( newState, function( value, key ) {
+        // Update state only if the value is non-null and non-falsy,
+        state[key] = (value === 'null' || !value ? state[key] : value);
     })
 
     radio.emit( EVENTS.exerciseChanged, {
@@ -391,10 +391,6 @@ function handleHaltEvent() {
     if (timer) timer.timesUp(); // this might not be needed because halt event can only happen if 
     // user changes site (so therefore previous page display shouldn't matter).
     // todo: remove? ^
-
-    state.endTime = undefined;
-    // I think this is needed because state stuff persists over refresh somehow (i think? otherwise
-    // not sure why removing halt altogether lead to refresh errors)
 }
 
 window.resetId = function() {
