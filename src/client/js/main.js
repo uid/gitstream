@@ -18,7 +18,6 @@ const EVENTS = {
     exerciseDone: 'exerciseDone',
     exerciseChanged: 'exerciseChanged',
     step: 'step',
-    ding: 'ding',
     halt: 'halt'
 }
 
@@ -122,12 +121,6 @@ events_WS.onmessage = function(event) {
             eventHandler = triggerExerciseEvent(EVENTS.step, handleStepEvent);
             eventHandler(...msgData);
             break;
-             
-        // Timer expiration: defocuses step and resets timer state
-        case EVENTS.ding:
-            eventHandler = triggerExerciseEvent(EVENTS.ding, handleDingEvent);
-            eventHandler(...msgData);
-            break;
 
         // Special case to share info about socket connection
         case 'ws':
@@ -174,7 +167,7 @@ $.get( '/user', function( userId ) {
 })
 
 /**
- * @param {typeof EVENTS} eventType the type of event: step, halt, ding
+ * @param {typeof EVENTS} eventType the type of event: step, halt
  * @param {Function} done the function to call when the transition has completed
  */
 function triggerExerciseEvent(eventType, done ) {
@@ -201,7 +194,7 @@ function Timer() {}
 Timer.prototype = {
     _update: function() {
         if ( this.timeRemaining === 0 ) {
-            return this.ding();
+            return this.timesUp();
         }
 
         if ( this.timeRemaining <= 10 * 1000 ) {
@@ -216,13 +209,26 @@ Timer.prototype = {
         this._timer = $('.timer') // CSS class linked to timer button
         this.timeRemaining = timeRemaining || Infinity
         this._update()
+
+        // attempting to take care of what ding event does, without server having to ding for us
+        setTimeout(() => {
+            console.log('times up!');
+
+            if (timer) timer.timesUp();
+            state.endTime = undefined;
+
+        }, this.timeRemaining); // although this value updates over time, this is 
+        // fine because its the initial time given by server
+
+
         if ( this.timeRemaining < Infinity ) {
-            this.timerInterval = setInterval( this._update.bind( this ), 1000 )
+            this.timerInterval = setInterval( this._update.bind( this ), 1000 ) // update button HTML every 1 second
         }
         this._timer.addClass('active')
+          
     },
     /** stop the timer and add the appropriate styles */
-    ding: function() {
+    timesUp: function() {
         this._timer.html('0:00').addClass('stress').addClass('dinged');
 
         this._stopped = true;
@@ -382,13 +388,13 @@ function handleStepEvent(newState, oldState, stepOutput) {
 }
 
 function handleHaltEvent() {
-    if (timer) timer.ding();
-    state.endTime = undefined;
-}
+    if (timer) timer.timesUp(); // this might not be needed because halt event can only happen if 
+    // user changes site (so therefore previous page display shouldn't matter).
+    // todo: remove? ^
 
-function handleDingEvent() {
-    if (timer) timer.ding();
     state.endTime = undefined;
+    // I think this is needed because state stuff persists over refresh somehow (i think? otherwise
+    // not sure why removing halt altogether lead to refresh errors)
 }
 
 window.resetId = function() {

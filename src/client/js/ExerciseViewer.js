@@ -16,7 +16,6 @@ function ExerciseViewer( config, eventEmitter ) {
         return new ExerciseViewer( config, eventEmitter )
     }
     var stateEntry,
-        onDing = config.onDing || function() {},
         onHalt = config.onHalt || function() {}
 
     this._states = {}
@@ -44,11 +43,6 @@ function ExerciseViewer( config, eventEmitter ) {
             doneCb(oldStateDef && oldStateDef[ newState ])
         }
         this._currentState = newState
-    }.bind( this ) )
-
-    eventEmitter.on( 'ding', function( cb ) { // todo: remove
-        onDing.call( config, this._currentState )
-        if ( cb ) { cb( this._currentState ) }
     }.bind( this ) )
 
     eventEmitter.on( 'halt', function( haltState, cb ) {

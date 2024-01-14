@@ -66,7 +66,7 @@ _.extend( ExerciseMachine.prototype, {
             })
             setTimeout( function() {
                 if ( !this.halted ) {
-                    this.emit('ding') // todo: remove
+                    console.log('a ding event used to be here') // todo: remove
                 }
             }.bind( this ), this._timeLimit * 1000 )
         }
@@ -102,6 +102,7 @@ _.extend( ExerciseMachine.prototype, {
         this._tearDown()
         this._state = newState
 
+        // if newState is null (only possible via halt._step defined below) then halt exercise
         if ( newState === null || newStateConf === null ) {
             this.halted = true
             if ( newState !== null ) { this.emit( 'step', newState, oldState ) }

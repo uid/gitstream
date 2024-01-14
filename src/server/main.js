@@ -43,7 +43,6 @@ const EVENTS = {
     exerciseDone: 'exerciseDone',
     exerciseChanged: 'exerciseChanged',
     step: 'step',
-    ding: 'ding',
     halt: 'halt'
 }
 
@@ -599,7 +598,7 @@ class ClientConnection {
     }
 
     /**
-     * Pings client every 55 seconds (< the default connection halt of 60 seconds).
+     * Pings client every 55 seconds (less than the standard Nginx connection halt of 60 seconds).
      * If no response, connection presumed dead
      */
     startHeartbeat() {
@@ -759,8 +758,11 @@ class ClientConnection {
                     exerciseState: exerciseState
                 })
     
-                if ( exerciseState && ( timeRemaining === undefined || timeRemaining > 0 ) ) {
+                if ( exerciseState) { // note: before this had a condition for timeRemaining being pos or inf
+                    // but I'm now allowing timeRemaining to also be neg, for the time being (debugging)
+
                     // there's already an excercise running. reconnect to it
+                    console.log('user refreshed page!')
                     this.exerciseMachine = this.createExerciseMachine( currentExercise )
                     this.exerciseMachine.init( exerciseState, timeRemaining / 1000 )
     
@@ -839,10 +841,14 @@ class ClientConnection {
         });
     }
 
-
+    // user changed exercise page
     handleExerciseChanged(newExercise) {
+
         if (this.exerciseMachine) { // stop the old machine
             this.exerciseMachine.halt()
+            // aka, previous exercise progress is wiped when user change to a new one
+            // todo: keep data persistent? possibly a bug tbh
+
             this.exerciseMachine = null
         }
     
@@ -900,13 +906,17 @@ class ClientConnection {
         }
     
         /**
-         * Called when one of 3 events happen (EVENTS.ding, EVENTS.halt, EVENTS.step)
+         * Called when one of these events happen: EVENTS.halt, EVENTS.step
+         * (see below with registerListener and when it's called)
          * and sends said event to the browser
          *  
          * @param {*} listenerDef 
          * @returns function
          */
-        const makeListenerFn = (listenerDef) => {      
+        const makeListenerFn = (listenerDef) => {
+            // send message via websocket and call upon helper function
+
+
             // todo: refactor this function 
             return (...args) => {
                 this.sendMessage(listenerDef.event, args);
@@ -926,7 +936,6 @@ class ClientConnection {
         }
     
         // set up listeners to send events to browser and update saved exercise state
-        registerListener(EVENTS.ding, unsetExercise);
         registerListener(EVENTS.halt, unsetExercise);
         registerListener(EVENTS.step, stepHelper);
     
