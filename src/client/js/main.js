@@ -21,18 +21,12 @@ const EVENTS = {
     halt: 'halt'
 }
 
-const TIMELIMIT = 30 * 1000; // todo: remove
-// setting initial timeRemaining and timeLimit to be a default of 30 seconds, this is to disconnect it from 
-// being initiated by config setting. artifact of this is that client refresh = 30 seconds restarts
-
-
 const EVENTS_ENDPOINT = '/events'; // must be the same as server!
 
 // Global variables -- DYNAMIC
 var exerciseEvents = eventEmitter({}), // internal client communication, with ExerciseViewer
     radio = eventEmitter({}), // internal client communication, within this file only
     state = {},
-    timer, // todo: remove
     viewer
 
 // ========= For Debugging =========
@@ -133,7 +127,8 @@ events_WS.onmessage = function(event) {
                 console.log('ws message received:', msg)
             break;
 
-        // Stop timer before expiration and reset timer state
+        // User changed exercise
+        // todo: handleHaltEvent doesn't do anything, safe to remove?
         case EVENTS.halt:
             eventHandler = triggerExerciseEvent(EVENTS.halt, handleHaltEvent);
             eventHandler(...msgData);
@@ -194,53 +189,6 @@ function toTimeStr( msec ) {
     return minutesStr + ':' + secondsStr
 }
 
-function Timer() {}
-
-Timer.prototype = {
-    _update: function() {
-        if ( this.timeRemaining === 0 ) {
-            return this.timesUp();
-        }
-
-        if ( this.timeRemaining <= 10 * 1000 ) {
-            this._timer.addClass('stress')
-        }
-
-        this._timer.html( toTimeStr( Math.max( this.timeRemaining, 0 ) ) )
-        this.timeRemaining = Math.max( this.timeRemaining - 1000, 0 )
-    },
-    start: function() {
-        this._stopped = false
-        this._timer = $('.timer') // CSS class linked to timer button
-        this.timeRemaining = TIMELIMIT
-
-        this._update()
-
-        // attempting to take care of what ding event does, without server having to ding for us
-        setTimeout(() => {
-            console.log('times up!');
-
-            if (timer) timer.timesUp();
-
-        }, this.timeRemaining); // although this value updates over time, this is 
-        // fine because its the initial time given by server
-
-
-        if ( this.timeRemaining < Infinity ) {
-            this.timerInterval = setInterval( this._update.bind( this ), 1000 ) // update button HTML every 1 second
-        }
-        this._timer.addClass('active')
-          
-    },
-    /** stop the timer and add the appropriate styles */
-    timesUp: function() {
-        this._timer.html('0:00').addClass('stress').addClass('dinged');
-
-        this._stopped = true;
-        clearInterval( this.timerInterval );
-    }
-}
-
 // html/css edits
 function renderExerciseView( exerciseName, conf, user ) {
     var stepIndex = 1,
@@ -260,12 +208,10 @@ function renderExerciseView( exerciseName, conf, user ) {
             stepIndex: function() {
                 return stepIndex++
             },
-            timeLimit: TIMELIMIT,
+            timeLimit: 30, // 30 seconds. todo: remove
             exerciseName: exerciseName
         },
         $rendered = $( exerciseTmp( templateParams ) )
-
-    // always show time button, for now // todo: remove
 
     return $rendered
 }
@@ -320,8 +266,6 @@ radio.on( EVENTS.exerciseChanged, function( changeTo ) {
 
         if ( state.exerciseState ) {
             selectViewStep( state.exerciseState, exerciseView ).addClass('focused')
-            timer = new Timer()
-            timer.start()
             $('.exercise-steps').toggleClass( 'focused', true )
             $('.step-number').toggleClass( 'blurred', true )
             $('.step-desc').toggleClass( 'blurred', true )
@@ -380,6 +324,7 @@ function handleStepEvent(newState, oldState, stepOutput) {
             newStateStepView.addClass('issue')
         }
         newStateFeedback.html( stepOutput )
+
         newStateFeedback.addClass('flash') // todo: not sure what flash is, might be redundant
         setTimeout( function() {
             newStateFeedback.removeClass('flash')
@@ -388,9 +333,6 @@ function handleStepEvent(newState, oldState, stepOutput) {
 }
 
 function handleHaltEvent() {
-    if (timer) timer.timesUp(); // this might not be needed because halt event can only happen if 
-    // user changes site (so therefore previous page display shouldn't matter).
-    // todo: remove? ^
 }
 
 window.resetId = function() {
