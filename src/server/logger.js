@@ -5,7 +5,8 @@ const CONFIG = {
     LOG_CONSOLE: false,
     LOG_FILE: false,
     LOG_DIR: '/opt/gitstream/logs',
-    WS_DEBUG: true
+    WS_DEBUG_IND: false, // individual user events
+    WS_DEBUG_SUM: true// summarized user events (aggregated stats or errors)
 }
 
 const WS_TYPE = {
@@ -217,7 +218,7 @@ module.exports = function( opts ) {
          * @returns nothing
          */
         ws: function(type, output){
-            if (CONFIG.WS_DEBUG) {
+            if (CONFIG.WS_DEBUG_IND) {
                 const strOutput = JSON.stringify(output);
                 strOutput.replace(/\"/g, ""); // remove extra quotation marks
 

@@ -560,7 +560,7 @@ class ClientConnection {
         // Start heartbeat with client (temporary measure to ensure connection persists)
         this.startHeartbeat();
 
-        if (logger.CONFIG.WS_DEBUG) this.sendMessage('ws', 'Hi from Server!');
+        if (logger.CONFIG.WS_DEBUG_IND) this.sendMessage('ws', 'Hi from Server!');
     }
 
     /**
@@ -615,16 +615,19 @@ class ClientConnection {
         
             // Special case to relay info about socket connection
             case 'ws':
-                console.log('ws message received: ', msg)
+                if (logger.CONFIG.WS_DEBUG_SUM)
+                    console.log('ws message received: ', msg)
                 break;
             
             // Special case to handle errors
             case 'err':
-                console.log('error event received:', msg)
+                if (logger.CONFIG.WS_DEBUG_SUM)
+                    console.log('error event received:', msg)
                 break;
 
             default:
-                console.error("error, unknown event: ", msgEvent);
+                if (logger.CONFIG.WS_DEBUG_SUM)
+                    console.error("error, unknown event: ", msgEvent);
         }
     }
 
@@ -655,7 +658,8 @@ class ClientConnection {
         activeConnections.push(this.userId);
 
         // Log the number of active connections
-        if (logger.CONFIG.WS_DEBUG) {
+        if (logger.CONFIG.WS_DEBUG_SUM) {
+            // todo: log these to MongoDB entry
             console.log(`\n[New connection] List of Active Users:\n${activeConnections.join('\n')}\n`);
         }        
     }
@@ -664,7 +668,7 @@ class ClientConnection {
         // Remove the connection from the array of active connections
         activeConnections = activeConnections.filter(userId => userId !== this.userId);
 
-        if (logger.CONFIG.WS_DEBUG) {
+        if (logger.CONFIG.WS_DEBUG_SUM) {
             // Log the number of active connections
             console.log(`\n[Connection Closed] List of Active Users:\n${activeConnections.join('\n')}\n`);
         }

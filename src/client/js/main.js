@@ -30,7 +30,7 @@ var exerciseEvents = eventEmitter({}), // internal client communication, with Ex
     viewer
 
 // ========= For Debugging =========
-const WS_DEBUG = true;
+const WS_DEBUG = false;
 
 const WS_TYPE = {
     STATUS: 'Status',
