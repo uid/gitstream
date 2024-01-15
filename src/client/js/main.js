@@ -208,7 +208,6 @@ function renderExerciseView( exerciseName, conf, user ) {
             stepIndex: function() {
                 return stepIndex++
             },
-            timeLimit: 30, // 30 seconds. todo: remove
             exerciseName: exerciseName
         },
         $rendered = $( exerciseTmp( templateParams ) )
@@ -259,7 +258,7 @@ radio.on( EVENTS.exerciseChanged, function( changeTo ) {
     // if ( setHash ) { changeHashSilent( newExercise ) }
 
     if ( exercises[ newExercise ] ) {
-        exerciseViewerConf = exercises[ newExercise ]() // config from gitstream-exercises/exercises folder
+        exerciseViewerConf = exercises[ newExercise ]() // config comes directly from gitstream-exercises/exercises folder, not server
         exerciseView = renderExerciseView( newExercise, exerciseViewerConf, state.user )
 
         $('.main-content').html( exerciseView )
