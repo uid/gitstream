@@ -35,7 +35,6 @@ const PATH_TO_REPOS = '/srv/repos',
 const app = express();
 
 const FIELD_EXERCISE_STATE = 'exerciseState',
-    FIELD_END_TIME = 'endTime',
     FIELD_CURRENT_EXERCISE = 'currentExercise'
 
 const EVENTS = {
@@ -748,37 +747,31 @@ class ClientConnection {
             }
     
             userKeyPromise.then( ( userKey ) => { // not used because is the same as `this.userKey`
-                var timeRemaining = clientState[ FIELD_END_TIME ] - Date.now() || undefined,
-                    exerciseState = clientState[ FIELD_EXERCISE_STATE ],
+                var exerciseState = clientState[ FIELD_EXERCISE_STATE ],
                     currentExercise = clientState[ FIELD_CURRENT_EXERCISE ]
     
                 // LOGGING
                 logger.log( logger.EVENT.SYNC, this.userId, currentExercise, {
-                    timeRemaining: timeRemaining,
                     exerciseState: exerciseState
                 })
     
-                if ( exerciseState) { // note: before this had a condition for timeRemaining being pos or inf
-                    // but I'm now allowing timeRemaining to also be neg, for the time being (debugging)
+                if ( exerciseState) {
 
                     // there's already an excercise running. reconnect to it
                     console.log('user refreshed page!')
                     this.exerciseMachine = this.createExerciseMachine( currentExercise )
-                    this.exerciseMachine.init( exerciseState, timeRemaining / 1000 )
+                    this.exerciseMachine.init( exerciseState)
     
                 } else if ( exerciseState ) { // last exercise has expired
-                    userMap.delete(this.userId, FIELD_EXERCISE_STATE, FIELD_END_TIME);
+                    userMap.delete(this.userId, [FIELD_EXERCISE_STATE]);
     
                     delete clientState[ FIELD_EXERCISE_STATE ]
-                    delete clientState[ FIELD_END_TIME ]
                 }
                 
                 clientState.user = {
                     key: this.userKey,
                     id: this.userId
                 }
-                clientState.timeRemaining = clientState.endTime - Date.now()
-                delete clientState[ FIELD_END_TIME ]
     
                 this.sendMessage(EVENTS.sync, clientState);
             })
@@ -792,7 +785,7 @@ class ClientConnection {
             logger.log( logger.EVENT.GO, this.userId, exerciseName )
     
             const handleExerciseState = ( err, state ) => {
-                var startState, endTime
+                var startState
                 
                 console.error('hgetall', this.userId, state);
     
@@ -806,11 +799,8 @@ class ClientConnection {
                 this.exerciseMachine = this.createExerciseMachine( exerciseName )
                 startState = this.exerciseMachine._states.startState
                 // set by EM during init, but init sends events. TODO: should probably be fixed
-                // note: time limit ultimately comes from parameter set in `gitstream-exercises>machines.js`
-                endTime = Date.now() + this.exerciseMachine._timeLimit * 1000
     
-                console.error('hmset', FIELD_EXERCISE_STATE, startState,
-                       FIELD_END_TIME, endTime );
+                console.error('hmset', FIELD_EXERCISE_STATE, startState);
                 
                 const handleError = function( err ) {
                     if ( err ) {
@@ -823,11 +813,8 @@ class ClientConnection {
                 }
                 userMap.expire(this.userId, CLIENT_IDLE_TIMEOUT, handleError);
                 userMap.set(this.userId, FIELD_EXERCISE_STATE, startState, handleError);
-                userMap.set(this.userId, FIELD_END_TIME, endTime, handleError);
     
                 state[ FIELD_EXERCISE_STATE ] = startState
-                state.timeRemaining = this.exerciseMachine._timeLimit * 1000
-                delete state[ FIELD_END_TIME ]
     
                 this.sendMessage(EVENTS.sync, state);
     
@@ -859,7 +846,7 @@ class ClientConnection {
         })
     
         userMap.expire(this.userId, CLIENT_IDLE_TIMEOUT, handleNewExercise);
-        userMap.delete(this.userId, [FIELD_EXERCISE_STATE, FIELD_END_TIME], handleNewExercise);
+        userMap.delete(this.userId, [FIELD_EXERCISE_STATE], handleNewExercise);
         userMap.set(this.userId, FIELD_CURRENT_EXERCISE, newExercise, handleNewExercise);
     
         // LOGGING
@@ -889,7 +876,7 @@ class ClientConnection {
         let exerciseMachine = new ExerciseMachine( emConf, repoPaths, exerciseDir, eventBus ) // local
     
         const unsetExercise = () => {
-            userMap.delete(this.userId, [FIELD_EXERCISE_STATE, FIELD_END_TIME]);
+            userMap.delete(this.userId, [FIELD_EXERCISE_STATE]);
         }
     
         const stepHelper = (newState) => {

@@ -14,13 +14,11 @@ var util = require('util'),
  * This class is an extension of EventEmitter:
  *  Event `step`: (newState, oldState, data)
  *  Event `halt`: (haltState)`
- *  If a time limit is specified, a `ding` event will be emitted when the timer runs out.
  *
  * @param {Object} config see `gitstream-exercises/README.md` > Configuration File Format > `machine`
  * @param {String} repoPaths { String path: the repo short path, String fsPath: the fs path }
  * @param {String} exercisePath the path to the exercise directory
  * @param {EventBus} eventBus the EventBus on which to listen for repo events
- * Once initialized, if a time limit is set, the end timestamp will be available as .endTime
  */
 function ExerciseMachine( config, repoPaths, exerciseDir, eventBus ) {
     if ( !config || !repoPaths || !exerciseDir || !eventBus ) {
@@ -29,8 +27,6 @@ function ExerciseMachine( config, repoPaths, exerciseDir, eventBus ) {
     if ( !(this instanceof ExerciseMachine) ) {
         return new ExerciseMachine( config, repoPaths, exerciseDir, eventBus )
     }
-
-    this._timeLimit = config.timeLimit // in seconds
 
     this._repo = repoPaths.path
     this._eventBus = eventBus
@@ -50,26 +46,13 @@ _.extend( ExerciseMachine.prototype, {
      * Initializes this ExerciseMachine with the provided start state and starts the clock
      * This method is idempotent once the machine has been started
      * @param {String} startState the start state. Default: startState specified by config
-     * @param {Number} timeLimit the exercise time limit in seconds. todo: remove
-     *  Default: timeLimit specified by config
      * @return {ExerciseMachine} the current ExerciseMachine
      */
-    init: function( startState, timeLimit ) {
+    init: function( startState ) {
         if ( this._state !== undefined ) { return }
 
-        this._timeLimit = timeLimit || this._timeLimit
         this.halted = false
-        if ( this._timeLimit && this._timeLimit < Infinity ) {
-            Object.defineProperty( this, 'endTime', {
-                value: Date.now() + this._timeLimit * 1000,
-                writable: false
-            })
-            setTimeout( function() {
-                if ( !this.halted ) {
-                    console.log('a ding event used to be here') // todo: remove
-                }
-            }.bind( this ), this._timeLimit * 1000 )
-        }
+
         this._step( startState || this._states.startState )
         return this
     },
