@@ -3,7 +3,13 @@
 
 include paths.mk
 
+REBUILD_EXERCISES=1 # yes by default
+
 build: clean
+
+ifeq ($(REBUILD_EXERCISES),1)
+	gitstream-exercises/createx.js
+endif
 
 ifeq ($(PACKAGING),)
 	npm install
