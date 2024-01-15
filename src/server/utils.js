@@ -4,7 +4,7 @@ var spawn = require('child_process').spawn,
     q = require('q'),
     mustache = require('mustache'),
     crypto = require('crypto'),
-    settings = require('../../settings'),
+    settings = require('../../src/secrets/settings'),
     utils
 
 utils = module.exports = {
@@ -200,7 +200,7 @@ utils = module.exports = {
                 var input = [ record ]
                 var sign = crypto.createSign('RSA-SHA256')
                 sign.update(JSON.stringify(input))
-                var privateKey = fs.readFileSync('gitstream.pem');
+                var privateKey = fs.readFileSync('src/secrets/gitstream.pem');
                 var signature = sign.sign(privateKey, 'base64')
                 
                 const url = omnivoreEndpoint.url;
