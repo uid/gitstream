@@ -27,7 +27,6 @@ const ExerciseMachine = require('./ExerciseMachine'),
 // Global variables -- CONSTANT
 const PATH_TO_REPOS = '/srv/repos',
     PATH_TO_EXERCISES = __dirname + '/exercises/',
-    CLIENT_IDLE_TIMEOUT = 60 * 60 * 1000, // 1 hr before
     PORT = 4242, // for WebSocket connection
     REPO_NAME_REGEX = /\/[a-z0-9_-]+\/[a-f0-9]{6,}\/.+.git$/,
     gitHTTPMount = '/repos'; // no trailing slash
@@ -100,38 +99,6 @@ let userMap = {
      * @param {Error} res - A result object if the operation succeeds.
      * @returns {void} - This function does not return anything (mutator function).
      */
-
-
-    /**
-     * Deletes user data after timeout expires. If user not in map, nothing happens.
-     *
-     * @param {string} userID - The ID of the user.
-     * @param {number} timeout - The timeout duration in milliseconds.
-     * @param {errorCallback} callback - The optional callback to be invoked if the operation fails.
-     * @returns {void} - This function does not return anything (mutator function).
-     */
-    expire(userID, timeout, callback=null) {
-        if (!this[userID]) {
-          if (callback)
-            return callback(null);
-          return
-        }
-        // report user data before expire was initialized
-        logger.userMapMod(this, userID, 'expire');
-
-        setTimeout(() => {
-          try {
-            delete this[userID];
-            logger.userMapMod(this, userID, 'expire');
-
-            if (callback)
-              return callback(null);
-          } catch (err) {
-            if (callback)
-              return callback(err);
-          }
-        }, timeout);
-    },
 
     /**
      * Sets a key-value pair for a user. If the user and/or key does not exist, they are created.
@@ -811,7 +778,6 @@ class ClientConnection {
                         })
                     }
                 }
-                userMap.expire(this.userId, CLIENT_IDLE_TIMEOUT, handleError);
                 userMap.set(this.userId, FIELD_EXERCISE_STATE, startState, handleError);
     
                 state[ FIELD_EXERCISE_STATE ] = startState
@@ -845,7 +811,6 @@ class ClientConnection {
             desc: 'userMap change exercise'
         })
     
-        userMap.expire(this.userId, CLIENT_IDLE_TIMEOUT, handleNewExercise);
         userMap.delete(this.userId, [FIELD_EXERCISE_STATE], handleNewExercise);
         userMap.set(this.userId, FIELD_CURRENT_EXERCISE, newExercise, handleNewExercise);
     
@@ -887,7 +852,6 @@ class ClientConnection {
                 newState: newState
             });
     
-            userMap.expire(this.userId, CLIENT_IDLE_TIMEOUT, updateState);
             userMap.set(this.userId, FIELD_EXERCISE_STATE, newState, updateState);
     
         }
