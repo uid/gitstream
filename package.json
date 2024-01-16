@@ -39,6 +39,7 @@
     "ws": "^8.14.2"
   },
   "devDependencies": {
+    "@types/q": "^1.5.8",
     "browserify": "^17.0.0",
     "crypto-js": "^4.1.1",
     "esbuild": "^0.19.5",
