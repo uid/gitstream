@@ -14,15 +14,15 @@ endif
 ifeq ($(PACKAGING),)
 	npm install
 endif
-	npm run sass
-	npm run browserify
+	npm run sass # move css client files to dist, in one compact main file
+	npm run browserify # move js client files to dist, in one compact main file
 
-	# collectstatic
+	# move static client files to dist
 	rsync -a $(SRC_CLIENT_STATIC) $(DIST_CLIENT)
 
-	# collectserver
-	rsync -a $(SRC_SERVER) $(DIST_SERVER)
-	npx tsc
+	# move all server files to dist
+	rsync -a --exclude='*.ts' $(SRC_SERVER) $(DIST_SERVER)
+	npx tsc # ts->js files will override existing js files moved from above
 
 	# linkexercises
 	ln -srf $(SRC_EXERCISES) $(DIST_EXERCISES)
