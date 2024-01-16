@@ -39,8 +39,8 @@ ifneq ($(DEST), $(SRC))
 	sudo cp -R node_modules $(DEST)
 	sudo cp nginx-deployed.conf $(DEST)
 	sudo cp -R gitstream-exercises git-angler git-http-backend $(DEST)
-	sudo cp src/secrets/gitstream.pem $(DEST)
-	sudo cp src/secrets/settings.js $(DEST)
+	sudo cp gitstream.pem $(DEST)
+	sudo cp settings.js $(DEST)
 endif
 	sudo touch $(GSLOGS)
 

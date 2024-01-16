@@ -20,7 +20,7 @@ const ExerciseMachine = require('./ExerciseMachine'),
     utils = require('./utils'),
     angler = require('git-angler'),
     exerciseConfs = require('gitstream-exercises'),
-    settings = require('../../src/secrets/settings'),
+    settings = require('../../settings'),
     { WS_TYPE, ...logger } = require('./logger')({ dbcon: mongodb }), // LOGGING
     user = require('./user')({ dbcon: mongodb });
 
