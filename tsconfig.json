@@ -1,35 +1,21 @@
 {
-  "compilerOptions": {
-    /* Projects */
-    // [no attributes for now]
-        
-    /* Language and Environment */
-    "target": "es2022",                  // Sets the JS version for output, ensuring compatibility with our current Node.js env
-    
-    /* Modules */
-    "module": "commonjs",                // Matches the module system in `package.json`
-
-    /* JavaScript Support */
-    "allowJs": true,                     // Enables the inclusion of JS files in the project, necessary for gradual conversion
-    "checkJs": false,                    // Avoids type-checking in existing JS files, preventing immediate errors during transition
-
-    /* Emit */
-    "rootDir": "src",                  // Designates the root directory of our source files
-    "outDir": "dist",                  // Specifies the directory for the compiled JS output, aligning with our build process
-    "noImplicitAny": false,              // Allows implicit 'any' types, offering flexibility as we start adding types to our code
-
-    /* Interop Constraints */
-    "esModuleInterop": true,             // Enhances compatibility between CommonJS and ES Module formats, useful for mixed JS/TS codebases.
-
-    /* Type Checking */
-    "strict": false,                     // Reduces the strictness of type-checking, making the initial transition less error-prone
-
-    /* Completeness */
-    "skipLibCheck": true,                // Skips type checking for declaration files, speeding up the compilation process during the transition
-  },
-
   "include": [
-    "src/**/*"                         // Includes all files in the src directory for compilation
-  ]
-}
+    "src/**/*.ts"                         // Includes all TS files in the src directory for compilation
+  ],
 
+  "compilerOptions": {
+    "strict": true,                     // Reduces the strictness of type-checking, making the initial transition less error-prone
+    "rootDir": "src",
+    "outDir": "dist",                  // Specifies the directory for the compiled JS output, aligning with our build process
+
+    // the rest are from praxistutor
+    "target": "esnext",
+    "module": "nodenext",
+    "sourceMap": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "downlevelIteration": true,
+    "forceConsistentCasingInFileNames": false,
+    "noImplicitAny": true
+  }
+}
