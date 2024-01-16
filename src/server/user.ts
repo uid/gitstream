@@ -1,20 +1,28 @@
 import crypto from 'crypto';
 import q from 'q';
+import { Collection, Db } from 'mongodb';
+
+interface User {
+    id: string;
+    key: string;
+    created: number;
+}
 
 console.error('using user.ts');
-module.exports = function( opts: any ) {
-    var dbcon = opts.dbcon
+
+module.exports = function(opts: {dbcon: Promise<Db>}) {
+    const dbcon = opts.dbcon;
 
     return {
         getUserKey: function( userId: any ) {
             return dbcon.then( function( db:any ) {
-                var users = db.collection('users')
+                const users: Collection<User> = db.collection('users')
                 return q.nfcall( users.findOne.bind( users ), { id: userId }, { key: true } )
-                .then( function( user ) {
+                .then( function( user: User | null) {
                     let newUserKey: string;
 
                     if ( user ) {
-                        return (<any>q).fulfill( (<any>user).key )
+                        return (<any>q).fulfill(user.key ) // todo: fix, not sure how to remove 'any'
                     } else {
                         newUserKey = crypto.pseudoRandomBytes(20).toString('hex'),
                         user = {
@@ -28,17 +36,18 @@ module.exports = function( opts: any ) {
                             return newUserKey
                         })
                     }
-                })
+                } as (value: unknown) => void) // todo: fix.
+                // Type assertion. Can't normally add type annotation here b/c q.nfcall expects param of type 'unknown' 
             })
         },
 
         verifyMac: function( userId: string, mac: string, macMsg: string ) {
-            return dbcon.then( function( db: any ) {
-                var users = db.collection('users')
+            return dbcon.then( function( db: Db ) {
+                const users: Collection<User> = db.collection('users')
                 return q.nfcall( users.findOne.bind( users ), { id: userId }, { key: true } )
             })
-            .then( function( user: any ) {
-                var hmac
+            .then( function( user: User | null ) {
+                let hmac;
 
                 if ( !user ) {
                     throw Error('No user with id ' + userId)
@@ -51,7 +60,8 @@ module.exports = function( opts: any ) {
                 if ( mac.length < 6 || hmac.indexOf( mac ) !== 0 ) {
                     throw Error('HMACs do not match')
                 }
-            })
+            } as (value: unknown) => void) //  todo: fix
+            // Type assertion. Can't normally add type annotation here b/c q.nfcall expects param of type 'unknown'
         },
 
         createMac: function( key: string, macMsg: string, length: number ) {
