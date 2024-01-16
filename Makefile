@@ -22,6 +22,7 @@ endif
 
 	# collectserver
 	rsync -a $(SRC_SERVER) $(DIST_SERVER)
+	npx tsc
 
 	# linkexercises
 	ln -srf $(SRC_EXERCISES) $(DIST_EXERCISES)

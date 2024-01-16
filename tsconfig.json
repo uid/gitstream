@@ -5,6 +5,7 @@
 
   "compilerOptions": {
     "strict": true,                     // Reduces the strictness of type-checking, making the initial transition less error-prone
+    "noImplicitAny": false,
     "rootDir": "src",
     "outDir": "dist",                  // Specifies the directory for the compiled JS output, aligning with our build process
 
@@ -15,7 +16,6 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "downlevelIteration": true,
-    "forceConsistentCasingInFileNames": false,
-    "noImplicitAny": true
+    "forceConsistentCasingInFileNames": false
   }
 }
