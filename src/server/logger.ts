@@ -4,36 +4,35 @@ import path from 'path';
 
 console.error('using logger.ts');
 
-
 const CONFIG = {
-    LOG_CONSOLE: true,
+    LOG_CONSOLE: false,
     LOG_FILE: false,
     LOG_DIR: '/opt/gitstream/logs',
     WS_DEBUG_IND: false, // individual user events
     WS_DEBUG_SUM: true // summarized user events (aggregated stats or errors)
 }
 
+// todo: remove once main.js -> main.ts done
 const WS_TYPE = {
     STATUS: 'Status',
     SENT: 'Sent',
     RECEIVED: 'Received'
 }
 
-// todo: make main.js use the enum
-enum WS_Type {
+export enum WebSocketEvent {
     STATUS = 'Status',
     SENT = 'Sent',
     RECEIVED = 'Received'
 }
 
-enum CLI_COL {
-    MAG = '\x1b[35m',
-    RST = '\x1b[0m',
-    GRN = '\x1b[32m',
-    BLU = '\x1b[34m',
+enum ConsoleColor {
+    MAG = '\x1b[35m', // magenta
+    RST = '\x1b[0m',  // reset
+    GRN = '\x1b[32m', // green
+    BLU = '\x1b[34m', // blue
 };
 
-enum EventType {
+export enum EventType {
     NEW_USER = 'NEW_USER',
     INIT_CLONE = 'INIT_CLONE',
     QUIT = 'QUIT',
@@ -44,7 +43,7 @@ enum EventType {
     ERROR = 'ERROR'
 }
 
-enum ErrorType {
+export enum ErrorType {
     GIT_HTTP = 'GIT_HTTP',
     CREATE_REPO = 'CREATE_REPO',
     ON_RECEIVE = 'ON_RECEIVE', 
@@ -97,12 +96,12 @@ if (CONFIG.LOG_FILE){
 /**
  * Log content to a specified file.
  *  
- * @param {string} directory - The directory where the file should be placed.
- * @param {string} name - The name for the log file (aka before `.log`)
- * @param {string} content - The content to be logged.
- * @returns {void} Nothing.
+ * @param directory - The directory where the file should be placed.
+ * @param name - The name for the log file (aka before `.log`)
+ * @param content - The content to be logged.
+ * @returns - Nothing.
  */
-function logToFile(directory: string, name: string, content: string | Uint8Array): void {
+function logToFile(directory: string, name: string, content: string): void {
     const filePath = path.join(directory, `${name}.log`);
 
     // If the name is not found, create the file and record it.
@@ -119,7 +118,7 @@ function logToFile(directory: string, name: string, content: string | Uint8Array
  * Format a field and its content with a specified width.
  * Truncates content if it exceeds the specified width.
  * 
- * @param field- The field name.
+ * @param field - The field name.
  * @param content - The content associated with the field.
  * @param width - The desired width for the field. Default 20.
  * @returns - The formatted string with proper padding.
@@ -241,18 +240,18 @@ module.exports = function (opts: {dbcon: Q.Promise<Db>}) {
 
             const callerInfo = getCallerInfo(2);
 
-            let location = `${CLI_COL.GRN}[${callerInfo.fileName}:${callerInfo.lineNum}]` +
-                             `${CLI_COL.MAG}[${type}]${CLI_COL.RST}`;
+            let location = `${ConsoleColor.GRN}[${callerInfo.fileName}:${callerInfo.lineNum}]` +
+                             `${ConsoleColor.MAG}[${type}]${ConsoleColor.RST}`;
 
             const userInfo = userMap[userID] ?? {};
-            let contentAll: string = CLI_COL.BLU;
+            let contentAll: string = ConsoleColor.BLU;
 
             Object.keys(userInfo).forEach(field => {
                 const formattedEntry = formatField(field, userInfo[field]);
                 contentAll += formattedEntry + '\n';
             });
 
-            contentAll += CLI_COL.RST;
+            contentAll += ConsoleColor.RST;
 
             const output = `[User Map][${userID}]\n${location}\n${contentAll}`;
             
@@ -266,11 +265,11 @@ module.exports = function (opts: {dbcon: Q.Promise<Db>}) {
         /**
          * Log WebSocket events
          * 
-         * @param type of WebSocket
-         * @param output any object
-         * @returns nothing
+         * @param type - of WebSocket
+         * @param output - any object
+         * @returns - nothing
          */
-        ws: function(type: WS_Type, output: any){ // todo: standardize type of output
+        ws: function(type: WebSocketEvent, output: any){ // todo: standardize type of output
             if (CONFIG.WS_DEBUG_IND) {
                 const strOutput = JSON.stringify(output);
                 strOutput.replace(/\"/g, ""); // remove extra quotation marks
