@@ -39,6 +39,7 @@
     "ws": "^8.14.2"
   },
   "devDependencies": {
+    "@types/mustache": "^4.2.5",
     "@types/q": "^1.5.8",
     "browserify": "^17.0.0",
     "crypto-js": "^4.1.1",
