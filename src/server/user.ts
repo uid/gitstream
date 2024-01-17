@@ -10,12 +10,12 @@ interface User {
 
 console.error('using user.ts');
 
-module.exports = function(opts: {dbcon: Promise<Db>}) {
+module.exports = function(opts: {dbcon: Q.Promise<Db>}) {
     const dbcon = opts.dbcon;
 
     return {
-        getUserKey: function( userId: any ) {
-            return dbcon.then( function( db:any ) {
+        getUserKey: function( userId: any ) { // todo: update userId's type
+            return dbcon.then( function( db:Db ) { 
                 const users: Collection<User> = db.collection('users')
                 return q.nfcall( users.findOne.bind( users ), { id: userId }, { key: true } )
                 .then( function( user: User | null) {
@@ -33,7 +33,7 @@ module.exports = function(opts: {dbcon: Promise<Db>}) {
 
                         return q.nfcall( users.insertOne.bind( users ), user )
                         .then( function() {
-                            return newUserKey
+                            return newUserKey;
                         })
                     }
                 } as (value: unknown) => void) // todo: fix.
