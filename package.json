@@ -39,6 +39,8 @@
     "ws": "^8.14.2"
   },
   "devDependencies": {
+    "@types/diff": "^5.0.9",
+    "@types/glob": "^8.1.0",
     "@types/mustache": "^4.2.5",
     "@types/q": "^1.5.8",
     "browserify": "^17.0.0",
