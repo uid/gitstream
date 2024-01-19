@@ -22,7 +22,7 @@ type FileSpec = {
 };
   
 
-type CommitSpec = {
+export type CommitSpec = {
     msg: string;
     author?: string; // Optional because a default value should be set
     date?: Date; // Optional because a default value should be set
@@ -31,7 +31,7 @@ type CommitSpec = {
         // if `FileSpec`, refers to a FileSpec
 };
 
-export let utils = {
+let utils = module.exports = {
     /**
      * Converts events in dash-delimited format to properties of the form onEventName
      * @param prefix - the prefix of the propified events. Default: on
