@@ -31,7 +31,7 @@ type CommitSpec = {
         // if `FileSpec`, refers to a FileSpec
 };
 
-let utils = module.exports = {
+export let utils = {
     /**
      * Converts events in dash-delimited format to properties of the form onEventName
      * @param prefix - the prefix of the propified events. Default: on
@@ -161,7 +161,7 @@ let utils = module.exports = {
      * @return - a promise on the completion of the commands
      */
         addCommit: function( repo: string, srcBase: string = '/', spec: CommitSpec ): Q.Promise<any> {
-        var srcPath = path.join.bind( null, srcBase ),
+        const srcPath = path.join.bind( null, srcBase ),
             destPath = path.join.bind( null, repo ),
             commitAuthor = spec.author ||'GitStream <gitstream@csail.mit.edu>',
             commitDate = ( spec.date || new Date() ).toISOString(),

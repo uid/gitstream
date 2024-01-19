@@ -1,89 +1,107 @@
 // This module provides utilities that are exposed as `this` to the functions in the exercise confs
 
+import diff from 'diff'
+import fs from 'fs'
+import path from 'path'
+import q from 'q'
+import glob from 'glob'
+import { CommitSpec } from './utils'
+import { errors } from 'openid-client'
+import Q from 'q'
+
+var utils = require('./utils'); // todo: use imports once we use ES6
+
+console.error('using exerciseUtils.ts');
+
 /* The ShadowBranch tracks (shadows) the tree of the local repository just
-before andafter a commit. It is not valid after any other operation. */
+before and after a commit. It is not valid after any other operation. */
+const SHADOWBRANCH = 'refs/gitstream/shadowbranch'
 
-var diff = require('diff'),
-    fs = require('fs'),
-    path = require('path'),
-    q = require('q'),
-    glob = require('glob'),
-    utils = require('./utils'),
-
-    SHADOWBRANCH = 'refs/gitstream/shadowbranch'
-
+type Config = {
+    repoDir: string;
+    exerciseDir: string;
+  };
+  
 // TODO: write tests
-module.exports = function( config ) {
+module.exports = function( config: Config ) { // todo: change into `export` once we get  ES6 module support
     // a new one of these is made for each new ExerciseMachine
-    var repoDir = config.repoDir,
+    const repoDir = config.repoDir,
         exerciseDir = config.exerciseDir,
         exercisePath = path.resolve( exerciseDir ), // the path to the exercise source dir
         repoPath = path.resolve( repoDir ), // the path to the real repo
-        git = utils.git.bind( null, repoPath ),
-        shadowFn = function( fn, args ) {
-            var callback,
-                result
+        git = utils.git.bind( null, repoPath )
+
+    // todo: this function is weird, take a closer look
+    const shadowFn = function( fn: Function, args: any ): Q.Promise<any> { // todo: fix use of any
+            let callback: (reason: any, value: any) => void = () => {}; // todo: fix, kinda jank
+            let result: any; // todo: fix use of any
+            
             if ( typeof args[ args.length - 1 ] === 'function' ) {
                 callback = args.pop()
             }
 
             return git( 'checkout', SHADOWBRANCH )
-            .then( fn.apply.bind( fn, null, args ) )
-            .then( function( output ) {
-                result = output
-                return git( 'checkout', 'main' )
-            })
-            .then( function() {
-                return result
-            })
-            .nodeify( callback )
-        },
-        exUtils
+                .then( fn.apply.bind( fn, null, args ) )
+                .then( function( output: any ) { // todo: wait, this will be fixed once utils becomes an import
+                    result = output
+                    return git( 'checkout', 'main' )
+                })
+                .then( function() {
+                    return result
+                })
+                .nodeify( callback )
+        }
 
-    exUtils = {
+    const exUtils = {
         /**
          * Executes a git command
-         * @param {String} cmd the git command to run
-         * @param {String|Array} args the arguments to pass to the command
-         * @param {Function} callback Optional. (err, data)
-         * @return {Promise} if no callback is given
+         * @param cmd - the git command to run 
+         * @param args - the argument(s) to pass to the command
+         * @param callback - Optional callback. (err, data)  
+         * @returns a promise if no callback is given
          */
-        git: function() {
-            var args = Array.prototype.slice.call( arguments ),
-                callback = args.length >= 3 ? args.pop() : undefined
-            return git.apply( null, arguments ).nodeify( callback )
+        git: function (cmd: string, args: string[] | string, callback ?: (err: any, data: any) => void): Q.Promise<any> | void {
+            const argsArray = Array.isArray(args) ? args : args.trim().split(' ');
+            
+            if (callback) {
+                return utils.git(repoPath, cmd, argsArray).nodeify(callback);
+            }
         },
-
+        
         /**
          * Returns a path to a given file relative to the exercise resources directory
-         * @param {String} filePath the relative path to the file
-         * @return {String} the path to the requested file
+         * @param filePath - the relative path to the file
+         * @return the path to the requested file
          */
-        resourceFilePath: function( filePath ) {
-            return path.join( exercisePath, filePath )
+        resourceFilePath: function(filePath: string): string {
+            return path.join(exercisePath, filePath)
         },
 
         /**
          * Compares a file in an exercise repo with a the reference file in the exercise directory
-         * @param {String} verifyFilePath the path of the file to validate
+         * @param verifyFilePath - the path of the file to validate
          *  - relative to the exercise repo
-         * @param {String} referenceFilePath the path of the file against which to validate
+         * @param referenceFilePath - the path of the file against which to validate
          *  - relative to the exercsie directory
-         * @param {Function} callback Optional. err, diff or null if files identical
-         * @return {Promise} if no callback is given
+         * @param callback Optional. err, diff or null if files identical
+         * @return a promise, if no callback is given
          */
-        compareFiles: function( verifyFilePath, referenceFilePath, callback ) {
-            var rfc = q.nfcall.bind( fs.readFile ),
-                pathToVerified = path.join( repoDir, verifyFilePath ),
-                pathToReference = path.join( exerciseDir, referenceFilePath )
+        compareFiles: function(verifyFilePath: string, referenceFilePath: string, 
+            callback?: (reason: any, value: any) => void): Q.Promise<any> { // todo: remove any            
+            // todo: fix callback needing to be a default of blank
+            const pathToVerified = path.join(repoDir, verifyFilePath),
+                pathToReference = path.join(exerciseDir, referenceFilePath);
 
-            return q.all([ rfc( pathToVerified ), rfc( pathToReference ) ])
-            .spread( function( verifyFile, referenceFile ) {
-                var fileDiff = diff.diffLines( verifyFile, referenceFile ),
-                    diffp = fileDiff.length !== 1 || fileDiff[0].added || fileDiff[0].removed
-                return diffp ? fileDiff : null
+            return q.all([
+                q.nfcall(fs.readFile, pathToVerified, 'utf8'),
+                q.nfcall(fs.readFile, pathToReference, 'utf8')
+            ])
+            .spread(function(verifyFile, referenceFile) {
+                var fileDiff = diff.diffLines(verifyFile, referenceFile),
+                    diffp = fileDiff.length !== 1 || fileDiff[0].added || fileDiff[0].removed;
+                return diffp ? fileDiff : null;
             })
-            .nodeify( callback )
+            .nodeify(callback || (() => {})); // todo: fix, kinda weird
         },
 
         /**
@@ -97,158 +115,178 @@ module.exports = function( config ) {
 
         /**
          * Diffs two refs.
-         * @param {String} from the ref to be compared against
-         * @param {String} to the compared ref
-         * @param {Function} callback Optional. (err, diff)
-         * @return {Promise} if no callback is given
+         * @param from - the ref to be compared against
+         * @param to - the compared ref
+         * @param callback Optional. (err, diff)
+         * @return a promise, if no callback is given
          * If `to` is undefined, `from` will be compared to its parent(s).
          * If both `from` and `to` are undefined, `from` will default to HEAD
          */
-        diff: function( from, to ) {
-            var diffArgs = [ '-p' ],
-                callback = arguments[ arguments.length - 1 ],
-                cbfnp = typeof callback === 'function' ? 1 : 0
+        diff: function( from?: string, to?: string, callback ?: (err: any, diff: any) => void ): Q.Promise<any> {
+            const diffArgs = [ '-p' ]
 
-            diffArgs.push( arguments.length < 1 + cbfnp ? 'HEAD' : from )
+            const cbfnp: number = typeof callback === 'function' ? 1 : 0; // I think this stands for call back function present?
+
+            diffArgs.push( arguments.length < 1 + cbfnp ? 'HEAD' : from as string); // // todo: fix
             if ( arguments.length >= 2 + cbfnp ) {
-                diffArgs.push(to)
+                diffArgs.push(to as string) // todo: fix
             }
 
             return git( 'diff-tree', diffArgs ).nodeify( cbfnp ? callback : null )
+            
+
+            // todo: verify that this refactoring is correct before swapping 
+
+            // const diffArgs = ['-p'];
+
+            // if (from === undefined) {
+            //     diffArgs.push('HEAD');
+            // } else {
+            //     diffArgs.push(from);
+            //     if (to !== undefined) {
+            //         diffArgs.push(to);
+            //     }
+            // }
+        
+            // return git('diff-tree', diffArgs).nodeify(callback || (() => {})); // todo: fix, kinda weird
         },
 
         /**
          * diff ref shadowbranch
-         * @param {String} ref the real ref. Default: HEAD
-         * @param {Function} callback Optional. (err, diff)
-         * @return {Promise} if no callback is given
+         * @param ref - the real ref. Default: 'HEAD'
+         * @param callback - Optional. (err, diff)
+         * @return a promise if no callback is given
          */
         diffShadow: function() {
-            var callback = arguments[ arguments.length - 1 ],
+            const callback = arguments[ arguments.length - 1 ],
                 cbfnp = typeof callback === 'function' ? 1 : 0,
                 ref = arguments.length < 1 + cbfnp ? 'HEAD' : arguments[0]
 
             return git( 'diff-tree', [ '-p', ref, SHADOWBRANCH ] )
             .nodeify( cbfnp ? callback : null )
         },
+        
+        // todo: not sure why this refactoring doesn't work
+        // diffShadow: function(ref: string = 'HEAD', callback?: (err: any, diff: any) => void): q.Promise<any> { // todo: any
+        //     return git( 'diff-tree', [ '-p', ref, SHADOWBRANCH ] )
+        //     .nodeify(  callback || (() => {}) ) // todo: fix, kinda weird
+        // },
 
         /**
          * Determines whether a file contains a specified string
-         * @param {String} filename the path to the searched file
-         * @param {String|RegExp} needle the String or RegExp for which to search
-         * @param {Function} callback Optional. (err, Boolean containsString)
-         * @return {Promise} if no callback is given
+         * @param filename the path to the searched file
+         * @param needle the String or RegExp for which to search
+         * @param callback Optional. (err, Boolean containsString)
+         * @return a promise if no callback is given
          */
-        fileContains: function( filename, needle, callback ) {
-            var needleRegExp = needle instanceof RegExp ? needle : new RegExp( needle )
+        fileContains: function(filename: string, needle: string | RegExp, callback?: (err: any, diff: any) => void) {
+            const needleRegExp = needle instanceof RegExp ? needle : new RegExp(needle)
+            
             return q.nfcall( fs.readFile, path.join( repoPath, filename ) )
-            .then( function( data ) {
+            .then( function( data: Buffer ) {
                 return needleRegExp.test( data.toString() )
-            })
-            .nodeify( callback )
+            } as (value: unknown) => boolean) // bc function wants data to be of type unknown
+            .nodeify( callback || (() => {}) ) // todo: fix, kinda weird
         },
 
         /**
          * Determines whether a shadowed file contains a specified string
+         * @param args - A list of arguments to pass to the `fileContains` function.
          * @see fileContains and the description of shadow branch, above
          */
-        shadowFileContains: function() {
-            return shadowFn( exUtils.fileContains, Array.prototype.slice.call( arguments ) )
+        shadowFileContains: function(...args: any[]) {
+            return shadowFn( exUtils.fileContains, args)
         },
 
         /**
          * Adds the specified files (possibly templated) to the given repo and commits them
-         * @param {String} repo the path to the repository. Dest files are relative to the repo root
-         * @param {String} srcBase path to which src files paths are relative. Default: /
-         * @param {Object} spec the specification for the commit
-         *  spec: {
-         *      msg: String,
-         *      author: String,
-         *      date: Date,
-         *      files: [ 'filepath', { src: 'path', dest: 'path', template: (Object|Function) } ],
-         *      // note: template and dest are optional in long-form file specs
-         *   }
-         * @param {Function} callback Optional. err
-         * @return {Promise} if no callback is given
+         * @param repo - the path to the repository. Dest files are relative to the repo root
+         * @param srcBase - path to which src files paths are relative. Default: `/`
+         * @param spec the specification for the commit
+         * @param callback Optional. err
+         * @return a promise if no callback is given
          */
-        addCommit: function( spec, callback ) {
-            return utils.addCommit( repoPath, exercisePath, spec ).nodeify( callback )
+        addCommit: function(repo: string = '.', srcBase: string = '/', spec: CommitSpec, callback?: (err: any) => void ): Q.Promise<any> { // todo: any. also, the default val for repo may be wrong
+            // if default values from above (which they did, in the original version)
+            if (repoPath) repo = repoPath;
+            if (exercisePath) srcBase = exercisePath;
+
+            return utils.addCommit( repo, srcBase, spec ).nodeify( callback || (() => {}) ) // todo: fix
         },
 
         /**
          * Returns the log message for a specified commit
-         * @param {String} ref the ref to check. Default: HEAD
-         * @param {Function} callback Optional. (err, String logMsg)
-         * @return {Promise} if no callback is given
+         * @param ref - the ref to check. Default: HEAD
+         * @param callback - Optional. (err, String logMsg)
+         * @return a promise if no callback is given
          */
-        getCommitMsg: function() {
-            var callback = arguments[ arguments.length - 1 ],
-                cbfnp = typeof callback === 'function' ? 1 : 0,
-                ref = arguments[ arguments.length - 1 - cbfnp ] || 'HEAD'
-
+        getCommitMsg: function(ref: string = 'HEAD', callback?: (err: any, msg: string) => void): Q.Promise<any> { // todo: any
             return git( 'log', [ '-n1', '--pretty="%s"', ref ] )
-            .then( function( msg ) {
-                return /"(.*)"\s*/.exec( msg )[1]
+            .then( function( msg: any ) { // todo: wait, this will be fixed once utils becomes an import
+                const match = /"(.*)"\s*/.exec(msg);
+                if (match) {
+                    return match[1];
+                } else {
+                    // Handle the case where the regex does not match
+                    throw new Error("Regex match failed");
+                }
             })
-            .nodeify( cbfnp ? callback : null )
+            .nodeify(callback || (() => {}) ) // todo: fix
         },
 
         /**
          * Parses the commit message by filtering comments and stripping whitespace
-         * @param {String} commitMsg the commit message
-         * @return {Array} the lines of the commit msg excluding those starting with a #
+         * @param commitMsg the commit message
+         * @return the lines of the commit msg excluding those starting with a #
          */
-        parseCommitMsg: function( commitMsg ) {
+        parseCommitMsg: function(commitMsg: string): string[] {
             return commitMsg.split( /\r?\n/ ).filter( function( line ) {
                 return line.charAt(0) !== '#' && line.length > 0
-            }).map( function( line ) {
+            }).map(function( line ) {
                 return line.trim()
             })
         },
 
         /**
          * Determines whether a commit log message contains a specified string
-         * @param {String|RegExp} needle the String or RegExp for which to search in the log message
-         * @param {String} ref the ref to check. Default: HEAD
+         * @param needle the String or RegExp for which to search in the log message
+         * @param ref the ref to check. Default: HEAD
          * @param {Function} callback Optional. (err, Boolean containsString)
          * @return {Promise} if no callback is given
          */
-        commitMsgContains: function( needle ) {
-            var callback = arguments[ arguments.length - 1 ],
-                cbfnp = typeof callback === 'function' ? 1 : 0,
-                ref = arguments.length >= 2 + cbfnp ? arguments[1] : 'HEAD',
-                needleRegExp = needle instanceof RegExp ? needle : new RegExp( needle )
+        commitMsgContains: function(needle: string | RegExp , ref: string = 'HEAD', callback: any): Q.Promise<any> { // todo: any
+            const needleRegExp = needle instanceof RegExp ? needle : new RegExp(needle)
 
-            return exUtils.getCommitMsg( ref )
-            .then( function( msg ) {
-                return needleRegExp.test( msg )
+            return exUtils.getCommitMsg(ref)
+            .then( function(msg) {
+                return needleRegExp.test(msg)
             })
-            .nodeify( cbfnp ? callback : null )
+            .nodeify(callback)
         },
 
         /**
          * Performs a glob match in the repo directory
-         * @param {String} fileGlob the glob to match against
-         * @param {Function} callback Optional. (err, [String]: matching filenames)
-         * @return {Promise} if no callback is given
+         * @param fileGlob the glob to match against
+         * @param callback Optional. (err, [String]: matching filenames)
+         * @return a promise if no callback is given
          */
-        filesMatching: function( fileGlob, callback ) {
+        filesMatching: function(fileGlob: string, callback?: any): Q.Promise<any> { // todo: any
             return q.nfcall( glob, fileGlob, { cwd: repoDir, root: repoDir, silent: true } )
             .nodeify( callback )
         },
 
-        shadowFilesMatching: function() {
-            return shadowFn( exUtils.filesMatching, Array.prototype.slice.call( arguments ) )
+        shadowFilesMatching: function(... args: any[]) {
+            return shadowFn( exUtils.filesMatching, args)
         },
 
         /**
          * Checks for the existence of a file in the repo
-         * @param {String} fileGlob a glob describing the the file
-         * @param {Function} callback Optional. (err, Boolean fileExists)
-         * @return {Promise} if no callback is given
+         * @param fileGlob a glob describing the the file
+         * @param callback Optional. (err, Boolean fileExists)
+         * @return a promise if no callback is given
          */
-        fileExists: function( fileGlob, callback ) {
-            return exUtils.filesMatching( fileGlob )
+        fileExists: function(fileGlob: string, callback: any ): Q.Promise<any> { // todo: any
+            return exUtils.filesMatching(fileGlob)
             .then( function( files ) { return files.length !== 0 })
             .nodeify( callback )
         },
