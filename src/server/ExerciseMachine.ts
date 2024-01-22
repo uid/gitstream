@@ -198,5 +198,4 @@ _.extend( ExerciseMachine.prototype, {
     }
 })
 
-module.exports = ExerciseMachine // todo: remove?
 export { ExerciseMachine };
