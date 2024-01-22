@@ -30,7 +30,7 @@ const loggerOpts = { dbcon: mongodb }
 const angler = require('git-angler')
 const exerciseConfs = require('gitstream-exercises')
 
-import { ExerciseMachine,ExerciseMachineContext } from './ExerciseMachine';
+import { ExerciseMachine, ExerciseMachineContext } from './ExerciseMachine';
 import { CommitSpec, utils } from './utils';
 
 import { WS_TYPE, createLogger, WebSocketEvent, EventType, ErrorType } from './logger';
@@ -119,7 +119,7 @@ type errorCallback = ((err: Error | null) => void) | undefined;
  * @param res A result object if the operation succeeds.
  * @returns void This function does not return anything (mutator function).
  */
-type standardCallback = (err: Error | null, res?: any) => void;
+type standardCallback = (err: Error | null, result?: any) => void;
 
 interface UserMap {
     [userID: string]: any; // todo: any
@@ -205,14 +205,14 @@ let userMap: UserMap = {
 
         try {
             const userInfo = this[userID];
-            
+
             if (!userInfo) {
               return callback(null, {});
             }
 
             // Return a shallow copy of the userInfo object
             const userInfoCopy = Object.assign({}, userInfo);
-
+            
             return callback(null, userInfoCopy);
         } catch (error) {
             return callback(error as Error, null);
@@ -799,7 +799,6 @@ class ClientConnection {
                 })
     
                 if ( exerciseState) {
-
                     // there's already an excercise running. reconnect to it
                     console.log('user refreshed page!')
                     this.exerciseMachine = this.createExerciseMachine( currentExercise as string) as ExerciseMachineContext // todo: sus
@@ -828,13 +827,17 @@ class ClientConnection {
             logger.log( EventType.GO, this.userId, exerciseName )
     
             const handleExerciseState = ( err: Error | null, state: State ) => {
-                var startState
+                if (err){
+                    console.log('err', err)
+                    return
+                }
+
+                let startState
                 
                 console.error('hgetall', this.userId, state);
     
                 // only start exercise if user is on the exercise page
                 if (exerciseName !== state.currentExercise) return
-    
                 if (this.exerciseMachine) {
                     this.exerciseMachine.halt()
                 }
