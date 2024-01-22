@@ -9,7 +9,7 @@ import { CommitSpec } from './utils'
 import { errors } from 'openid-client'
 import Q from 'q'
 
-var utils = require('./utils'); // todo: use imports once we use ES6
+var utils = require('./utils'); // todo: use imports once we use ES6 modules
 
 console.error('using exerciseUtils.ts');
 
@@ -200,17 +200,15 @@ module.exports = function( config: Config ) { // todo: change into `export` once
 
         /**
          * Adds the specified files (possibly templated) to the given repo and commits them
-         * @param repo - the path to the repository. Dest files are relative to the repo root
-         * @param srcBase - path to which src files paths are relative. Default: `/`
-         * @param spec the specification for the commit
          * @param callback Optional. err
          * @return a promise if no callback is given
          */
-        addCommit: function(repo: string = '.', srcBase: string = '/', spec: CommitSpec, callback?: (err: any) => void ): Q.Promise<any> { // todo: any. also, the default val for repo may be wrong
-            // if default values from above (which they did, in the original version)
-            if (repoPath) repo = repoPath;
-            if (exercisePath) srcBase = exercisePath;
+        addCommit: function(spec: CommitSpec, callback?: (err: any) => void ): Q.Promise<any> { // todo: any. also, the default val for repo may be wrong
+            // default values defined at top of file
 
+            const repo = repoPath; // the path to the repository. Dest files are relative to the repo root
+            const srcBase = exercisePath; // path to which src files paths are relative. Default: `/`
+            
             return utils.addCommit( repo, srcBase, spec ).nodeify( callback || (() => {}) ) // todo: fix
         },
 
