@@ -1,39 +1,12 @@
-import util from 'util';
-import _ from 'lodash';
-import { v1 as uuid } from 'node-uuid'; // question: what/why is v4
-import { EventEmitter } from 'events';
-
-console.error('using exerciseMachine.ts');
-
-// todo: use imports once all files are .ts
-const utils = require('./utils'),
-    exerciseUtils = require('./exerciseUtils');
-
-const GIT_EVENTS = utils.events2Props( [ 'on', 'handle' ],
-[ 'pre-pull', 'pull', 'pre-clone', 'clone', 'pre-push', 'push', 'pre-info', 'info',
-'merge', 'pre-rebase', 'pre-commit', 'commit', 'checkout', 'pre-receive', 'receive' ] )
-
-type EventBus = any; // todo: this is created in the angler file
-
-// todo: modify to work
-// interface Conf {
-//     global: {
-//       [key: string]: any;
-//     };
-  
-//     machine: {
-//       startState: string;
-//       [key: string]: any;
-//     };
-  
-//     viewer: {
-//       [key: string]: any; 
-//     };
-  
-//     repo?: {
-//       [key: string]: any;
-//     };
-//   }
+var util = require('util'),
+    utils = require('./utils'),
+    exerciseUtils = require('./exerciseUtils'),
+    _ = require('lodash'),
+    uuid = require('node-uuid'),
+    EventEmitter = require('events').EventEmitter,
+    GIT_EVENTS = utils.events2Props( [ 'on', 'handle' ],
+        [ 'pre-pull', 'pull', 'pre-clone', 'clone', 'pre-push', 'push', 'pre-info', 'info',
+        'merge', 'pre-rebase', 'pre-commit', 'commit', 'checkout', 'pre-receive', 'receive' ] )
 
 /**
  * A state machine that represents multi-step exercises as states.
@@ -42,68 +15,47 @@ type EventBus = any; // todo: this is created in the angler file
  *  Event `step`: (newState, oldState, data)
  *  Event `halt`: (haltState)`
  *
+ * @param {Object} config see `gitstream-exercises/README.md` > Configuration File Format > `machine`
+ * @param {String} repoPaths { String path: the repo short path, String fsPath: the fs path }
+ * @param {String} exercisePath the path to the exercise directory
+ * @param {EventBus} eventBus the EventBus on which to listen for repo events
  */
-class ExerciseMachine extends EventEmitter {
-    // todo: remove '_'
-    private _repo!: string; // type assertion
-    private _state: string | undefined = undefined;
-    private _eventBus: EventBus;
-    private _exerciseUtils: any;
-    private _states: any;
-    private _currentListeners: Array<{ name: string, action: string }> = [];
-    private _currentHandlers: Array<{ action: string }> = [];
-    halted!: boolean;
-
-    /**
-     * Add default values to machine.
-     * 
-     * @param config see `gitstream-exercises/README.md` > Configuration File Format > `machine`
-     * @param repoPaths { String path: the repo short path, String fsPath: the fs path }
-     * @param exerciseDir the path to the exercise directory
-     * @param eventBus the EventBus on which to listen for repo events
-     */
-    constructor(config: any, repoPaths: {path: string, fsPath: string}, exerciseDir: string, eventBus: EventBus) {
-        super();
-
-        if ( !(this instanceof ExerciseMachine) ) {
-            return new ExerciseMachine(config, repoPaths, exerciseDir, eventBus)
-        }
-    
-        this._repo = repoPaths.path;
-        this._eventBus = eventBus;
-    
-        this._exerciseUtils = exerciseUtils({ repoDir: repoPaths.fsPath, exerciseDir: exerciseDir })
-    
-        this._states = config
-        this.halted = true
-
-        // already initialized as empty (above)
-        // this._currentListeners;
-        // this._currentHandlers;
-
-        // todo: instead have arrow functions in class properties?
-        this.init = this.init.bind(this);
-        this._step = this._step.bind(this);
-        this._setUp = this._setUp.bind(this);
-        this.halt = this.halt.bind(this);
-        this._tearDown = this._tearDown.bind(this);
+function ExerciseMachine( config, repoPaths, exerciseDir, eventBus ) {
+    if ( !config || !repoPaths || !exerciseDir || !eventBus ) {
+        throw Error('Missing required param(s)')
+    }
+    if ( !(this instanceof ExerciseMachine) ) {
+        return new ExerciseMachine( config, repoPaths, exerciseDir, eventBus )
     }
 
+    this._repo = repoPaths.path
+    this._eventBus = eventBus
+
+    this._exerciseUtils = exerciseUtils({ repoDir: repoPaths.fsPath, exerciseDir: exerciseDir })
+
+    this._states = config
+    this._currentListeners = []
+    this._currentHandlers = []
+    this.halted = true
+}
+
+util.inherits(ExerciseMachine, EventEmitter) // (EventEmitter (ExerciseMachine))
+
+_.extend( ExerciseMachine.prototype, {
     /**
      * Initializes this ExerciseMachine with the provided start state and starts the clock
      * This method is idempotent once the machine has been started
-     * @param startState - the start state. Default: startState specified by config
-     * @return the current ExerciseMachine
+     * @param {String} startState the start state. Default: startState specified by config
+     * @return {ExerciseMachine} the current ExerciseMachine
      */
-    init(startState: string = this._states.machine.startState): void {
-        console.log('startState inside .ts', startState)
-        if ( this._state !== undefined ) { return } // todo: remove?
+    init: function( startState ) {
+        if ( this._state !== undefined ) { return }
 
         this.halted = false
 
-        this._step(startState);
-    }
-
+        this._step( startState || this._states.startState )
+        return this
+    },
 
     /**
      * Steps the ExerciseMachine into the given state and fires a corresponding event
@@ -113,22 +65,20 @@ class ExerciseMachine extends EventEmitter {
      * The `null` state is defined as the halt state. States returning `null` are also halt states
      * Further steps when halted do nothing.
      *
-     * @param state the state into which to step
-     * @param incomingData the data that's incoming (optional)
+     * @param {String} state the state into which to step
      */
-    private _step(newState: string | undefined, incomingData?:any): void { // todo: any
+    _step: function( newState, incomingData ) {
         if ( newState === undefined ) { return }
 
-        const oldState = this._state,
-            newStateConf = this._states[ newState ]
-        
-        let entryPoint,
-            stepDone = ( stepTo: string, stepData?: any ) => { // todo: any, not sure if stepData should be optional
-                const emitData = { prev: incomingData, new: stepData }
+        var oldState = this._state,
+            newStateConf = this._states[ newState ],
+            entryPoint,
+            stepDone = function( stepTo, stepData ) {
+                var emitData = { prev: incomingData, new: stepData }
                 this.emit( 'step', newState, oldState, emitData )
                 if ( stepTo !== undefined ) { this._step( stepTo ) }
                 this._setUp()
-            }
+            }.bind( this )
 
         if ( this.halted ) { return }
 
@@ -143,31 +93,31 @@ class ExerciseMachine extends EventEmitter {
             return
         }
 
-        if ( this._state !== undefined && newStateConf === undefined ) {
+        if ( this.state !== undefined && newStateConf === undefined ) {
             throw Error('No definition for state: ' + newState + '. Prev state: ' + oldState )
         }
 
         entryPoint = typeof newStateConf !== 'object' ? newStateConf :
-            ( newStateConf.onEnter ? newStateConf.onEnter : function( done: () => void ) { done() } ) // todo: weird type on done
+            ( newStateConf.onEnter ? newStateConf.onEnter : function( done ) { done() } )
 
         if ( typeof entryPoint === 'function' ) {
             entryPoint.call( this._exerciseUtils, stepDone )
         } else {
-            stepDone( entryPoint ) // todo: not sure how to fix
+            stepDone( entryPoint )
         }
-    }
+    },
 
     /**
      * Sets up the current state
      */
-    private _setUp() {
-        const stateConfig = this._states[ this._state as string], // todo: fix
-            transitionDone = ( stepTo: any, data?: any ) => { // todo: any. also not sure if setting data as optional is ok
+    _setUp: function() {
+        var stateConfig = this._states[ this._state ],
+            transitionDone = function( stepTo, data ) {
                 this._step( stepTo, data )
-            }
+            }.bind( this )
 
-        _.map( stateConfig, ( transition: any, transitionEvent: any ) => { // todo: any
-            let gitEventName = GIT_EVENTS[ transitionEvent ],
+        _.map( stateConfig, function( transition, transitionEvent ) {
+            var gitEventName = GIT_EVENTS[ transitionEvent ],
                 uniqName,
                 registerFn
             if ( !gitEventName ) { return }
@@ -176,46 +126,43 @@ class ExerciseMachine extends EventEmitter {
                 registerFn = this._eventBus.setHandler.bind( this._eventBus )
                 this._currentHandlers.push({ action: gitEventName })
             } else {
-                uniqName = uuid();
+                uniqName = uuid.v1()
                 registerFn = this._eventBus.addListener.bind( this._eventBus, uniqName )
                 this._currentListeners.push({ name: uniqName, action: gitEventName })
             }
 
-            registerFn(this._repo, gitEventName, (...listenerArgs: any) => { // todo: any
-                if (typeof transition === 'function') {
-                    transition.apply(this._exerciseUtils, [...listenerArgs, transitionDone]);
+            registerFn( this._repo, gitEventName, function() {
+                var listenerArgs = Array.prototype.slice.call( arguments )
+                if ( typeof transition === 'function' ) {
+                    transition.apply( this._exerciseUtils, listenerArgs.concat( transitionDone ) )
                 } else {
                     // transition contains the name of the next state
-                    transitionDone(transition); // todo: not sure how to fix
+                    transitionDone( transition )
                 }
-            });
-        })
-    }
+            }.bind( this ) )
+        }.bind( this ) )
+    },
 
     /**
      * Tears down the current state
      */
-    private _tearDown() {
-        this._currentListeners.map( ( listener: { name: string; action: string; } ) => {
+    _tearDown: function() {
+        this._currentListeners.map( function( listener ) {
             this._eventBus.removeListener( listener.name, this._repo, listener.action )
-        })
-        this._currentHandlers.map( ( handler: { action: string; } ) => {
+        }.bind( this ) )
+        this._currentHandlers.map( function( handler  ) {
             this._eventBus.setHandler( this._repo, handler.action, undefined )
-        } )
+        }.bind( this ) )
         this._currentListeners = []
         this._currentHandlers = []
-    }
+    },
 
     /**
      * Forcibly halts this ExerciseMachine
      */
-    halt() {
-        this._step( undefined )
+    halt: function() {
+        this._step( null )
     }
-}
-    
-module.exports = ExerciseMachine;
+})
 
-
-// todo: not sure if needed, removed for now
-util.inherits(ExerciseMachine, EventEmitter) // (EventEmitter (ExerciseMachine))
+module.exports = ExerciseMachine
