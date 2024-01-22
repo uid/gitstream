@@ -1,30 +1,45 @@
-// Imported Libraries -- EXTERNAL
-const compression = require('compression'),
-    express = require('express'),
-    path = require('path'),
-    q = require('q'),
-    rimraf = require('rimraf'),
-    WebSocket = require('ws'),
-    session = require('cookie-session'),
-    { Passport } = require('passport'),
-    openidclient = require('openid-client'),
-    crypto = require('crypto'),
-    EventEmitter = require('events'),
-    { spawn } = require('child_process'),
-    MongoClient = require('mongodb').MongoClient,
-    mongodb = q.nfcall(MongoClient.connect, 'mongodb://localhost/gitstream')
-        .then(client => client.db());
-  
-// Imported Libraries -- INTERNAL
-const ExerciseMachine = require('./ExerciseMachine'),
-    utils = require('./utils'),
-    angler = require('git-angler'),
-    exerciseConfs = require('gitstream-exercises'),
-    settings = require('../../settings'),
-    { WS_TYPE, ...logger } = require('./logger')({ dbcon: mongodb }), // LOGGING
-    user = require('./user')({ dbcon: mongodb });
+console.error('using main.ts');
 
-// import { WebSocketEvent, EventType, ErrorType } from './logger';
+
+// Imported Libraries -- EXTERNAL
+import compression from 'compression';
+import express from 'express';
+import { Request, Response, NextFunction } from 'express';
+import path from 'path';
+import q from 'q';
+import WebSocket from 'ws';
+import session from 'cookie-session';
+import { Passport } from 'passport';
+import openidclient from 'openid-client';
+import { Strategy as OpenIdClientStrategy, TokenSet, UserinfoResponse } from 'openid-client';
+
+import crypto from 'crypto';
+import EventEmitter from 'events';
+import { spawn } from 'child_process';
+import { MongoClient, Db } from 'mongodb';
+
+const rimraf = require('rimraf') // todo: replace with a modern alternative 
+
+const mongodb: q.Promise<Db> = q.nfcall<MongoClient>(MongoClient.connect, 'mongodb://localhost/gitstream')
+  .then((client: MongoClient) => client.db());
+
+// Imported Libraries -- INTERNAL
+const loggerOpts = { dbcon: mongodb }
+
+// These can't be a module bc they are still an unmodified js package
+const angler = require('git-angler')
+const exerciseConfs = require('gitstream-exercises')
+
+import { ExerciseMachine,ExerciseMachineContext } from './ExerciseMachine';
+import { CommitSpec, utils } from './utils';
+
+import { WS_TYPE, createLogger, WebSocketEvent, EventType, ErrorType } from './logger';
+const logger = createLogger(loggerOpts);
+
+import { createUser } from './user';
+const user = createUser(loggerOpts);
+
+const settings = require('../../settings') as any; // todo: any
 
 
 // Global variables -- CONSTANT
@@ -39,81 +54,95 @@ const app = express();
 const FIELD_EXERCISE_STATE = 'exerciseState',
     FIELD_CURRENT_EXERCISE = 'currentExercise'
 
-const EVENTS = {
-    sync: 'sync',
-    exerciseDone: 'exerciseDone',
-    exerciseChanged: 'exerciseChanged',
-    step: 'step',
-    halt: 'halt'
+enum EVENTS {
+    sync = 'sync',
+    exerciseDone = 'exerciseDone',
+    exerciseChanged = 'exerciseChanged',
+    step = 'step',
+    halt = 'halt'
 }
+
 
 const EVENTS_ENDPOINT = '/events'; // configured with nginx
 
-
 // Global Variables -- DYNAMIC
-var eventBus = new angler.EventBus(), // todo: might constant, but leaving here for now
+let eventBus = new angler.EventBus(), // todo: might constant, but leaving here for now
     githookEndpoint = angler.githookEndpoint({
         pathToRepos: PATH_TO_REPOS,
         eventBus: eventBus,
         gitHTTPMount: gitHTTPMount
     })
 
-var backend = angler.gitHttpBackend({ // todo: might constant, but leaving here for now
+let backend = angler.gitHttpBackend({ // todo: might constant, but leaving here for now
     pathToRepos: PATH_TO_REPOS,
     eventBus: eventBus,
-    authenticator: function( params, cb ) {
+    authenticator: function( params: { repoPath: any; }, callback: any ) { // todo: any
         verifyAndGetRepoInfo( params.repoPath )
         .done( function() {
-            cb({ ok: true })
+            callback({ ok: true })
         }, function( err ) {
-            var info = extractRepoInfoFromPath( params.repoPath )
-            logger.err( logger.ERR.GIT_HTTP, info.userId, info.exerciseName, {
+            let info = extractRepoInfoFromPath( params.repoPath )! // type assertion;
+            logger.err( ErrorType.GIT_HTTP, info.userId, info.exerciseName, {
                 msg: err.message
             })
-            cb({ ok: false, status: 404 })
+            callback({ ok: false, status: 404 })
         })
     }
 })
 
-function logDbErr(userId, exercise, data) {
-    return (err) => {
+function logDbErr(userId: string, exercise: string, data: any) { // todo: any
+    return (err: any) => { // todo: any
         if (!err) return
         data.msg = err.message
+        
         console.error(err);
-        logger.err(logger.ERR.DB, userId, exercise, data)
+
+        logger.err(ErrorType.DB, userId, exercise, data)
     }
 }
 
 const exerciseEvents = new EventEmitter();
 
+// type declerations
+
+// 
+// err - An error object if the operation fails.
+// returns void - This function does not return anything (mutator function).
+type errorCallback = ((err: Error | null) => void) | undefined;
+
+// todo: is Error | null good? or should we use Error | undefined?
+
+/**
+ * A callback function type for standard operations.
+ * 
+ * @param err An error object if the operation fails, otherwise null.
+ * @param res A result object if the operation succeeds.
+ * @returns void This function does not return anything (mutator function).
+ */
+type standardCallback = (err: Error | null, res?: any) => void;
+
+interface UserMap {
+    [userID: string]: any; // todo: any
+    set(userID: string, key: string, value: string, callback?: errorCallback): void;
+    delete(userID: string, keys: Array<string>, callback?: errorCallback): void;
+    getAll(userID: string, callback: standardCallback): void
+}
+
 /**
  * Global map to store user progress. Methods encapsulated.
  */
-let userMap = {
-    /**
-     * @callback errorCallback
-     * @param {Error?} err - An error object if the operation fails.
-     * @returns {void} - This function does not return anything (mutator function).
-     */
-
-    /**
-     * @callback standardCallback
-     * @param {Error} err - An error object if the operation fails.
-     * @param {Error} res - A result object if the operation succeeds.
-     * @returns {void} - This function does not return anything (mutator function).
-     */
-
+let userMap: UserMap = {
     /**
      * Sets a key-value pair for a user. If the user and/or key does not exist, they are created.
      * 
-     * @param {string} userID - The ID of the user.
-     * @param {string} key - The key to be set or edited for the specified user.
-     * @param {string} value - The value to be associated with the specified key. Overrides existing
+     * @param userID - The ID of the user.
+     * @param key - The key to be set or edited for the specified user.
+     * @param value - The value to be associated with the specified key. Overrides existing
      *                         value.
-     * @param {errorCallback} callback - The optional callback to be invoked if the operation fails.
-     * @returns {void} - This function does not return anything (mutator function).
+     * @param callback - The optional callback to be invoked if the operation fails.
+     * @returns This function does not return anything (mutator function).
      */
-    set(userID, key, value, callback=null) {
+    set(userID: string, key: string, value: string, callback: errorCallback = undefined): void {
         try {
           if (!this[userID])
             this[userID] = {};
@@ -125,7 +154,7 @@ let userMap = {
             return callback(null);
         } catch (error) {
           if (callback)
-            return callback(error);
+            return callback(error as Error);
         }
     },
 
@@ -133,12 +162,12 @@ let userMap = {
      * Deletes a list of keys and their associated data for a user. If the user or one of 
      * the keys cannot be found, nothing happens.
      * 
-     * @param {string} userID - The ID of the user.
-     * @param {Array<string>} keys - The list of keys to be deleted along with their data.
-     * @param {errorCallback} callback - The optional callback to be invoked if the operation fails.
-     * @returns {void} - This function does not return anything (mutator function).
+     * @param userID - The ID of the user.
+     * @param keys - The list of keys to be deleted along with their data.
+     * @param callback - The optional callback to be invoked if the operation fails.
+     * @returns - This function does not return anything (mutator function).
      */
-    delete(userID, keys, callback=null) {
+    delete(userID: string, keys: Array<string>, callback?: errorCallback): void {
         try {
           const userInfo = this[userID];
           
@@ -159,7 +188,7 @@ let userMap = {
             return callback(null);
         } catch (error) {
           if (callback)
-            return callback(error);
+            return callback(error as Error);
         }
     },
 
@@ -167,11 +196,11 @@ let userMap = {
      * Retrieves all of the data (keys and values) associated with a user. If user is not
      * found, an empty object is returned.
      * 
-     * @param {string} userID - The ID of the user.
-     * @param {standardCallback} callback - The callback to be invoked on failure or success.
-     * @returns {void} - This function does not return anything (mutator function)
+     * @param userID - The ID of the user.
+     * @param callback - The callback to be invoked on failure or success.
+     * @returns - This function does not return anything (mutator function)
      */
-    getAll(userID, callback) {
+    getAll(userID: string, callback: standardCallback): void {
         logger.userMapMod(this, userID, "getAll");
 
         try {
@@ -186,20 +215,29 @@ let userMap = {
 
             return callback(null, userInfoCopy);
         } catch (error) {
-            return callback(error, null);
+            return callback(error as Error, null);
         }
     }
 }
 
+
+interface ExerciseData {
+    userId: string;
+    exerciseName: string;
+    mac: string;
+    macMsg?: string;
+}
+
+type RepoPath = string|string[];
+
 /**
  * Extracts data from the components of a repo's path
- * @param {String|Array} repoPath a path string or an array of path components
- * @return {Object|Boolean} data - if repo path is invalid, returns null
- *  { userId: String, exerciseName: String, mac: String, macMsg: String }
+ * @param repoPath - a path string or an array of path components
+ * @return data - if repo path is invalid, returns null
  */
-function extractRepoInfoFromPath( repoPath ) {
+function extractRepoInfoFromPath( repoPath: RepoPath):ExerciseData | null {
     // slice(1) to remove the '' from splitting '/something'
-    var splitRepoPath = repoPath instanceof Array ? repoPath : repoPath.split('/').slice(1),
+    let splitRepoPath = repoPath instanceof Array ? repoPath : repoPath.split('/').slice(1),
         userId,
         repoMac,
         exerciseName,
@@ -224,23 +262,23 @@ function extractRepoInfoFromPath( repoPath ) {
 }
 
 /** Does the inverse of @see extractRepoInfoFromPath. macMsg is not required */
-function createRepoShortPath( info ) {
+function createRepoShortPath( info: ExerciseData ) {
     return path.join( '/', info.userId, info.mac, info.exerciseName + '.git' )
 }
 
 /**
  * Verifies the MAC provided in a repo's path (ex. /username/beef42-exercise2.git)
- * @param {String|Array} repoPath a path string or an array of path components
- * @return {Promise}
+ * @param repoPath a path string or an array of path components
+ * @return promise
  */
-function verifyAndGetRepoInfo( repoPath ) {
-    var repoInfo = extractRepoInfoFromPath( repoPath )
+function verifyAndGetRepoInfo( repoPath: RepoPath): q.Promise<ExerciseData>{
+    const repoInfo = extractRepoInfoFromPath( repoPath )
 
     if (!repoInfo) {
         throw Error('Could not get repo info')
     }
 
-    return user.verifyMac( repoInfo.userId, repoInfo.mac, repoInfo.macMsg )
+    return user.verifyMac( repoInfo.userId, repoInfo.mac, repoInfo.macMsg as string )
         .then(function() {
             return repoInfo
         })
@@ -248,15 +286,15 @@ function verifyAndGetRepoInfo( repoPath ) {
 
 /**
  * Creates a new exercise repo.
- * @param {String} repoName the full repo name. e.g. /nhynes/12345/exercise1.git
- * @return {Promise} a promise resolved with the repo info as returned by verifyAndGetRepoInfo
+ * @param repoName - the full repo name. e.g. /nhynes/12345/exercise1.git
+ * @return a promise resolved with the repo info as returned by verifyAndGetRepoInfo
  */
-function createRepo( repoName ) {
-    var repoInfo,
+function createRepo( repoName: string ): Q.Promise<any> { // todo: any
+    let repoInfo: ExerciseData,
         pathToRepo = path.join( PATH_TO_REPOS, repoName ),
         pathToRepoDir = path.dirname( pathToRepo ),
-        pathToExercise,
-        pathToStarterRepo
+        pathToExercise: string,
+        pathToStarterRepo: string
 
     return verifyAndGetRepoInfo( repoName )
     .then( function( info ) {
@@ -266,13 +304,13 @@ function createRepo( repoName ) {
         return q.nfcall( rimraf, pathToRepoDir )
     })
     .then( function() {
-        var done = q.defer(),
+        let done = q.defer(),
             repoUtils = {
                 _: require('lodash'),
                 resourcesPath: pathToExercise
             },
-            commits = q.promise( function( resolve ) {
-                var commitsConf = exerciseConfs.repos[ repoInfo.exerciseName ]().commits
+            commits: any = q.Promise( function( resolve ) { // todo: any
+                const commitsConf = exerciseConfs.repos[ repoInfo.exerciseName ]().commits
                 if ( Array.isArray( commitsConf ) && commitsConf.length ) {
                     resolve( commitsConf )
                 } else if ( typeof commitsConf === 'function' ) {
@@ -287,21 +325,21 @@ function createRepo( repoName ) {
             spawn( 'cp', [ '-r', pathToStarterRepo, pathToRepo ] ).on( 'close', function( cpRet ) {
                 if ( cpRet !== 0 ) { return done.reject( Error('Copying exercise repo failed') ) }
 
-                commits.then( function( commits ) {
-                    var addCommit = function( spec ) {
+                commits.then( function( commits: CommitSpec[] ) {
+                    const addCommit = function( spec: CommitSpec ) {
                         return utils.addCommit.bind( null, pathToRepo, pathToExercise, spec )
                     }
-                    if ( commits ) {
-                        return commits.map( function( commit ) {
+                    if ( commits ) { // todo: fix
+                        return commits.map( function( commit: CommitSpec ) {
                             return addCommit( commit )
-                        }).reduce( q.when, q.fulfill() )
+                        }).reduce( q.when, (<any>q).fulfill() ) // todo: any
                     } else {
                         return utils.git( pathToRepo, 'commit', [ '-m', 'Initial commit' ] )
                     }
                 })
                 .done( function() {
                     done.resolve( repoInfo )
-                }, function( err ) {
+                }, function( err: any) {
                     done.reject( err )
                 })
             })
@@ -314,12 +352,12 @@ function createRepo( repoName ) {
 }
 
 // transparently initialize exercise repos right before user clones it
-eventBus.setHandler( '*', '404', function( repoName, _, data, clonable ) {
+eventBus.setHandler( '*', '404', function( repoName: string, _: any, data: any, clonable: any ) { // todo: any
     if ( !REPO_NAME_REGEX.test( repoName ) ) { return clonable( false ) }
 
     // LOGGING
-    var repoInfo = extractRepoInfoFromPath( repoName )
-    logger.log( logger.EVENT.INIT_CLONE, repoInfo.userId, repoInfo.exerciseName )
+    const repoInfo = extractRepoInfoFromPath( repoName ) as ExerciseData; // assert good
+    logger.log( EventType.INIT_CLONE, repoInfo.userId, repoInfo.exerciseName )
 
     createRepo( repoName )
     .done( function() {
@@ -327,7 +365,7 @@ eventBus.setHandler( '*', '404', function( repoName, _, data, clonable ) {
     }, function( err ) {
         clonable( false )
         // LOGGING
-        logger.err( logger.ERR.CREATE_REPO, repoInfo.userId, repoInfo.exerciseName, {
+        logger.err( ErrorType.CREATE_REPO, repoInfo.userId, repoInfo.exerciseName, {
             msg: err.message
         })
     })
@@ -336,15 +374,14 @@ eventBus.setHandler( '*', '404', function( repoName, _, data, clonable ) {
 // hard resets and checks out the updated HEAD after a push to a non-bare remote repo
 // this can't be done inside of the post-receive hook, for some reason
 // NOTE: when Git >= 2.3.0 is in APT, look into `receive.denyCurrentBranch updateInstead`
-eventBus.setHandler( '*', 'receive', function( repo, action, updates, done ) {
-    var repoPath = path.resolve( PATH_TO_REPOS, '.' + repo ),
+eventBus.setHandler( '*', 'receive', function( repo: string, action: any, updates: any[], done: () => void ) { // todo: any
+    const repoPath = path.resolve( PATH_TO_REPOS, '.' + repo ),
         git = utils.git.bind( utils, repoPath ),
         isPushingShadowBranch = updates.reduce( function( isbr, update ) {
             return isbr || update.name === 'refs/heads/shadowbranch'
-        }, false ),
-        chain
+        }, false )
 
-    chain = git( 'reset', '--hard' )
+    const chain = git( 'reset', '--hard' )
     .then( function() {
         return git( 'checkout', ':/')
     })
@@ -359,9 +396,9 @@ eventBus.setHandler( '*', 'receive', function( repo, action, updates, done ) {
     }
 
     chain.catch( function( err ) {
-        var repoInfo = extractRepoInfoFromPath( repo )
+        var repoInfo = extractRepoInfoFromPath( repo ) as ExerciseData; // assert good
         // LOGGING
-        logger.err( logger.ERR.ON_RECEIVE, repoInfo.userId, repoInfo.exerciseName, {
+        logger.err( ErrorType.ON_RECEIVE, repoInfo.userId, repoInfo.exerciseName, {
             msg: err.message
         })
     })
@@ -379,12 +416,20 @@ const sessionParser = session({
 });
 app.use(sessionParser);
 
+
+// Extend the Express Request to include the user property and the session from cookie-session
+interface AuthenticatedRequest extends Request {
+    user?: { username: string, fullname: string }; // Replace 'any' with the actual type of your user object
+    session?: any //todo: figure out why this doesnt work: session.Session & { returnTo?: string };
+}
+  
+
 // setUserAuthenticateIfNecessary: this middleware sets req.user to an object { username:string, fullname:string }, either from
 // session cookie information or by authenticating the user using the authentication method selected in settings.js.
 //
 // By default there is no authentication method, so this method authenticates as a guest user with a randomly-generated username.
-let setUser = function(req,res,next) {
-    if ( ! req.user ) {
+let setUser = function(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    if ( !req.user ) {
         if (req.session.guest_user){
             req.user = req.session.guest_user;
         } else {
@@ -412,18 +457,18 @@ async function configureApp() {
         // https://github.com/panva/node-openid-client/blob/master/docs/README.md#customizing-clock-skew-tolerance
         client[(openidclient.custom).clock_tolerance] = 'clockTolerance' in settings.openid ? settings.openid.clockTolerance : 5;
         
-        var usernameFromEmail = settings.openid.usernameFromEmail || ((email) => email);
+        var usernameFromEmail = settings.openid.usernameFromEmail || ((email: any) => email); // todo: any
         
         passport.use('openid', new openidclient.Strategy({
             client,
             params: { scope: 'openid email profile' },
-        }, (tokenset, passportUserInfo, done) => {
+        }, (tokenset: TokenSet, passportUserInfo: UserinfoResponse, done: any) => { // todo: any
             console.log('passport returned', passportUserInfo);
             const username = usernameFromEmail(passportUserInfo.email || '');
             const fullname = passportUserInfo.name || '';
             done(null, { username, fullname });
         }));
-        const returnUserInfo = (userinfo, done) => done(null, userinfo);
+        const returnUserInfo = (userinfo: any, done: any) => done(null, userinfo);
         passport.serializeUser(returnUserInfo);
         passport.deserializeUser(returnUserInfo);
         
@@ -436,7 +481,7 @@ async function configureApp() {
                     passport.authenticate(
                         'openid',
                         // see "Custom Callback" at http://www.passportjs.org/docs/authenticate/
-                        (err, user, info) => {
+                        (err: Error, user: any, info: any) => { // any
                             if (err || !user) {
                                 // put some debugging info in the log
                                 console.log('problem in OpenId authentication', req.originalUrl);
@@ -454,7 +499,7 @@ async function configureApp() {
                                 // http://www.passportjs.org/docs/login/
                                 req.login(user, (err) => {
                                     if (err) { return next(err); }
-                                    return res.redirect(req.session.returnTo);
+                                    return res.redirect(req.session!.returnTo); // assert
                                 });
                             }
                         }
@@ -490,7 +535,7 @@ async function configureApp() {
             return res.end()
         }
 
-        var remoteUrl = req.headers['x-gitstream-repo'],
+        const remoteUrl = req.headers['x-gitstream-repo'] as string,
             repo = remoteUrl.substring( remoteUrl.indexOf( gitHTTPMount ) + gitHTTPMount.length )
 
         createRepo( repo )
@@ -513,7 +558,7 @@ async function configureApp() {
             res.writeHead( 403 )
             res.end()
             // LOGGING
-            logger.err( logger.ERR.CREATE_REPO, null, null, {
+            logger.err( ErrorType.CREATE_REPO, 'null', 'null', {
                 desc: 'New repo on go',
                 repo: repo,
                 remoteUrl: remoteUrl,
@@ -522,11 +567,11 @@ async function configureApp() {
         })
     })
 
-    app.use( '/login', setUserAuthenticateIfNecessary, function( req, res ) {
+    app.use( '/login', <any>setUserAuthenticateIfNecessary, function( req, res ) { // todo: any
         res.redirect(req.originalUrl.replace(/^\/login/, '/'));
     })
 
-    app.use( '/user', setUser, function( req, res ) {
+    app.use( '/user', <any>setUser, <any>function( req: AuthenticatedRequest, res: Response ) { // todo: fix any
         const userId = ( req.user && req.user.username ) || "";
         res.writeHead( 200, { 'Content-Type': 'text/plain' } )
         res.end( userId )
@@ -535,7 +580,7 @@ async function configureApp() {
 configureApp().catch(err => console.error(err));
 
 // Start the server using the shorthand provided by Express
-server = app.listen(PORT)
+const server = app.listen(PORT)
 
 // Create a WebSocket connection ontop of the Express app
 // todo: this config might need additional tweaks (though, it does work rn)
@@ -544,16 +589,35 @@ const wss = new WebSocket.Server({
     path: EVENTS_ENDPOINT
 });
 
+// todo: figure out which of these should not be optional
+type ClientState = {
+    [FIELD_EXERCISE_STATE]?: string;
+    [FIELD_CURRENT_EXERCISE]?: string;
+    user?: {
+      key?: string;
+      id?: string;
+    };
+  };
+
+type State = ClientState; // todo: check if this is strictly true
 
 class ClientConnection {
-    constructor(ws) {
+    private ws: WebSocket;
+
+    // todo: fix the use of nulls here?
+    private exerciseMachine: ExerciseMachineContext | null;
+    private userId: string;
+    private userKey: string;
+    private heartbeat: NodeJS.Timeout | undefined; // todo: change?
+
+    constructor(ws: WebSocket) {
         // one client = one socket
         this.ws = ws;
 
         // Shared state variables
         this.exerciseMachine = null;
-        this.userId = null;
-        this.userKey = null;
+        this.userId = ''; // note: because of these defaults, weird stuff can happen if userID is never set somewhere
+        this.userKey = '';
 
         // Shared socket listeners
         this.ws.onmessage = this.handleMessage.bind(this);
@@ -581,27 +645,29 @@ class ClientConnection {
     /**
      * Sends messages to established client.
      * 
-     * @param {typeof EVENTS | 'ws' | 'err'} msgEvent
-     * @param {any} msgData the object to be transmitted
+     * @param msgEvent
+     * @param msgData the object to be transmitted
      */
-    sendMessage(msgEvent, msgData) {
+    sendMessage(msgEvent: EVENTS | 'ws' | 'err', msgData: any) { // todo: any
         const msg = {event: msgEvent, data: msgData};
         const strMsg = JSON.stringify(msg);
 
         try {
             this.ws.send(strMsg);
-            logger.ws(WS_TYPE.SENT, msg);
+            logger.ws(WebSocketEvent.SENT, msg);
         } catch (error) { // todo: more graceful error handling?
             console.error('Error sending message:', error);
         }
 
     }
 
-    handleMessage(event) {
-        const msg = JSON.parse(event.data);
+    handleMessage(event: WebSocket.MessageEvent) {
+        const event_data = event.data as string; // Type assertion
+
+        const msg = JSON.parse(event_data);
         const {event: msgEvent, data: msgData} = msg;
         
-        logger.ws(WS_TYPE.RECEIVED, msg);
+        logger.ws(WebSocketEvent.RECEIVED, msg);
 
         switch (msgEvent) {
             case EVENTS.sync:
@@ -635,12 +701,13 @@ class ClientConnection {
     }
 
     // per socket
-    handleError(event) {
+    handleError(event: WebSocket.ErrorEvent) {
+        
         console.error('ws connection error:', event);
     }
     
     // per socket
-    handleClose(event) {
+    handleClose(event: WebSocket.CloseEvent) {
         if (this.exerciseMachine) {
             this.exerciseMachine.removeAllListeners()
             this.exerciseMachine.halt()
@@ -651,7 +718,7 @@ class ClientConnection {
 
         this.removeFromActiveList();
     
-        logger.log(logger.EVENT.QUIT, this.userId, null)
+        logger.log(EventType.QUIT, this.userId, null)
     }
 
     // === Expiremental feature to maintain list of active connections ===
@@ -685,23 +752,25 @@ class ClientConnection {
      * 
      * @param {*} recvUserId 
      */
-    handleClientSync(recvUserId) {
+    handleClientSync(recvUserId: string) {
         this.userId = recvUserId; // initial and sole assignment
         this.addToActiveList();
 
         var userKeyPromise = user.getUserKey( this.userId )
     
-        userKeyPromise.done( ( key ) => { this.userKey = key }, ( err ) => {
+        userKeyPromise.done(( key ) => {
+            this.userKey = key as unknown as string // Type assertion
+        }, ( err ) => {
             // LOGGING
-            logger.err(logger.ERR.DB, this.userId, null, {msg: err.message})
+            logger.err(ErrorType.DB, this.userId, 'null', {msg: err.message})
         })
     
-        const handleClientState = ( err, clientState ) => {
+        const handleClientState = ( err: Error | null, clientState: ClientState ) => {
             if ( err ) {
                 console.error(err)
     
                 // LOGGING
-                logger.err( logger.ERR.DB, this.userId, null, {
+                logger.err( ErrorType.DB, this.userId, 'null', {
                     desc: 'userMap get client state',
                     msg: err.message
                 })
@@ -713,7 +782,7 @@ class ClientConnection {
 
                 console.error('hmset', FIELD_EXERCISE_STATE, null);
                 
-                const handleUnsetClientState = logDbErr( this.userId, null, {
+                const handleUnsetClientState = logDbErr( this.userId, 'null', {
                     desc: 'userMap unset client state'
                 })
     
@@ -725,7 +794,7 @@ class ClientConnection {
                     currentExercise = clientState[ FIELD_CURRENT_EXERCISE ]
     
                 // LOGGING
-                logger.log( logger.EVENT.SYNC, this.userId, currentExercise, {
+                logger.log( EventType.SYNC, this.userId, currentExercise, {
                     exerciseState: exerciseState
                 })
     
@@ -733,7 +802,7 @@ class ClientConnection {
 
                     // there's already an excercise running. reconnect to it
                     console.log('user refreshed page!')
-                    this.exerciseMachine = this.createExerciseMachine( currentExercise )
+                    this.exerciseMachine = this.createExerciseMachine( currentExercise as string) as ExerciseMachineContext // todo: sus
                     this.exerciseMachine.init( exerciseState)
     
                 } else if ( exerciseState ) { // last exercise has expired // wait this weird, same conditional as above. todo: fix?
@@ -754,11 +823,11 @@ class ClientConnection {
 
         userMap.getAll(this.userId, handleClientState);
     
-        const processNewExercise = ( channel, exerciseName ) => {
+        const processNewExercise = ( channel: any, exerciseName: string ) => { // todo: any
             // LOGGING
-            logger.log( logger.EVENT.GO, this.userId, exerciseName )
+            logger.log( EventType.GO, this.userId, exerciseName )
     
-            const handleExerciseState = ( err, state ) => {
+            const handleExerciseState = ( err: Error | null, state: State ) => {
                 var startState
                 
                 console.error('hgetall', this.userId, state);
@@ -770,15 +839,15 @@ class ClientConnection {
                     this.exerciseMachine.halt()
                 }
                 this.exerciseMachine = this.createExerciseMachine( exerciseName )
-                startState = this.exerciseMachine._states.startState
+                startState = this.exerciseMachine!._states.startState // assert exists
                 // set by EM during init, but init sends events. TODO: should probably be fixed
     
                 console.error('hmset', FIELD_EXERCISE_STATE, startState);
                 
-                const handleError = function( err ) {
+                const handleError = ( err: Error | null) => {
                     if ( err ) {
                         // LOGGING
-                        logger.err( logger.ERR.DB, this.userId, exerciseName, {
+                        logger.err( ErrorType.DB, this.userId, exerciseName, {
                             desc: 'userMap go',
                             msg: err.message
                         })
@@ -789,7 +858,7 @@ class ClientConnection {
                 state[ FIELD_EXERCISE_STATE ] = startState
     
                 this.sendMessage(EVENTS.sync, state);
-                this.exerciseMachine.init()
+                this.exerciseMachine!.init()
             }
             userMap.getAll(this.userId, handleExerciseState)
         }
@@ -800,7 +869,7 @@ class ClientConnection {
     }
 
     // user changed exercise page
-    handleExerciseChanged(newExercise) {
+    handleExerciseChanged(newExercise: string) {
 
         if (this.exerciseMachine) { // stop the old machine
             this.exerciseMachine.halt()
@@ -820,16 +889,16 @@ class ClientConnection {
         userMap.set(this.userId, FIELD_CURRENT_EXERCISE, newExercise, handleNewExercise);
     
         // LOGGING
-        logger.log( logger.EVENT.CHANGE_EXERCISE, this.userId, newExercise )
+        logger.log( EventType.CHANGE_EXERCISE, this.userId, newExercise )
     }
 
-    handleExerciseDone(doneExercise) {
+    handleExerciseDone(doneExercise: string) {
         utils.exportToOmnivore(this.userId, doneExercise,
             logDbErr( this.userId, doneExercise, { desc: 'Omnivore POST error' } ));
     }
 
 
-    createExerciseMachine(exerciseName) {
+    createExerciseMachine(exerciseName: string) {
         var emConf = exerciseConfs.machines[ exerciseName ](),
             repoMac = user.createMac( this.userKey, this.userId + exerciseName ),
             exerciseRepo = createRepoShortPath({
@@ -843,12 +912,12 @@ class ClientConnection {
             },
             exerciseDir = path.join( PATH_TO_EXERCISES, exerciseName )
     
-        let exerciseMachine = new ExerciseMachine( emConf, repoPaths, exerciseDir, eventBus ) // local
+        let exerciseMachine = new (ExerciseMachine as any)( emConf, repoPaths, exerciseDir, eventBus ) // todo: fix any
         const unsetExercise = () => {
             userMap.delete(this.userId, [FIELD_EXERCISE_STATE]);
         }
     
-        const stepHelper = (newState) => {
+        const stepHelper = (newState: any) => { // todo: any
             console.error('hset', this.userId, FIELD_EXERCISE_STATE, newState);
     
             const updateState =  logDbErr( this.userId, exerciseName, {
@@ -868,17 +937,17 @@ class ClientConnection {
          * @param {*} listenerDef 
          * @returns function
          */
-        const makeListenerFn = (listenerDef) => {
+        const makeListenerFn = (listenerDef: any) => {
             // send message via websocket and call upon helper function
 
 
             // todo: refactor this function 
-            return (...args) => {
+            return (...args: any) => {
                 this.sendMessage(listenerDef.event, args);
     
                 listenerDef.helper(...args);
     
-                logger.log(logger.EVENT.EM, this.userId, exerciseName, {
+                logger.log(EventType.EM, this.userId, exerciseName, {
                         type: listenerDef.event,
                         info: args.slice( 1 )
                     }
@@ -886,7 +955,7 @@ class ClientConnection {
             }
         }
     
-        const registerListener = (eventType, helper) => {
+        const registerListener = (eventType: any, helper: any) => {
             exerciseMachine.on(eventType, makeListenerFn({ event: eventType, helper: helper}));
         }
     
@@ -899,7 +968,7 @@ class ClientConnection {
 
 }
 
-let activeConnections = [];
+let activeConnections: string[] = [];
 
 // Create a new websocket connection
 wss.on('connection', function(ws) {
