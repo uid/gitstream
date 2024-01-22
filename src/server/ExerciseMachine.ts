@@ -1,12 +1,22 @@
-var util = require('util'),
-    utils = require('./utils'),
-    exerciseUtils = require('./exerciseUtils'),
-    _ = require('lodash'),
-    uuid = require('node-uuid'),
-    EventEmitter = require('events').EventEmitter,
-    GIT_EVENTS = utils.events2Props( [ 'on', 'handle' ],
-        [ 'pre-pull', 'pull', 'pre-clone', 'clone', 'pre-push', 'push', 'pre-info', 'info',
-        'merge', 'pre-rebase', 'pre-commit', 'commit', 'checkout', 'pre-receive', 'receive' ] )
+import util from 'util';
+import _ from 'lodash';
+import { v1 as uuid } from 'node-uuid';
+import { EventEmitter } from 'events';
+
+console.error('using exerciseMachine.ts');
+
+// todo: use imports once all files are .ts
+const utils = require('./utils'),
+    exerciseUtils = require('./exerciseUtils');
+
+const GIT_EVENTS = utils.events2Props( [ 'on', 'handle' ],
+[ 'pre-pull', 'pull', 'pre-clone', 'clone', 'pre-push', 'push', 'pre-info', 'info',
+'merge', 'pre-rebase', 'pre-commit', 'commit', 'checkout', 'pre-receive', 'receive' ] )
+
+// todo: solidify these types
+type EventBus = any; // this one can be traced back to angler
+type Conf = any; // review docs
+
 
 /**
  * A state machine that represents multi-step exercises as states.
@@ -15,17 +25,40 @@ var util = require('util'),
  *  Event `step`: (newState, oldState, data)
  *  Event `halt`: (haltState)`
  *
- * @param {Object} config see `gitstream-exercises/README.md` > Configuration File Format > `machine`
- * @param {String} repoPaths { String path: the repo short path, String fsPath: the fs path }
- * @param {String} exercisePath the path to the exercise directory
- * @param {EventBus} eventBus the EventBus on which to listen for repo events
  */
-function ExerciseMachine( config, repoPaths, exerciseDir, eventBus ) {
-    if ( !config || !repoPaths || !exerciseDir || !eventBus ) {
-        throw Error('Missing required param(s)')
-    }
+interface ExerciseMachineContext extends EventEmitter {
+    // properties
+    _repo: string;
+    _state: string | undefined;
+    _eventBus: EventBus;
+    _exerciseUtils: any;
+    _states: any;
+    _currentListeners: Array<{ name: string, action: string }>;
+    _currentHandlers: Array<{ action: string }>;
+    halted: boolean;
+
+    // methods
+    // todo: not sure if these have to be arrow functions
+    init: () => void;
+    _step : (newState: string | undefined, incomingData?: any) => void;
+    _setUp: () => void;
+    halt: () => void;
+    _tearDown: () => void;
+}
+
+
+
+/**
+ * Add default values to machine.
+ * 
+ * @param config see `gitstream-exercises/README.md` > Configuration File Format > `machine`
+ * @param repoPaths { String path: the repo short path, String fsPath: the fs path }
+ * @param exercisePath the path to the exercise directory
+ * @param eventBus the EventBus on which to listen for repo events
+ */
+function ExerciseMachine(this: ExerciseMachineContext, config: any, repoPaths: {path: string, fsPath: string}, exerciseDir: string, eventBus: EventBus): any { // todo: any
     if ( !(this instanceof ExerciseMachine) ) {
-        return new ExerciseMachine( config, repoPaths, exerciseDir, eventBus )
+        return new (ExerciseMachine as any)(config, repoPaths, exerciseDir, eventBus ) // todo: improve type assertion
     }
 
     this._repo = repoPaths.path
@@ -48,7 +81,7 @@ _.extend( ExerciseMachine.prototype, {
      * @param {String} startState the start state. Default: startState specified by config
      * @return {ExerciseMachine} the current ExerciseMachine
      */
-    init: function( startState ) {
+    init: function(this: ExerciseMachineContext, startState: string ) {
         if ( this._state !== undefined ) { return }
 
         this.halted = false
@@ -67,18 +100,20 @@ _.extend( ExerciseMachine.prototype, {
      *
      * @param {String} state the state into which to step
      */
-    _step: function( newState, incomingData ) {
+    _step: function(this: ExerciseMachineContext, newState: string | undefined, incomingData?:any): void {
         if ( newState === undefined ) { return }
 
-        var oldState = this._state,
-            newStateConf = this._states[ newState ],
-            entryPoint,
-            stepDone = function( stepTo, stepData ) {
-                var emitData = { prev: incomingData, new: stepData }
+        const oldState = this._state,
+            newStateConf = this._states[ newState ]
+        
+        let entryPoint;
+
+        const stepDone = ( stepTo: string, stepData?: any ) => { // todo: any, not sure if stepData should be optional
+                const emitData = { prev: incomingData, new: stepData }
                 this.emit( 'step', newState, oldState, emitData )
                 if ( stepTo !== undefined ) { this._step( stepTo ) }
                 this._setUp()
-            }.bind( this )
+            }
 
         if ( this.halted ) { return }
 
@@ -93,12 +128,12 @@ _.extend( ExerciseMachine.prototype, {
             return
         }
 
-        if ( this.state !== undefined && newStateConf === undefined ) {
+        if ( this._state !== undefined && newStateConf === undefined ) {
             throw Error('No definition for state: ' + newState + '. Prev state: ' + oldState )
         }
 
         entryPoint = typeof newStateConf !== 'object' ? newStateConf :
-            ( newStateConf.onEnter ? newStateConf.onEnter : function( done ) { done() } )
+            ( newStateConf.onEnter ? newStateConf.onEnter : function( done: () => void ) { done() } ) // todo: weird type on done
 
         if ( typeof entryPoint === 'function' ) {
             entryPoint.call( this._exerciseUtils, stepDone )
@@ -110,14 +145,14 @@ _.extend( ExerciseMachine.prototype, {
     /**
      * Sets up the current state
      */
-    _setUp: function() {
-        var stateConfig = this._states[ this._state ],
-            transitionDone = function( stepTo, data ) {
+    _setUp: function(this: ExerciseMachineContext) {
+        const stateConfig = this._states[ this._state as string], // todo:fix
+            transitionDone = ( stepTo: any, data?: any ) => { // todo: any. also not sure if setting data as optional is ok
                 this._step( stepTo, data )
-            }.bind( this )
+            }
 
-        _.map( stateConfig, function( transition, transitionEvent ) {
-            var gitEventName = GIT_EVENTS[ transitionEvent ],
+        _.map( stateConfig, ( transition: any, transitionEvent: any ) => { // todo: any
+            let gitEventName = GIT_EVENTS[ transitionEvent ],
                 uniqName,
                 registerFn
             if ( !gitEventName ) { return }
@@ -126,42 +161,41 @@ _.extend( ExerciseMachine.prototype, {
                 registerFn = this._eventBus.setHandler.bind( this._eventBus )
                 this._currentHandlers.push({ action: gitEventName })
             } else {
-                uniqName = uuid.v1()
+                uniqName = uuid()
                 registerFn = this._eventBus.addListener.bind( this._eventBus, uniqName )
                 this._currentListeners.push({ name: uniqName, action: gitEventName })
             }
 
-            registerFn( this._repo, gitEventName, function() {
-                var listenerArgs = Array.prototype.slice.call( arguments )
+            registerFn( this._repo, gitEventName, (...listenerArgs: any) => {
                 if ( typeof transition === 'function' ) {
                     transition.apply( this._exerciseUtils, listenerArgs.concat( transitionDone ) )
                 } else {
                     // transition contains the name of the next state
                     transitionDone( transition )
                 }
-            }.bind( this ) )
-        }.bind( this ) )
+            })
+        })
     },
 
     /**
      * Tears down the current state
      */
-    _tearDown: function() {
-        this._currentListeners.map( function( listener ) {
+    _tearDown: function(this: ExerciseMachineContext) {
+        this._currentListeners.map( ( listener: { name: string; action: string; } ) => {
             this._eventBus.removeListener( listener.name, this._repo, listener.action )
-        }.bind( this ) )
-        this._currentHandlers.map( function( handler  ) {
+        })
+        this._currentHandlers.map( ( handler: { action: string; } ) => {
             this._eventBus.setHandler( this._repo, handler.action, undefined )
-        }.bind( this ) )
-        this._currentListeners = []
-        this._currentHandlers = []
+        } )
+        this._currentListeners = [];
+        this._currentHandlers = [];
     },
 
     /**
      * Forcibly halts this ExerciseMachine
      */
-    halt: function() {
-        this._step( null )
+    halt: function(this: ExerciseMachineContext) {
+        this._step( undefined );
     }
 })
 
