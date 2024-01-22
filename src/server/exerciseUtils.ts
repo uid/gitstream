@@ -1,3 +1,5 @@
+console.error('using exerciseUtils.ts');
+
 // This module provides utilities that are exposed as `this` to the functions in the exercise confs
 
 import diff from 'diff'
@@ -9,9 +11,7 @@ import { CommitSpec } from './utils'
 import { errors } from 'openid-client'
 import Q from 'q'
 
-var utils = require('./utils'); // todo: use imports once we use ES6 modules
-
-console.error('using exerciseUtils.ts');
+import { utils} from './utils';
 
 /* The ShadowBranch tracks (shadows) the tree of the local repository just
 before and after a commit. It is not valid after any other operation. */
@@ -23,7 +23,7 @@ type Config = {
   };
   
 // TODO: write tests
-module.exports = function( config: Config ) { // todo: change into `export` once we get  ES6 module support
+export function exerciseUtils( config: Config ) { // todo: change into `export` once we get  ES6 module support
     // a new one of these is made for each new ExerciseMachine
     const repoDir = config.repoDir,
         exerciseDir = config.exerciseDir,
@@ -132,7 +132,7 @@ module.exports = function( config: Config ) { // todo: change into `export` once
                 diffArgs.push(to as string) // todo: fix
             }
 
-            return git( 'diff-tree', diffArgs ).nodeify( cbfnp ? callback : null )
+            return git( 'diff-tree', diffArgs ).nodeify( callback || (() => {})) // todo: fix, kinda weird
             
 
             // todo: verify that this refactoring is correct before swapping 

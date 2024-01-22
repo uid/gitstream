@@ -1,8 +1,8 @@
+console.error('using logger.ts');
+
 import fs from "fs";
 import { Db } from "mongodb";
 import path from 'path';
-
-console.error('using logger.ts');
 
 const CONFIG = {
     LOG_CONSOLE: false,
@@ -13,7 +13,7 @@ const CONFIG = {
 }
 
 // todo: remove once main.js -> main.ts done
-const WS_TYPE = {
+export const WS_TYPE = {
     STATUS: 'Status',
     SENT: 'Sent',
     RECEIVED: 'Received'
@@ -160,7 +160,7 @@ function getCallerInfo(depth: number = 1): {fileName: string, lineNum: string} {
 }
 
 
-module.exports = function (opts: {dbcon: Q.Promise<Db>}) {
+export function createLogger(opts: {dbcon: Q.Promise<Db>}) {
 
     const dbcon = opts.dbcon;
 
@@ -197,7 +197,7 @@ module.exports = function (opts: {dbcon: Q.Promise<Db>}) {
             })
         },
 
-        log: function( eventType: EventType, userId: any, exercise: any, data: any) {
+        log: function( eventType: EventType, userId: any, exercise: any, data?: any) {
             // if ( !this.EVENT[ eventType ] ) {
             //     return console.error( '[ERROR] Tried logging invalid event: ', eventType )
             // }
@@ -212,7 +212,7 @@ module.exports = function (opts: {dbcon: Q.Promise<Db>}) {
             })
         },
 
-        err: function( type: ErrorType, userId: any, exercise: any, data: any ) {
+        err: function( type: ErrorType, userId: string, exercise: string, data: any ) {
             // if ( !this.ERR[ type ] ) {
             //     return console.error( '[ERROR] Tried logging invalid error type: ', type, data )
             // }

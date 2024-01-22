@@ -1,3 +1,5 @@
+console.error('using utils.ts');
+
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
@@ -6,8 +8,6 @@ import mustache from 'mustache';
 import crypto from 'crypto';
 
 const settings = require('../../settings') // todo: convert into an import once settings.js becomes a .ts
-
-console.error('using utils.ts');
 
 // todo: verify types are right
 type FileSpec = {
@@ -31,7 +31,7 @@ export type CommitSpec = {
         // if `FileSpec`, refers to a FileSpec
 };
 
-let utils = module.exports = {
+export let utils = {
     /**
      * Converts events in dash-delimited format to properties of the form onEventName
      * @param prefix - the prefix of the propified events. Default: on
@@ -160,7 +160,7 @@ let utils = module.exports = {
      * 
      * @return - a promise on the completion of the commands
      */
-        addCommit: function( repo: string, srcBase: string = '/', spec: CommitSpec ): Q.Promise<any> {
+    addCommit: function( repo: string, srcBase: string = '/', spec: CommitSpec ): Q.Promise<any> {
         const srcPath = path.join.bind( null, srcBase ),
             destPath = path.join.bind( null, repo ),
             commitAuthor = spec.author ||'GitStream <gitstream@csail.mit.edu>',

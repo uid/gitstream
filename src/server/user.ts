@@ -1,3 +1,5 @@
+console.error('using user.ts');
+
 import crypto from 'crypto';
 import q from 'q';
 import { Collection, Db } from 'mongodb';
@@ -8,9 +10,7 @@ interface User {
     created: number;
 }
 
-console.error('using user.ts');
-
-module.exports = function(opts: {dbcon: Q.Promise<Db>}) {
+export function createUser(opts: {dbcon: Q.Promise<Db>}) {
     const dbcon = opts.dbcon;
 
     return {
@@ -64,8 +64,8 @@ module.exports = function(opts: {dbcon: Q.Promise<Db>}) {
             // Type assertion. Can't normally add type annotation here b/c q.nfcall expects param of type 'unknown'
         },
 
-        createMac: function( key: string, macMsg: string, length: number ) {
-            length = length || 6 // default for repos
+        // length's default is 6 for repos
+        createMac: function( key: string, macMsg: string, length: number = 6 ) {
             return crypto.createHmac( 'sha1', key )
                 .update( macMsg )
                 .digest('hex')

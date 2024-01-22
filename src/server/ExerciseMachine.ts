@@ -1,13 +1,13 @@
+console.error('using exerciseMachine.ts');
+
 import util from 'util';
 import _ from 'lodash';
 import { v1 as uuid } from 'node-uuid';
 import { EventEmitter } from 'events';
 
-console.error('using exerciseMachine.ts');
-
 // todo: use imports once all files are .ts
-const utils = require('./utils'),
-    exerciseUtils = require('./exerciseUtils');
+import { utils } from './utils'
+import { exerciseUtils } from './exerciseUtils';
 
 const GIT_EVENTS = utils.events2Props( [ 'on', 'handle' ],
 [ 'pre-pull', 'pull', 'pre-clone', 'clone', 'pre-push', 'push', 'pre-info', 'info',
@@ -26,7 +26,7 @@ type Conf = any; // review docs
  *  Event `halt`: (haltState)`
  *
  */
-interface ExerciseMachineContext extends EventEmitter {
+export interface ExerciseMachineContext extends EventEmitter {
     // properties
     _repo: string;
     _state: string | undefined;
@@ -39,13 +39,12 @@ interface ExerciseMachineContext extends EventEmitter {
 
     // methods
     // todo: not sure if these have to be arrow functions
-    init: () => void;
-    _step : (newState: string | undefined, incomingData?: any) => void;
-    _setUp: () => void;
-    halt: () => void;
-    _tearDown: () => void;
-}
-
+     init( startState?: string): void;
+    _step( newState: string | undefined, incomingData?: any): void;
+    _setUp(): void;
+    _tearDown(): void;
+     halt(): void;
+ }
 
 
 /**
@@ -78,8 +77,8 @@ _.extend( ExerciseMachine.prototype, {
     /**
      * Initializes this ExerciseMachine with the provided start state and starts the clock
      * This method is idempotent once the machine has been started
-     * @param {String} startState the start state. Default: startState specified by config
-     * @return {ExerciseMachine} the current ExerciseMachine
+     * @param startState - the start state. Default: startState specified by config
+     * @return the current ExerciseMachine
      */
     init: function(this: ExerciseMachineContext, startState: string ) {
         if ( this._state !== undefined ) { return }
@@ -98,7 +97,7 @@ _.extend( ExerciseMachine.prototype, {
      * The `null` state is defined as the halt state. States returning `null` are also halt states
      * Further steps when halted do nothing.
      *
-     * @param {String} state the state into which to step
+     * @param state - the state into which to step
      */
     _step: function(this: ExerciseMachineContext, newState: string | undefined, incomingData?:any): void {
         if ( newState === undefined ) { return }
@@ -199,4 +198,5 @@ _.extend( ExerciseMachine.prototype, {
     }
 })
 
-module.exports = ExerciseMachine
+module.exports = ExerciseMachine // todo: remove?
+export { ExerciseMachine };
