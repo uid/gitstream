@@ -4,16 +4,14 @@
 
 ### Ubuntu
 
-\[WARNING\] THIS PART WILL SOON BE DEPRECATED.
+>**Warning:** Deprecated.
 
-```
+```sh
 sudo add-apt-repository ppa:gitstream/gitstream
 sudo apt-get update && sudo apt-get install gitstream
-```
+``` 
 
 ### General
-\[NOTE\] These instructions may be outdated.
-
 
 Download and access GitStream repository:
 ```sh
@@ -22,14 +20,9 @@ cd gitstream
 ```
 
 Install development dependencies:
-
-```sh
-sudo apt-get update
-curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get -y install git nginx nodejs make
-```
-
-Install [MongoDB Community Edition](https://docs.mongodb.com/manual/administration/install-community/).
+* Node.js v22
+* apt packages: `git nginx nodejs make`
+* MongoDB Community Edition
 
 
 Build and install GitStream:
@@ -52,8 +45,6 @@ place inside the root folder of GitStream.
 3. Add a new Vagrant box to your machine: `vagrant box add ubuntu/focal64`.
 4. Ensure special configuration files are in the main directory: `gistream.pem`, `settings.js`
 
-Now you're all set!
-
 ### Test
 
 * Run test cases via `npm test`.
@@ -62,6 +53,7 @@ Now you're all set!
 ### Run
 
 1. Access the VM by entering the vagrant folder (`cd vagrant`) and running `vagrant up && vagrant ssh`.
+The first boot will be slow as the VM is being initialized.
 
 2. Once in the VM, head to the gitstream directory: `cd /opt/gitstream`.
 
