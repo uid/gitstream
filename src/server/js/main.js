@@ -24,6 +24,9 @@ const ExerciseMachine = require('./ExerciseMachine'),
     { WS_TYPE, ...logger } = require('./logger')({ dbcon: mongodb }), // LOGGING
     user = require('./user')({ dbcon: mongodb });
 
+// import { WebSocketEvent, EventType, ErrorType } from './logger';
+
+
 // Global variables -- CONSTANT
 const PATH_TO_REPOS = '/srv/repos',
     PATH_TO_EXERCISES = __dirname + '/exercises/',
@@ -733,7 +736,7 @@ class ClientConnection {
                     this.exerciseMachine = this.createExerciseMachine( currentExercise )
                     this.exerciseMachine.init( exerciseState)
     
-                } else if ( exerciseState ) { // last exercise has expired
+                } else if ( exerciseState ) { // last exercise has expired // wait this weird, same conditional as above. todo: fix?
                     userMap.delete(this.userId, [FIELD_EXERCISE_STATE]);
     
                     delete clientState[ FIELD_EXERCISE_STATE ]
@@ -766,7 +769,6 @@ class ClientConnection {
                 if (this.exerciseMachine) {
                     this.exerciseMachine.halt()
                 }
-    
                 this.exerciseMachine = this.createExerciseMachine( exerciseName )
                 startState = this.exerciseMachine._states.startState
                 // set by EM during init, but init sends events. TODO: should probably be fixed
@@ -787,7 +789,6 @@ class ClientConnection {
                 state[ FIELD_EXERCISE_STATE ] = startState
     
                 this.sendMessage(EVENTS.sync, state);
-    
                 this.exerciseMachine.init()
             }
             userMap.getAll(this.userId, handleExerciseState)
@@ -843,7 +844,6 @@ class ClientConnection {
             exerciseDir = path.join( PATH_TO_EXERCISES, exerciseName )
     
         let exerciseMachine = new ExerciseMachine( emConf, repoPaths, exerciseDir, eventBus ) // local
-    
         const unsetExercise = () => {
             userMap.delete(this.userId, [FIELD_EXERCISE_STATE]);
         }
