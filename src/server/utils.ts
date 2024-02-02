@@ -34,13 +34,14 @@ export type CommitSpec = {
 export let utils = {
     /**
      * Converts events in dash-delimited format to properties of the form onEventName
-     * @param prefix - the prefix of the propified events. Default: on
-     * @param events - the events to propify
+     * @param prefixesArg - the prefix of the propified events. Default: 'on'
+     * @param eventsArg - the events to propify. Optional - defaults to `prefixesArg`
      * @return a hash from onEventName to event-name strings
      */
-    events2Props: function(prefixesArg: Array<any>, eventsArg: Array<any> ) { // todo: change the strings to another type?
+    events2Props: function(prefixesArg: Array<any>, eventsArg?: Array<any> ) { // todo: change the strings to another type?
         const prefixes = eventsArg ? prefixesArg : [ 'on' ],
             events = eventsArg ? eventsArg : prefixesArg
+
         return events.reduce( function( propHash, event ) {
             const eventPropSuffix = event.split('-').map( function( eventIdentifier: string ) {
                     return eventIdentifier.slice( 0, 1 ).toUpperCase() + eventIdentifier.slice( 1 )
