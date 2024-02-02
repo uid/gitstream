@@ -9,7 +9,6 @@ GITSTREAM_USER := $(shell grep gitstream /etc/passwd; echo $$?)
 
 # source paths
 SRC_CLIENT_STATIC = src/client/resources/ src/client/*.html
-SRC_SERVER = src/server/
 SRC_EXERCISES = node_modules/gitstream-exercises/exercises
 
 # destination paths

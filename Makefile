@@ -20,14 +20,14 @@ endif
 	# move static client files to dist
 	rsync -a $(SRC_CLIENT_STATIC) $(DIST_CLIENT)
 
-	# move all server files to dist
-	rsync -a --exclude='*.ts' $(SRC_SERVER) $(DIST_SERVER)
-	npx tsc # ts->js files will override existing js files moved from above
+	# move all server files to dist directory (requires ts->js conversion) 
+	npx tsc
 
 	# linkexercises
 	ln -srf $(SRC_EXERCISES) $(DIST_EXERCISES)
 
-	npm test
+	npm test-client
+	npm test-server
 
 run: build
 	sudo -u gitstream node dist/server/main
