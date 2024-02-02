@@ -1,0 +1,296 @@
+import assert from 'assert'
+import { ExerciseMachine } from '../../src/server/ExerciseMachine'
+
+const angler = require('git-angler')
+
+describe('ExcerciseMachine', function() {
+
+  let eventBus: any, repoPaths: any, repo: string, exerciseDir: string;
+
+  beforeEach(function () {
+    eventBus = new angler.EventBus()
+
+    //todo: investigate where these file paths are coming from
+    repoPaths = { path: '/nhynes/test.git', fsPath: '/srv/repos/nhynes/test.git' };
+    repo = repoPaths.path;
+    exerciseDir = '/srv/exercises/test';
+  })
+
+  // initialization using init( startState )
+  it('testInitialize', function (){
+    const em = new (ExerciseMachine as any)({
+      startState: 'otherState',
+      test: {},
+      otherState: {}
+      }, repoPaths, exerciseDir, eventBus)
+    em.init('test')
+    assert.strictEqual( em._state, 'test' )
+  })
+
+  // initialization using init()
+  it('testInitializeStartState', function (){
+    const em = (ExerciseMachine as any)({
+      startState: 'test',
+      test: {},
+      otherState: {}
+      }, repoPaths, exerciseDir, eventBus).init()
+    assert.strictEqual( em._state, 'test' )
+  })
+  
+  // verify that halting emits 'halt' event and that further steps do nothing
+  it('testHalt', function (){
+    const em = new (ExerciseMachine as any)({
+      testHalt: null,
+      otherState: {}
+      }, repoPaths, exerciseDir, eventBus)
+
+    em.on( 'halt', function( haltState: string ) {
+      assert.strictEqual( haltState, 'testHalt' )
+      em._step('otherState')
+      assert.strictEqual( em._state, 'testHalt' )
+    })
+
+    em.init('testHalt')
+  })
+  
+
+  // verify that stepping into a state emits the state as an event
+  it('testStepBasic', function (){
+    const em = new (ExerciseMachine as any)({
+      startState: 'test',
+      test: {},
+      nextState: null
+      }, repoPaths, exerciseDir, eventBus ).init()
+
+    em.on( 'step', function( newState: string, oldState: string ) {
+      assert.strictEqual( newState, 'nextState' )
+      assert.strictEqual( oldState, 'test' )
+    })
+
+    em._step('nextState')
+  })
+
+  // verify that stepping into a data and state-returning state emits the appropriate data
+  // and that the newly specified state is stepped into
+  it('testStepDataStep', function (){
+    let stepCount = 0,
+    em = new (ExerciseMachine as any)({
+      startState: 'test',
+      test: {
+          onEnter: (done: any) => {
+            done( 'nextState', 'some data' )
+          }
+        },
+      nextState: null
+      }, repoPaths, exerciseDir, eventBus )
+
+    em.on( 'step', function( newState: string, oldState: string, data: any ) {
+        stepCount++
+        if ( stepCount === 1 ) {
+            assert.strictEqual( newState, 'test' )
+            assert.strictEqual( data.new, 'some data' )
+        } else if ( stepCount === 2 ) {
+            assert.strictEqual( newState, 'nextState' )
+        } else {
+            assert( false )
+        }
+    })
+
+    em.init()
+    em._step('nextState')
+  })
+
+  // stepping into a state with a string value should go to the state specified by the value
+  // shorthand for defining an onEnter value
+  it('testStepStringForwarding', function (){
+    const em = new (ExerciseMachine as any)({
+      startState: 'test',
+      test: 'nextState',
+      nextState: null
+      }, repoPaths, exerciseDir, eventBus).init()
+
+  assert.strictEqual( em._state, 'nextState' )
+  })
+
+  // stepping into a state with a funtion value should go to the state specified by the return
+  // value of the function. Shorthand for defining an onEnter function
+  it('testStepFunctionForwarding', function (){
+    const em = new (ExerciseMachine as any)({
+      startState: 'test',
+      test: (done: any) => { done('nextState') },
+      nextState: null
+      }, repoPaths, exerciseDir, eventBus)
+
+    em.on('halt', ( haltState: any ) => {
+      assert.strictEqual( haltState, 'nextState' )
+    })
+
+    em.init()
+  })
+
+  // stepping into a state with a funtion value should halt if the return value is null
+  it('testStepFunctionHalting', function (){
+    let stepCount = 0;
+    const em = new (ExerciseMachine as any)({
+      startState: 'test',
+      test: () => { return null },
+      nextState: null
+      }, repoPaths, exerciseDir, eventBus)
+
+    em.on( 'step', function( newState: any, oldState: any) {
+      stepCount++
+      if ( stepCount === 2 ) {
+        assert.strictEqual( newState, null )
+        assert.strictEqual( oldState, 'test' )
+      }
+    })
+
+    em.init()
+  })
+
+  // stepping into a state that defines a string for onEntry should forward to that state
+  it('testStepEntryStringHalting', function (){
+    const em = new (ExerciseMachine as any)({
+      startState: 'test',
+      test: {onEnter: 'nextState'},
+      nextState: null
+      }, repoPaths, exerciseDir, eventBus ).init()
+
+    assert.strictEqual( em._state, 'nextState' )
+  })
+
+  // stepping into a state that defines a string-returning function  for onEntry should forward
+  // to that state specified by the return value
+  it('testStepEntryFunctionHalting', function (){
+    const em = new (ExerciseMachine as any)({
+      startState: 'test',
+      test: {onEnter: (done: any) => {done(null)}},
+      nextState: null
+      }, repoPaths, exerciseDir, eventBus)
+
+    em.on( 'halt', function( haltState: any ) {
+      assert.strictEqual( haltState, 'test' )
+    })
+  })
+
+  // stepping into a state that defines a non-string-returning function for onEntry should
+  // not forward to any other state
+  it('testStepEntryFunctionJustExecute', function (){
+    const em = new (ExerciseMachine as any)({
+      startState: 'test',
+      test: {onEnter: () => {return false}},
+      nextState: null
+    }, repoPaths, exerciseDir, eventBus ).init()
+
+    assert.strictEqual( em._state, 'test' )
+  })
+
+  // tests that events are correctly registered as listeners and transition to next states
+  // arguments passed to the stepping function should be those generated by the eventbus
+  // `this` in a transition fn should be the exercise utils
+  it('testEventedStepFn', function (){
+    const em = new (ExerciseMachine as any)({
+      startState: 'test',
+      test: {
+        onCommit: function(repo: string, action: string, info: any, done: any) {
+          assert.strictEqual( repo, '/nhynes/test.git' )
+          assert.strictEqual( action, 'commit' )
+          assert( info.test )
+          // assert( this.fileExists ) // todo: this doesnt seem to exist?
+          done('nextState')
+        }
+      },
+      nextState: null
+    }, repoPaths, exerciseDir, eventBus )
+
+    em.on( 'halt', (haltState: any) => {
+      assert.strictEqual( haltState, 'nextState' )
+    })
+
+    em.init()
+
+    eventBus.trigger(repo, 'commit', [ { test: true } ] )
+  })
+
+
+  // same as above but for handlers
+  it('testEventedStepHandler', function (){
+    const em = new (ExerciseMachine as any)({
+      startState: 'test',
+      test: {
+          handleCommit: function( repo: string, action: string, info: any, done: any ) {
+              assert.strictEqual( repo, '/nhynes/test.git' )
+              assert.strictEqual( action, 'commit' )
+              assert( info.test )
+              // assert( this.fileExists )
+              done('nextState')
+          }
+        },
+      nextState: null
+      }, repoPaths, exerciseDir, eventBus )
+
+    em.on( 'halt', function( haltState: any ) {
+      assert.strictEqual( haltState, 'nextState' )
+    })
+
+    em.init()
+
+    eventBus.trigger( repo, 'commit', [ { test: true } ] )
+  })
+
+
+  it('testEventedStepString', function (){
+    const em = new (ExerciseMachine as any)({
+      startState: 'test',
+      test: {
+          onCommit: 'nextState'
+        },
+      nextState: null
+      }, repoPaths, exerciseDir, eventBus )
+
+    em.on( 'halt', function( haltState: any ) {
+      assert.strictEqual( haltState, 'nextState' )
+    })
+
+    em.init()
+
+    eventBus.trigger( repo, 'commit', [ { test: true } ] )
+  })
+
+
+  // verifies that ExerciseMachine does not simply call properties that match on[A-Z][a-z]+
+  it('testEventedStepIgnoreExtraneousOn', function (){
+    const em = new (ExerciseMachine as any)({
+      startState: 'test',
+      test: {
+          onSomeNonGitEvent: 'nextState'
+      },
+      nextState: null
+      }, repoPaths, exerciseDir, eventBus ).init()
+
+    eventBus.triggerListeners( repo, 'some-non-git-event' )
+
+    assert.strictEqual( em._state, 'test' )
+  })
+
+  // tests that listeners from the old state are removed
+  it('testTeardown', function (){
+    const em = new (ExerciseMachine as any)({
+      startState: 'test',
+      test: {
+          onPush: 'badState',
+          onCommit: 'nextState'
+      },
+      nextState: {
+          onCommit: 'goodState'
+      },
+      badState: null,
+      goodState: null
+      }, repoPaths, exerciseDir, eventBus ).init()
+
+    eventBus.triggerListeners( repo, 'commit' )
+    eventBus.triggerListeners( repo, 'push' )
+    eventBus.triggerListeners( repo, 'commit' )
+    assert.strictEqual( em._state, 'goodState' )
+  })
+})
