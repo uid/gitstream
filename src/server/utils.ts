@@ -230,6 +230,7 @@ export let utils = {
                 
                 const url = omnivoreEndpoint.url;
                 const headers = { 
+                    'Content-Type': 'application/json',
                     'X-Omnivore-Signed': 'gitstream ' + signature 
                 };
                 const body = JSON.stringify(input);
