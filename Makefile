@@ -26,8 +26,8 @@ endif
 	# linkexercises
 	ln -srf $(SRC_EXERCISES) $(DIST_EXERCISES)
 
-	npm test-client
-	npm test-server
+	npm run test-client
+	npm run test-server
 
 run: build
 	sudo -u gitstream node dist/server/main
