@@ -204,7 +204,8 @@ utils = module.exports = {
                 var signature = sign.sign(privateKey, 'base64')
                 
                 const url = omnivoreEndpoint.url;
-                const headers = { 
+                const headers = {
+                    'Content-Type': 'application/json',    
                   'X-Omnivore-Signed': 'gitstream ' + signature 
                 };
                 const body = JSON.stringify(input);
