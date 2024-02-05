@@ -2,8 +2,8 @@ const fs = require("fs");
 const path = require('path');
 
 const CONFIG = {
-    LOG_CONSOLE: false,
-    LOG_FILE: false,
+    LOG_CONSOLE: true,
+    LOG_FILE: true,
     LOG_DIR: '/opt/gitstream/logs',
     WS_DEBUG_IND: false, // individual user events
     WS_DEBUG_SUM: true// summarized user events (aggregated stats or errors)
@@ -23,16 +23,21 @@ const CLI_COL = {
 };
 
 const colorCodeRegex = /\x1b\[\d{1,2}m/g;
+
 let allLogFiles = {};
+
+const current_time = new Date();
+
+const timestamp = {
+    date: current_time.toISOString().split('T')[0],
+    time: current_time.toLocaleTimeString('en-US', { hour12: false }),
+};
+
+const sharedLogDir = path.join(CONFIG.LOG_DIR, `${timestamp.date}_${timestamp.time}`);
+
 
 // Save all log files from the same session under the same timestamped folder
 if (CONFIG.LOG_FILE){
-    const now = new Date();
-    const timestamp = {
-        date: now.toISOString().split('T')[0],
-        time: now.toLocaleTimeString('en-US', { hour12: false }),
-    };
-
     // todo: more graceful way to handle this edge case?
     if (!fs.existsSync(CONFIG.LOG_DIR)) {
         console.error(`[ERROR] Log directory ${CONFIG.LOG_DIR} does not exist.
@@ -41,7 +46,7 @@ if (CONFIG.LOG_FILE){
         process.exit(1); // exit
     }
 
-    const sharedLogDir = path.join(CONFIG.LOG_DIR, `${timestamp.date}_${timestamp.time}`);
+    fs.chmodSync(CONFIG.LOG_DIR, 0o777);
     fs.mkdirSync(sharedLogDir);
     fs.chmodSync(sharedLogDir, 0o777);
 }

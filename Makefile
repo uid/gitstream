@@ -62,3 +62,10 @@ uninstall:
 
 clean:
 	rm -rf dist
+
+force-clean:
+	npm cache clean --force
+	rm -rf /opt/gitstream/node_modules
+
+
+
