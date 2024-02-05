@@ -56,7 +56,7 @@ Now you're all set!
 
 ### Test
 
-* Run test cases via `npm test`.
+* Run test cases via `make test`. 
 * To locally test multiple users, comment out `openid` config in `settings.js`. 
 
 ### Run

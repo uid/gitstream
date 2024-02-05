@@ -63,3 +63,7 @@ uninstall:
 
 clean:
 	rm -rf dist
+
+test:
+	npm run test-server
+	npm run test-client

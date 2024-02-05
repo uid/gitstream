@@ -1,6 +1,6 @@
 {
   "include": [
-    "src/**/*.ts"                         // Includes all TS files in the src directory for compilation
+    "src/**/*.ts"
   ],
 
   "compilerOptions": {

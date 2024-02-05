@@ -5,7 +5,7 @@ import { Db } from "mongodb";
 import path from 'path';
 
 const CONFIG = {
-    LOG_CONSOLE: false,
+    LOG_CONSOLE: true,
     LOG_FILE: false,
     LOG_DIR: '/opt/gitstream/logs',
     WS_DEBUG_IND: false, // individual user events
