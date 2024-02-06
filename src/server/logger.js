@@ -2,8 +2,8 @@ const fs = require("fs");
 const path = require('path');
 
 const CONFIG = {
-    LOG_CONSOLE: true,
-    LOG_FILE: true,
+    LOG_CONSOLE: false,
+    LOG_FILE: false,
     LOG_DIR: '/opt/gitstream/logs',
     WS_DEBUG_IND: false, // individual user events
     WS_DEBUG_SUM: true// summarized user events (aggregated stats or errors)
