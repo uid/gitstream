@@ -256,7 +256,7 @@ export function exerciseUtils( config: Config ) { // todo: change into `export` 
             const needleRegExp = needle instanceof RegExp ? needle : new RegExp(needle)
 
             return exUtils.getCommitMsg(ref)
-            .then( function(msg) {
+            .then( function(msg: any) {
                 return needleRegExp.test(msg)
             })
             .nodeify(callback)
@@ -285,7 +285,7 @@ export function exerciseUtils( config: Config ) { // todo: change into `export` 
          */
         fileExists: function(fileGlob: string, callback: any ): Q.Promise<any> { // todo: any
             return exUtils.filesMatching(fileGlob)
-            .then( function( files ) { return files.length !== 0 })
+            .then( function( files:any ) { return files.length !== 0 })
             .nodeify( callback )
         },
 

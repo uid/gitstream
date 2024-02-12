@@ -190,8 +190,8 @@ export function createLogger(opts: {dbcon: Q.Promise<Db>}) {
         },
 
         _log: function( record: LogRecord) {
-            dbcon.done( function( db ) {
-                db.collection('logs').insertOne( record, function( err ) { // todo: fix. soon to be deprecated
+            dbcon.done( function( db: any ) {
+                db.collection('logs').insertOne( record, function( err: any) { // todo: fix. soon to be deprecated
                     if ( err ) { console.error( '[ERROR] Logger error:', record, err ) }
                 })
             })
