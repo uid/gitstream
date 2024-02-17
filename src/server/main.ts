@@ -31,7 +31,7 @@ const exerciseConfs = require('gitstream-exercises')
 import { ExerciseMachine, ExerciseMachineContext } from './ExerciseMachine';
 import { CommitSpec, utils } from './utils';
 
-import { createLogger, WebSocketEvent, EventType, ErrorType } from './logger';
+import { createLogger, WebSocketEvent, EventType, ErrorType, UserMapOp } from './logger';
 const logger = createLogger(loggerOpts);
 
 import { createUser } from './user';

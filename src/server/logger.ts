@@ -42,6 +42,12 @@ export enum ErrorType {
     ERR = 'ERR'
   }
 
+export enum UserMapOp {
+    SET = 'set',
+    DELETE = 'delete',
+    GET_ALL = 'getAll'
+}
+
 // todo: figure out the 'any' types later
 interface LogRecord {
     timestamp: number;
@@ -150,9 +156,9 @@ export function createLogger(opts: {dbcon: Q.Promise<Db>}) {
          * 
          * @param userMap - Map object containing all user data
          * @param userID - ID of user
-         * @param type - Type of operation: set, expire, delete, getall
+         * @param type - Type of operation
          */
-        userMapMod: function(userMap: {[userID: string]: any}, userID: string, type: string) {
+        userMapMod: function(userMap: {[userID: string]: any}, userID: string, type: UserMapOp) {
             if (!(CONFIG.LOG_CONSOLE || CONFIG.LOG_MONGO)) return; // if both false, skip this function
 
             const callerInfo = getCallerInfo(2);
