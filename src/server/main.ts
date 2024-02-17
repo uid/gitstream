@@ -90,8 +90,21 @@ let backend = angler.gitHttpBackend({ // todo: might constant, but leaving here 
     }
 })
 
-function logDbErr(userId: string, exercise: string, data: any) { // todo: any
-    return (err: any) => { // todo: any
+/**
+ * Logs database errors with additional context information.
+ * 
+ * This function returns a callback that, when invoked with an error, logs the error
+ * along with the user ID, exercise name, and additional data provided. If the error
+ * is null, indicating no error occurred, the callback will simply return without
+ * performing any logging.
+ *
+ * @param userId - The ID of the user associated with the database operation
+ * @param exercise - The name of the exercise
+ * @param data - Additional data to be logged
+ * @returns A callback function that takes an optional Error object.
+ */
+function logDbErr(userId: string, exercise: string, data: any): (err: Error | null) => void { // todo: any
+    return (err: Error | null) => { // todo: any
         if (!err) return
         data.msg = err.message
         
@@ -548,8 +561,10 @@ async function configureApp() {
 
             try {
                 exerciseEvents.emit(repoInfo.userId + ':go', repoInfo.exerciseName); 
-            } catch (error) {
-                handlePublishError(error);
+            } catch (err) {
+                if (err instanceof Error){
+                    handlePublishError(err);
+                }
             }
 
             res.writeHead( 200 )
