@@ -105,7 +105,7 @@ export function exerciseUtils( config: Config ) { // todo: change into `export` 
                 q.nfcall(fs.readFile, pathToReference, 'utf8')
             ])
             .spread(function(verifyFile, referenceFile) {
-                var fileDiff = diff.diffLines(verifyFile, referenceFile),
+                const fileDiff = diff.diffLines(verifyFile, referenceFile),
                     diffp = fileDiff.length !== 1 || fileDiff[0].added || fileDiff[0].removed;
                 return diffp ? fileDiff : null;
             })

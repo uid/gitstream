@@ -396,7 +396,7 @@ eventBus.setHandler( '*', 'receive', function( repo: string, action: any, update
     }
 
     chain.catch( function( err ) {
-        var repoInfo = extractRepoInfoFromPath( repo ) as ExerciseData; // assert good
+        const repoInfo = extractRepoInfoFromPath( repo ) as ExerciseData; // assert good
         // LOGGING
         logger.err( ErrorType.ON_RECEIVE, repoInfo.userId, repoInfo.exerciseName, {
             msg: err.message
@@ -457,7 +457,7 @@ async function configureApp() {
         // https://github.com/panva/node-openid-client/blob/master/docs/README.md#customizing-clock-skew-tolerance
         client[(openidclient.custom).clock_tolerance] = 'clockTolerance' in settings.openid ? settings.openid.clockTolerance : 5;
         
-        var usernameFromEmail = settings.openid.usernameFromEmail || ((email: any) => email); // todo: any
+        const usernameFromEmail = settings.openid.usernameFromEmail || ((email: any) => email); // todo: any
         
         passport.use('openid', new openidclient.Strategy({
             client,
@@ -756,7 +756,7 @@ class ClientConnection {
         this.userId = recvUserId; // initial and sole assignment
         this.addToActiveList();
 
-        var userKeyPromise = user.getUserKey( this.userId )
+        const userKeyPromise = user.getUserKey( this.userId )
     
         userKeyPromise.done(( key ) => {
             this.userKey = key as unknown as string // Type assertion
@@ -790,8 +790,8 @@ class ClientConnection {
             }
     
             userKeyPromise.then( ( userKey ) => { // not used because is the same as `this.userKey`
-                var exerciseState = clientState[ FIELD_EXERCISE_STATE ],
-                    currentExercise = clientState[ FIELD_CURRENT_EXERCISE ]
+                const exerciseState = clientState[ FIELD_EXERCISE_STATE ],
+                      currentExercise = clientState[ FIELD_CURRENT_EXERCISE ]
     
                 // LOGGING
                 logger.log( EventType.SYNC, this.userId, currentExercise, {
@@ -902,7 +902,7 @@ class ClientConnection {
 
 
     createExerciseMachine(exerciseName: string) {
-        var emConf = exerciseConfs.machines[ exerciseName ](),
+        const emConf = exerciseConfs.machines[ exerciseName ](),
             repoMac = user.createMac( this.userKey, this.userId + exerciseName ),
             exerciseRepo = createRepoShortPath({
                 userId: this.userId,
