@@ -17,8 +17,8 @@ import crypto from 'crypto';
 import EventEmitter from 'events';
 import { spawn } from 'child_process';
 import { MongoClient, Db } from 'mongodb';
+import { rimraf } from 'rimraf';
 
-const rimraf = require('rimraf') // todo: replace with a modern alternative 
 
 const mongodb: q.Promise<Db> = q.nfcall<MongoClient>(MongoClient.connect, 'mongodb://localhost/gitstream')
   .then((client: MongoClient) => client.db());
@@ -314,7 +314,8 @@ function createRepo( repoName: string ): Q.Promise<any> { // todo: any
         repoInfo = info
         pathToExercise = path.join( PATH_TO_EXERCISES, repoInfo.exerciseName )
         pathToStarterRepo = path.join( pathToExercise, 'starting.git' )
-        return q.nfcall( rimraf, pathToRepoDir )
+
+        return rimraf(pathToRepoDir, {} ) // second param = no additional options
     })
     .then( function() {
         let done = q.defer(),
