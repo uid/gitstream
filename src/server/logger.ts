@@ -57,6 +57,7 @@ interface LogRecord {
     data: any;
     errorType?: ErrorType;
 }
+
 const colorCodeRegex = /\x1b\[\d{1,2}m/g; // strips colors from text
 
 /**
@@ -73,7 +74,7 @@ function formatField(field: string, content: string, width: number = 20): string
     const contentString = String(content).substring(0, width);
     const padding = ' '.repeat(width - fieldString.length);
     return fieldString + padding + contentString;
-  }
+}
 
 /**
  * Retrieves filename and line number information from some ancestor caller function that was called.
@@ -106,12 +107,16 @@ function getCallerInfo(depth: number = 1): {fileName: string, lineNum: string} {
 
 
 export function createLogger(opts: {dbcon: Q.Promise<Db>}) {
-
     const dbcon = opts.dbcon;
 
     return {
         CONFIG, // todo: move out of here
 
+        /**
+         * Method that inserts standardized log records to the database
+         * 
+         * @param record The log record object to be inserted
+         */
         _log: function( record: LogRecord) {
             dbcon.done( function( db: any ) {
                 db.collection('logs').insertOne( record, function( err: any) { // todo: fix. soon to be deprecated
@@ -120,12 +125,19 @@ export function createLogger(opts: {dbcon: Q.Promise<Db>}) {
             })
         },
 
-        log: function( eventType: EventType, userId: any, exercise: any, data?: any) {
-            // if ( !this.EVENT[ eventType ] ) {
-            //     return console.error( '[ERROR] Tried logging invalid event: ', eventType )
-            // }
-            
-            console.info(eventType, userId, exercise, data);
+        /**
+         * Logs an event with its associated data.
+         * 
+         * @param eventType The type of event to log.
+         * @param userId The ID of the user associated with the event.
+         * @param exercise The exercise related to the event.
+         * @param data Additional data relevant to the event (optional).
+         */
+        log: function( eventType: EventType, userId: any, exercise: any, data?: any) {          
+            if (CONFIG.LOG_CONSOLE) {
+                console.info(eventType, userId, exercise, data);
+            }
+
             this._log({
                 userId: userId,
                 event: eventType,
@@ -135,11 +147,18 @@ export function createLogger(opts: {dbcon: Q.Promise<Db>}) {
             })
         },
 
+        /**
+         * Logs an error with its associated data.
+         * 
+         * @param type The type of error to log.
+         * @param userId The ID of the user associated with the error.
+         * @param exercise The exercise related to the error.
+         * @param data Additional data relevant to the error.
+         */
         err: function( type: ErrorType, userId: string, exercise: string, data: any ) {
-            // if ( !this.ERR[ type ] ) {
-            //     return console.error( '[ERROR] Tried logging invalid error type: ', type, data )
-            // }
-            console.error(type, userId, exercise, data);
+            if (CONFIG.LOG_CONSOLE) {
+                console.error(type, userId, exercise, data);
+            }
 
             this._log({
                 event: EventType.ERROR,
@@ -193,16 +212,19 @@ export function createLogger(opts: {dbcon: Q.Promise<Db>}) {
          * @param output - any object
          * @returns - nothing
          */
-        ws: function(type: WebSocketEvent, output: any){ // todo: standardize type of output
+        ws: function(type: WebSocketEvent, output: any) { // todo: standardize type of output
             if (CONFIG.WS_DEBUG_IND) {
                 const strOutput = JSON.stringify(output);
                 strOutput.replace(/\"/g, ""); // remove extra quotation marks
 
                 const trueOutput = `\n[WS][Server][${type}] ${strOutput}\n`;
                 
-                // todo: replace with using _log method
-                // todo, condition on LOG_CONSOLE and LOG_MONGO
-                console.log(trueOutput);
+                if (CONFIG.LOG_CONSOLE) {
+                    console.log(trueOutput);
+                }
+                if (CONFIG.LOG_MONGO) {
+                    // todo
+                }
             }
         }
     }
