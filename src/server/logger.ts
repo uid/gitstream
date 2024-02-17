@@ -1,15 +1,12 @@
 console.error('using logger.ts');
 
-import fs from "fs";
 import { Db } from "mongodb";
-import path from 'path';
 
 const CONFIG = {
     LOG_CONSOLE: true,
-    LOG_FILE: false,
-    LOG_DIR: '/opt/gitstream/logs',
-    WS_DEBUG_IND: false, // individual user events
-    WS_DEBUG_SUM: true // summarized user events (aggregated stats or errors)
+    LOG_MONGO: true,
+    WS_DEBUG_IND: false, // all individual user events (normal and error)
+    WS_DEBUG_SUM: true   // summary of user events (aggregated stats and individual errors)
 }
 
 export enum WebSocketEvent {
@@ -53,59 +50,8 @@ interface LogRecord {
     exercise: any;
     data: any;
     errorType?: ErrorType;
-  }
-
-const colorCodeRegex = /\x1b\[\d{1,2}m/g;
-
-/**
- * Map of log file names to boolean indicating 
- * if that log file has already been created.
- */
-let allLogFiles: {[name: string]: boolean} = {};
-
-let sharedLogDir: string;
-
-// Save all log files from the same session under the same timestamped folder
-if (CONFIG.LOG_FILE){
-    const now = new Date();
-    const timestamp = {
-        date: now.toISOString().split('T')[0],
-        time: now.toLocaleTimeString('en-US', { hour12: false }),
-    };
-
-    // todo: more graceful way to handle this edge case?
-    if (!fs.existsSync(CONFIG.LOG_DIR)) {
-        console.error(`[ERROR] Log directory ${CONFIG.LOG_DIR} does not exist.
-        To fix, run \`mkdir ${CONFIG.LOG_DIR}; chmod 777 ${CONFIG.LOG_DIR}\``);
-
-        process.exit(1); // exit
-    }
-
-    sharedLogDir = path.join(CONFIG.LOG_DIR, `${timestamp.date}_${timestamp.time}`);
-    fs.mkdirSync(sharedLogDir);
-    fs.chmodSync(sharedLogDir, 0o777);
 }
-
-/**
- * Log content to a specified file.
- *  
- * @param directory - The directory where the file should be placed.
- * @param name - The name for the log file (aka before `.log`)
- * @param content - The content to be logged.
- * @returns - Nothing.
- */
-function logToFile(directory: string, name: string, content: string): void {
-    const filePath = path.join(directory, `${name}.log`);
-
-    // If the name is not found, create the file and record it.
-    if (!(name in allLogFiles)) {
-        fs.writeFileSync(filePath, "");
-        fs.chmodSync(filePath, 0o777);
-        allLogFiles[name] = true;
-    }
-
-    fs.appendFileSync(filePath, content);
-}
+const colorCodeRegex = /\x1b\[\d{1,2}m/g; // strips colors from text
 
 /**
  * Format a field and its content with a specified width.
@@ -207,11 +153,11 @@ export function createLogger(opts: {dbcon: Q.Promise<Db>}) {
          * @param type - Type of operation: set, expire, delete, getall
          */
         userMapMod: function(userMap: {[userID: string]: any}, userID: string, type: string) {
-            if (!(CONFIG.LOG_CONSOLE || CONFIG.LOG_FILE)) return;
+            if (!(CONFIG.LOG_CONSOLE || CONFIG.LOG_MONGO)) return; // if both false, skip this function
 
             const callerInfo = getCallerInfo(2);
 
-            let location = `${ConsoleColor.GRN}[${callerInfo.fileName}:${callerInfo.lineNum}]` +
+            const location = `${ConsoleColor.GRN}[${callerInfo.fileName}:${callerInfo.lineNum}]` +
                              `${ConsoleColor.MAG}[${type}]${ConsoleColor.RST}`;
 
             const userInfo = userMap[userID] ?? {};
@@ -226,11 +172,12 @@ export function createLogger(opts: {dbcon: Q.Promise<Db>}) {
 
             const output = `[User Map][${userID}]\n${location}\n${contentAll}`;
             
-            if (CONFIG.LOG_CONSOLE)
+            if (CONFIG.LOG_CONSOLE) {
                 console.log(`\n${output}`);
-            
-            if (CONFIG.LOG_FILE)
-                logToFile(sharedLogDir, 'userMap', `${output.replace(colorCodeRegex, '')}\n`);
+            }
+            if (CONFIG.LOG_MONGO) {
+                // todo
+            }
         },
 
         /**
@@ -248,6 +195,7 @@ export function createLogger(opts: {dbcon: Q.Promise<Db>}) {
                 const trueOutput = `\n[WS][Server][${type}] ${strOutput}\n`;
                 
                 // todo: replace with using _log method
+                // todo, condition on LOG_CONSOLE and LOG_MONGO
                 console.log(trueOutput);
             }
         }
