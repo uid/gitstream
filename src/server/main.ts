@@ -1,7 +1,6 @@
 console.error('using main.ts');
 
-
-// Imported Libraries -- EXTERNAL
+// External Libraries
 import compression from 'compression';
 import express from 'express';
 import { Request, Response, NextFunction } from 'express';
@@ -12,7 +11,6 @@ import session from 'cookie-session';
 import { Passport } from 'passport';
 import openidclient from 'openid-client';
 import { Strategy as OpenIdClientStrategy, TokenSet, UserinfoResponse } from 'openid-client';
-
 import crypto from 'crypto';
 import EventEmitter from 'events';
 import { spawn } from 'child_process';
@@ -23,17 +21,17 @@ import { rimraf } from 'rimraf';
 const mongodb: q.Promise<Db> = q.nfcall<MongoClient>(MongoClient.connect, 'mongodb://localhost/gitstream')
   .then((client: MongoClient) => client.db());
 
-// Imported Libraries -- INTERNAL
+// Internal Libraries
 const loggerOpts = { dbcon: mongodb }
 
-// These can't be a module bc they are still an unmodified js package
+// note: these can't be a module bc they are still a regular js package
 const angler = require('git-angler')
 const exerciseConfs = require('gitstream-exercises')
 
 import { ExerciseMachine, ExerciseMachineContext } from './ExerciseMachine';
 import { CommitSpec, utils } from './utils';
 
-import { WS_TYPE, createLogger, WebSocketEvent, EventType, ErrorType } from './logger';
+import { createLogger, WebSocketEvent, EventType, ErrorType } from './logger';
 const logger = createLogger(loggerOpts);
 
 import { createUser } from './user';
@@ -42,7 +40,7 @@ const user = createUser(loggerOpts);
 const settings = require('../../settings') as any; // todo: any
 
 
-// Global variables -- CONSTANT
+// Constant Global variables
 const PATH_TO_REPOS = '/srv/repos',
     PATH_TO_EXERCISES = __dirname + '/exercises/',
     PORT = 4242, // for WebSocket connection
@@ -65,7 +63,7 @@ enum EVENTS {
 
 const EVENTS_ENDPOINT = '/events'; // configured with nginx
 
-// Global Variables -- DYNAMIC
+// Dynamic Global Variables
 let eventBus = new angler.EventBus(), // todo: might constant, but leaving here for now
     githookEndpoint = angler.githookEndpoint({
         pathToRepos: PATH_TO_REPOS,

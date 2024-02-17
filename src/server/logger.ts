@@ -12,13 +12,6 @@ const CONFIG = {
     WS_DEBUG_SUM: true // summarized user events (aggregated stats or errors)
 }
 
-// todo: remove once main.js -> main.ts done
-export const WS_TYPE = {
-    STATUS: 'Status',
-    SENT: 'Sent',
-    RECEIVED: 'Received'
-}
-
 export enum WebSocketEvent {
     STATUS = 'Status',
     SENT = 'Sent',
@@ -165,29 +158,7 @@ export function createLogger(opts: {dbcon: Q.Promise<Db>}) {
     const dbcon = opts.dbcon;
 
     return {
-        CONFIG,
-        WS_TYPE,
-
-        // todo: replace with enum defined above
-        EVENT: {
-            NEW_USER: 'NEW_USER',
-            INIT_CLONE: 'INIT_CLONE',
-            QUIT: 'QUIT',
-            EM: 'EM',
-            GO: 'GO',
-            CHANGE_EXERCISE: 'CHANGE_EXERCISE',
-            SYNC: 'SYNC',
-            ERROR: 'ERROR'
-        },
-
-        ERR: {
-            GIT_HTTP: 'GIT_HTTP',
-            CREATE_REPO: 'LOG_ERR',
-            ON_RECEIVE: 'ON_RECEIVE',
-            EX: 'EXERCISE_ERR',
-            DB: 'DB_ERR',
-            ERR: 'ERR'
-        },
+        CONFIG, // todo: move out of here
 
         _log: function( record: LogRecord) {
             dbcon.done( function( db: any ) {
@@ -276,6 +247,7 @@ export function createLogger(opts: {dbcon: Q.Promise<Db>}) {
 
                 const trueOutput = `\n[WS][Server][${type}] ${strOutput}\n`;
                 
+                // todo: replace with using _log method
                 console.log(trueOutput);
             }
         }
