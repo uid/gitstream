@@ -51,9 +51,9 @@ export enum UserMapOp {
 // todo: figure out the 'any' types later
 interface LogRecord {
     timestamp: number;
-    userId: any;
+    userId: string;
     event: EventType;
-    exercise: any;
+    exercise: string;
     data: any;
     errorType?: ErrorType;
 }
@@ -117,9 +117,9 @@ export function createLogger(opts: {dbcon: Q.Promise<Db>}) {
          * 
          * @param record The log record object to be inserted
          */
-        _log: function( record: LogRecord) {
+        _log: function(record: LogRecord) {
             dbcon.done( function( db: any ) {
-                db.collection('logs').insertOne( record, function( err: any) { // todo: fix. soon to be deprecated
+                db.collection('logs').insertOne( record, function(err: any) { // todo: fix. soon to be deprecated
                     if ( err ) { console.error( '[ERROR] Logger error:', record, err ) }
                 })
             })
@@ -130,18 +130,18 @@ export function createLogger(opts: {dbcon: Q.Promise<Db>}) {
          * 
          * @param eventType The type of event to log.
          * @param userId The ID of the user associated with the event.
-         * @param exercise The exercise related to the event.
+         * @param exerciseName The exercise related to the event.
          * @param data Additional data relevant to the event (optional).
          */
-        log: function( eventType: EventType, userId: any, exercise: any, data?: any) {          
+        log: function(eventType: EventType, userId: string, exerciseName?: string, data?: any) {          
             if (CONFIG.LOG_CONSOLE) {
-                console.info(eventType, userId, exercise, data);
+                console.info(eventType, userId, exerciseName, data);
             }
 
             this._log({
                 userId: userId,
                 event: eventType,
-                exercise: exercise,
+                exercise: exerciseName || "NA",
                 data: data,
                 timestamp: Date.now()
             })

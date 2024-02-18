@@ -732,7 +732,7 @@ class ClientConnection {
 
         this.removeFromActiveList();
     
-        logger.log(EventType.QUIT, this.userId, null)
+        logger.log(EventType.QUIT, this.userId)
     }
 
     // === Expiremental feature to maintain list of active connections ===
