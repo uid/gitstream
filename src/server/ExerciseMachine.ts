@@ -2,7 +2,7 @@ console.error('using exerciseMachine.ts');
 
 import util from 'util';
 import _ from 'lodash';
-import { v1 as uuid } from 'node-uuid';
+import { v1 as uuidv1 } from 'uuid';
 import { EventEmitter } from 'events';
 
 // todo: use imports once all files are .ts
@@ -160,7 +160,7 @@ _.extend( ExerciseMachine.prototype, {
                 registerFn = this._eventBus.setHandler.bind( this._eventBus )
                 this._currentHandlers.push({ action: gitEventName })
             } else {
-                uniqName = uuid()
+                uniqName = uuidv1()
                 registerFn = this._eventBus.addListener.bind( this._eventBus, uniqName )
                 this._currentListeners.push({ name: uniqName, action: gitEventName })
             }
