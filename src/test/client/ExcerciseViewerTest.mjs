@@ -1,4 +1,4 @@
-import ExerciseViewer from '../../src/client/js/ExerciseViewer.js';
+import ExerciseViewer from '../../client/js/ExerciseViewer.js';
 import EventEmitter from 'events';
 import assert from 'assert'
 

@@ -8,8 +8,8 @@
   "repository": "https://github.com/uid/gitstream",
   "type": "commonjs",
   "scripts": {
-    "test-client": "mocha test/client/*.mjs",
-    "test-server": "mocha --require source-map-support/register --require ts-node/register test/server/*.ts",
+    "test-client": "mocha src/test/client/*.mjs",
+    "test-server": "mocha --require source-map-support/register --require ts-node/register src/test/server/*.ts",
     "sass": "node-sass src/client/scss/ -o dist/client",
     "build-js": "node esbuild.config.js",
     "esbuild": "esbuild --bundle src/client/js/main.js --outfile=dist/client/main.js",

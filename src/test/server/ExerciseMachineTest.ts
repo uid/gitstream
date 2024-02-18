@@ -1,5 +1,5 @@
 import assert from 'assert'
-import { ExerciseMachine } from '../../src/server/ExerciseMachine'
+import { ExerciseMachine } from '../../server/ExerciseMachine'
 
 const angler = require('git-angler')
 

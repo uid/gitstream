@@ -1,4 +1,4 @@
-import { utils } from '../../src/server/utils'
+import { utils } from '../../server/utils'
 import assert from 'assert'
 
 describe('Utils', () => {
