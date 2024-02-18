@@ -16,7 +16,7 @@ import EventEmitter from 'events';
 import { spawn } from 'child_process';
 import { MongoClient, Db } from 'mongodb';
 import { rimraf } from 'rimraf';
-
+import * as _ from 'lodash';
 
 const mongodb: q.Promise<Db> = q.nfcall<MongoClient>(MongoClient.connect, 'mongodb://localhost/gitstream')
   .then((client: MongoClient) => client.db());
@@ -25,7 +25,7 @@ const mongodb: q.Promise<Db> = q.nfcall<MongoClient>(MongoClient.connect, 'mongo
 const loggerOpts = { dbcon: mongodb }
 
 import angler from 'git-angler';
-const exerciseConfs = require('gitstream-exercises')
+import exerciseConfs from 'gitstream-exercises';
 
 import { ExerciseMachine, ExerciseMachineContext } from './ExerciseMachine.js';
 import { CommitSpec, utils } from './utils.js';
@@ -316,7 +316,7 @@ function createRepo( repoName: string ): Q.Promise<any> { // todo: any
     .then( function() {
         let done = q.defer(),
             repoUtils = {
-                _: require('lodash'),
+                _: _, // todo: looks weird, change later
                 resourcesPath: pathToExercise
             },
             commits: any = q.Promise( function( resolve ) { // todo: any
