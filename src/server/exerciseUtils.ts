@@ -2,7 +2,7 @@ console.error('using exerciseUtils.ts');
 
 // This module provides utilities that are exposed as `this` to the functions in the exercise confs
 
-import diff from 'diff'
+import { diffLines } from 'diff'
 import fs from 'fs'
 import path from 'path'
 import q from 'q'
@@ -104,7 +104,7 @@ export function exerciseUtils( config: Config ) { // todo: change into `export` 
                 q.nfcall(fs.readFile, pathToReference, 'utf8')
             ])
             .spread(function(verifyFile, referenceFile) {
-                const fileDiff = diff.diffLines(verifyFile, referenceFile),
+                const fileDiff = diffLines(verifyFile, referenceFile),
                     diffp = fileDiff.length !== 1 || fileDiff[0].added || fileDiff[0].removed;
                 return diffp ? fileDiff : null;
             })
