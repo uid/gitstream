@@ -38,6 +38,8 @@ const user = createUser(loggerOpts);
 
 import settings from '../../settings.js'
 
+const __dirname = import.meta.dirname; // required in ESM
+
 // Constant Global variables
 const PATH_TO_REPOS = '/srv/repos',
     PATH_TO_EXERCISES = __dirname + '/exercises/',
