@@ -6,7 +6,7 @@ import express from 'express';
 import { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import q from 'q';
-import WebSocket from 'ws';
+import WebSocket, { WebSocketServer } from 'ws';
 import session from 'cookie-session';
 import { Passport } from 'passport';
 import openidclient from 'openid-client';
@@ -598,7 +598,7 @@ const server = app.listen(PORT)
 
 // Create a WebSocket connection ontop of the Express app
 // todo: this config might need additional tweaks (though, it does work rn)
-const wss = new WebSocket.Server({
+const wss = new WebSocketServer({
     server: server,
     path: EVENTS_ENDPOINT
 });
