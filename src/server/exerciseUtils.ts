@@ -8,10 +8,7 @@ import path from 'path'
 import q from 'q'
 import { CommitSpec, utils } from './utils.js'
 import Q from 'q'
-
-
-const glob = require('glob') // this might be sus?
-
+import glob from 'glob';
 
 /* The ShadowBranch tracks (shadows) the tree of the local repository just
 before and after a commit. It is not valid after any other operation. */
@@ -23,7 +20,7 @@ type Config = {
 };
   
 // TODO: write tests
-export function exerciseUtils( config: Config ) { // todo: change into `export` once we get  ES6 module support
+export function exerciseUtils( config: Config ) {
     // a new one of these is made for each new ExerciseMachine
     const repoDir = config.repoDir,
         exerciseDir = config.exerciseDir,
@@ -290,6 +287,8 @@ export function exerciseUtils( config: Config ) { // todo: change into `export` 
             .nodeify(callback)
         },
 
+
+        // NOTE: this logic may not be correct, but I've yet to check due to it currently not being used
         /**
          * Performs a glob match in the repo directory
          * @param fileGlob the glob to match against
@@ -298,10 +297,26 @@ export function exerciseUtils( config: Config ) { // todo: change into `export` 
          */
         filesMatching: function(
             fileGlob: string,
-            callback: (err: Error | null, matchingFilenames: string[] | null) => void = () => {}
+            callback?: (err: Error | null, matchingFilenames: string[] | null) => void
         ): Q.Promise<string[]> {
-            return q.nfcall( glob, fileGlob, { cwd: repoDir, root: repoDir, silent: true } )
-            .nodeify( callback) as Q.Promise<string[]> // todo: hacky fix
+            const deferred = Q.defer<string[]>();
+            const options = { cwd: repoDir, root: repoDir, silent: true };
+        
+            glob(fileGlob, options, (err, files) => {
+                if (err) {
+                    deferred.reject(err);
+                    if (callback) {
+                        callback(err, null);
+                    }
+                } else {
+                    deferred.resolve(files);
+                    if (callback) {
+                        callback(null, files);
+                    }
+                }
+            });
+        
+            return deferred.promise;
         },
 
         // todo: remove? not used
@@ -309,6 +324,7 @@ export function exerciseUtils( config: Config ) { // todo: change into `export` 
             return shadowFn( exUtils.filesMatching, args)
         },
 
+        // todo: remove? used in a test file but that's also currently commented out
         /**
          * Checks for the existence of a file in the repo
          * @param fileGlob a glob describing the the file
@@ -317,13 +333,14 @@ export function exerciseUtils( config: Config ) { // todo: change into `export` 
          */
         fileExists: function(
             fileGlob: string,
-            callback: any // todo: any
-        ): Q.Promise<boolean> { // todo: any
+            callback: (err: Error | null, fileExists: boolean) => void = () => {}
+        ): Q.Promise<boolean> {
             return exUtils.filesMatching(fileGlob)
             .then( function( files:any ) { return files.length !== 0 })
             .nodeify( callback )
         },
 
+        // todo: remove? not used
         /**
          * Checks for the existence of a file in the repo's shadowbranch
          * @see fileExists and the description of the shadowbranch
