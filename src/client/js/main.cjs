@@ -8,7 +8,7 @@ const $ = require('zeptojs'),
 
 // Imports -- INTERNAL
 const exercises = require('gitstream-exercises/viewers'),
-    ExerciseViewer = require('./ExerciseViewer'),
+    ExerciseViewer = require('./ExerciseViewer.cjs'),
     exerciseTmp = require('../templates/exercise.hbs'),
     indexTmp = require('../templates/index.hbs');
 
