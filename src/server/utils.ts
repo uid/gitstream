@@ -7,7 +7,8 @@ import q from 'q';
 import mustache from 'mustache';
 import crypto from 'crypto';
 
-const settings = require('../../settings') // todo: convert into an import once settings.js becomes a .ts
+import settings from '../../settings.js';
+
 
 // todo: verify types are right
 type FileSpec = {

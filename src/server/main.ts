@@ -37,8 +37,7 @@ const logger = createLogger(loggerOpts);
 import { createUser } from './user.js';
 const user = createUser(loggerOpts);
 
-const settings = require('../../settings') as any; // todo: any
-
+import settings from '../../settings.js'
 
 // Constant Global variables
 const PATH_TO_REPOS = '/srv/repos',
