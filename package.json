@@ -12,8 +12,8 @@
     "test-server": "mocha --require source-map-support/register dist/test/**/*.js",
     "sass": "node-sass src/client/scss/ -o dist/client",
     "build-js": "node esbuild.config.js",
-    "esbuild": "esbuild --bundle src/client/js/main.js --outfile=dist/client/main.js",
-    "browserify": "browserify src/client/js/main.js --outfile=dist/client/main.js"
+    "esbuild": "esbuild --bundle src/client/js/main.cjs --outfile=dist/client/main.js",
+    "browserify": "browserify src/client/js/main.cjs --outfile=dist/client/main.js"
   },
   "browserify": {
     "transform": [
