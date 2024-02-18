@@ -1,14 +1,14 @@
 import assert from 'assert'
 import { ExerciseMachine } from '../../server/ExerciseMachine.js'
 
-const angler = require('git-angler')
+import angler from 'git-angler';
 
 describe('ExcerciseMachine', function() {
 
   let eventBus: any, repoPaths: any, repo: string, exerciseDir: string;
 
   beforeEach(function () {
-    eventBus = new angler.EventBus()
+    eventBus = new angler.EventBus();
 
     //todo: investigate where these file paths are coming from
     repoPaths = { path: '/nhynes/test.git', fsPath: '/srv/repos/nhynes/test.git' };

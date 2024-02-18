@@ -24,8 +24,7 @@ const mongodb: q.Promise<Db> = q.nfcall<MongoClient>(MongoClient.connect, 'mongo
 // Internal Libraries
 const loggerOpts = { dbcon: mongodb }
 
-// note: these can't be a module bc they are still a regular js package
-const angler = require('git-angler')
+import angler from 'git-angler';
 const exerciseConfs = require('gitstream-exercises')
 
 import { ExerciseMachine, ExerciseMachineContext } from './ExerciseMachine.js';
