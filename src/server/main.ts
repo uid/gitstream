@@ -28,13 +28,13 @@ const loggerOpts = { dbcon: mongodb }
 const angler = require('git-angler')
 const exerciseConfs = require('gitstream-exercises')
 
-import { ExerciseMachine, ExerciseMachineContext } from './ExerciseMachine';
-import { CommitSpec, utils } from './utils';
+import { ExerciseMachine, ExerciseMachineContext } from './ExerciseMachine.js';
+import { CommitSpec, utils } from './utils.js';
 
-import { createLogger, WebSocketEvent, EventType, ErrorType, UserMapOp } from './logger';
+import { createLogger, WebSocketEvent, EventType, ErrorType, UserMapOp } from './logger.js';
 const logger = createLogger(loggerOpts);
 
-import { createUser } from './user';
+import { createUser } from './user.js';
 const user = createUser(loggerOpts);
 
 const settings = require('../../settings') as any; // todo: any

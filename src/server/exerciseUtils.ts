@@ -6,9 +6,8 @@ import diff from 'diff'
 import fs from 'fs'
 import path from 'path'
 import q from 'q'
-import { CommitSpec } from './utils'
+import { CommitSpec, utils } from './utils.js'
 import Q from 'q'
-import { utils} from './utils';
 
 
 const glob = require('glob') // this might be sus?

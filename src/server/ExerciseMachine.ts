@@ -6,8 +6,8 @@ import { v1 as uuid } from 'node-uuid';
 import { EventEmitter } from 'events';
 
 // todo: use imports once all files are .ts
-import { utils } from './utils'
-import { exerciseUtils } from './exerciseUtils';
+import { utils } from './utils.js'
+import { exerciseUtils } from './exerciseUtils.js';
 
 const GIT_EVENTS = utils.events2Props( [ 'on', 'handle' ],
 [ 'pre-pull', 'pull', 'pre-clone', 'clone', 'pre-push', 'push', 'pre-info', 'info',
