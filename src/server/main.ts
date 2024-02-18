@@ -159,7 +159,7 @@ let userMap: UserMap = {
             this[userID] = {};
 
           this[userID][key] = value;
-          logger.userMapMod(this, userID, "set");
+          logger.userMapMod(this, userID, UserMapOp.SET);
 
           if (callback)
             return callback(null);
@@ -191,7 +191,7 @@ let userMap: UserMap = {
           for (const key of keys) {
             if (key in userInfo) {
               delete userInfo[key];
-              logger.userMapMod(this, userID, "delete");
+              logger.userMapMod(this, userID, UserMapOp.DELETE);
             }
           }
 
@@ -212,7 +212,7 @@ let userMap: UserMap = {
      * @returns - This function does not return anything (mutator function)
      */
     getAll(userID: string, callback: standardCallback): void {
-        logger.userMapMod(this, userID, "getAll");
+        logger.userMapMod(this, userID, UserMapOp.SET);
 
         try {
             const userInfo = this[userID];
