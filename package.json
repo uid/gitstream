@@ -6,7 +6,7 @@
   "author": "Nick Hynes",
   "license": "MIT",
   "repository": "https://github.com/uid/gitstream",
-  "type": "commonjs",
+  "type": "module",
   "scripts": {
     "test-client": "mocha src/test/client/*.mjs",
     "test-server": "mocha --require source-map-support/register dist/test/**/*.js",
