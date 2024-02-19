@@ -8,7 +8,7 @@ import path from 'path'
 import q from 'q'
 import { CommitSpec, utils } from './utils.js'
 import Q from 'q'
-import glob from 'glob';
+import { glob } from 'glob';
 
 /* The ShadowBranch tracks (shadows) the tree of the local repository just
 before and after a commit. It is not valid after any other operation. */
@@ -302,19 +302,19 @@ export function exerciseUtils( config: Config ) {
             const deferred = Q.defer<string[]>();
             const options = { cwd: repoDir, root: repoDir, silent: true };
         
-            glob(fileGlob, options, (err, files) => {
-                if (err) {
-                    deferred.reject(err);
-                    if (callback) {
-                        callback(err, null);
-                    }
-                } else {
-                    deferred.resolve(files);
-                    if (callback) {
-                        callback(null, files);
-                    }
+            glob(fileGlob, options)
+            .then((files) => {
+                deferred.resolve(files);
+                if (callback) {
+                    callback(null, files);
                 }
-            });
+            })
+            .catch((err) => {
+                deferred.reject(err);
+                if (callback) {
+                    callback(err, null);
+                }
+            })
         
             return deferred.promise;
         },
