@@ -71,9 +71,5 @@ export function createUser(opts: {dbcon: Q.Promise<Db>}) {
                 .digest('hex')
                 .substring( 0, length )
         },
-
-        createRandomId: function() {
-            return 'user' + crypto.pseudoRandomBytes(3).toString('hex').substring(0, 5)
-        }
     }
 }
