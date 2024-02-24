@@ -1,5 +1,3 @@
-console.error('using exerciseMachine.ts');
-
 import util from 'util';
 import _ from 'lodash';
 import { v1 as uuidv1 } from 'uuid';

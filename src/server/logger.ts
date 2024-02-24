@@ -1,5 +1,3 @@
-console.error('using logger.ts');
-
 import { Db } from "mongodb";
 
 const CONFIG = {

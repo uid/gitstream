@@ -1,5 +1,3 @@
-console.error('using user.ts');
-
 import crypto from 'crypto';
 import q from 'q';
 import { Collection, Db } from 'mongodb';

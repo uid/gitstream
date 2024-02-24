@@ -1,5 +1,3 @@
-console.error('using exerciseUtils.ts');
-
 // This module provides utilities that are exposed as `this` to the functions in the exercise confs
 
 import { diffLines } from 'diff'
