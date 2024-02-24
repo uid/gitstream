@@ -9,9 +9,7 @@ import crypto from 'crypto';
 import settings from '../../settings.js'
 
 export const app = express();
-
 export const PORT = 4242; // for WebSocket connection
-
 
 // set up a session cookie to hold the user's identity after authentication
 const sessionParser = session({
@@ -22,20 +20,24 @@ const sessionParser = session({
 });
 app.use(sessionParser);
 
-
 // Extend the Express Request to include the user property and the session from cookie-session
 interface AuthenticatedRequest extends Request {
-    user?: { username: string, fullname: string }; // Replace 'any' with the actual type of your user object
-    session?: any //todo: figure out why this doesnt work: session.Session & { returnTo?: string };
+    user?: {
+        username: string,
+        fullname: string
+    };
+    session?: any //todo: any
 }
   
 
-
+/**
+ * Generates a random 5 character ID string prefixed with 'user'
+ */
 function createRandomId(): string {
     return 'user' + crypto.pseudoRandomBytes(3).toString('hex').substring(0, 5)
 }
 
-// setUserAuthenticateIfNecessary: this middleware sets req.user to an object { username:string, fullname:string }, either from
+// this middleware sets req.user to an object { username:string, fullname:string }, either from
 // session cookie information or by authenticating the user using the authentication method selected in settings.js.
 //
 // By default there is no authentication method, so this method authenticates as a guest user with a randomly-generated username.
@@ -54,9 +56,10 @@ let setUser = function(req: AuthenticatedRequest, res: Response, next: NextFunct
 let setUserAuthenticateIfNecessary = setUser; 
 
 async function configureApp() {
-    // // if we have settings for OpenID authentication, configure it
+    // if we have settings for OpenID authentication, configure it
+    // this should always be the case, unless you're debugging and want to generate random
+    // usernames per session
     if (settings.openid) {
-
         const passport = new Passport();
         const openidissuer = await openidclient.Issuer.discover(settings.openid.serverUrl);
         const client = new openidissuer.Client({
@@ -68,7 +71,7 @@ async function configureApp() {
         // https://github.com/panva/node-openid-client/blob/master/docs/README.md#customizing-clock-skew-tolerance
         client[(openidclient.custom).clock_tolerance] = 'clockTolerance' in settings.openid ? settings.openid.clockTolerance : 5;
         
-        const usernameFromEmail = settings.openid.usernameFromEmail || ((email: any) => email); // todo: any
+        const usernameFromEmail = settings.openid.usernameFromEmail || ((email: string) => email);
         
         passport.use('openid', new openidclient.Strategy({
             client,
@@ -85,14 +88,16 @@ async function configureApp() {
         
         const passportInit = passport.initialize();
         app.use(passportInit);
+
         const passportSession = passport.session();
         app.use(passportSession);
+        
         app.use('/auth',
                 (req, res, next) => {
                     passport.authenticate(
                         'openid',
                         // see "Custom Callback" at http://www.passportjs.org/docs/authenticate/
-                        (err: Error, user: any, info: any) => { // any
+                        (err: Error, user: any, info: any) => { // todo: any
                             if (err || !user) {
                                 // put some debugging info in the log
                                 console.log('problem in OpenId authentication', req.originalUrl);
@@ -147,5 +152,4 @@ async function configureApp() {
 }
 configureApp().catch(err => console.error(err));
 
-// Start the server using the shorthand provided by Express
 export const server = app.listen(PORT)
