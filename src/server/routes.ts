@@ -365,7 +365,6 @@ function createRepo( repoName: string ): Q.Promise<any> { // todo: any
 eventBus.setHandler( '*', '404', function( repoName: string, _: any, data: any, clonable: any ) { // todo: any
     if ( !REPO_NAME_REGEX.test( repoName ) ) { return clonable( false ) }
 
-    // LOGGING
     const repoInfo = extractRepoInfoFromPath( repoName ) as ExerciseData; // assert good
     logger.log( EventType.INIT_CLONE, repoInfo.userId, repoInfo.exerciseName )
 
@@ -374,7 +373,6 @@ eventBus.setHandler( '*', '404', function( repoName: string, _: any, data: any, 
         clonable( true )
     }, function( err ) {
         clonable( false )
-        // LOGGING
         logger.err( ErrorType.CREATE_REPO, repoInfo.userId, repoInfo.exerciseName, {
             msg: err.message
         })
@@ -385,16 +383,16 @@ eventBus.setHandler( '*', '404', function( repoName: string, _: any, data: any, 
 // this can't be done inside of the post-receive hook, for some reason
 // NOTE: when Git >= 2.3.0 is in APT, look into `receive.denyCurrentBranch updateInstead`
 eventBus.setHandler( '*', 'receive', function( repo: string, action: any, updates: any[], done: () => void ) { // todo: any
-    const repoPath = path.resolve( PATH_TO_REPOS, '.' + repo ),
-        git = utils.git.bind( utils, repoPath ),
-        isPushingShadowBranch = updates.reduce( function( isbr, update ) {
+    const repoPath = path.resolve( PATH_TO_REPOS, '.' + repo );
+    const git = utils.git.bind( utils, repoPath );
+    const isPushingShadowBranch = updates.reduce( function( isbr, update ) {
             return isbr || update.name === 'refs/heads/shadowbranch'
         }, false )
 
     const chain = git( 'reset', '--hard' )
-    .then( function() {
-        return git( 'checkout', ':/')
-    })
+        .then( function() {
+            return git( 'checkout', ':/')
+        })
 
     if ( isPushingShadowBranch ) {
         chain.then( function() {
@@ -407,7 +405,6 @@ eventBus.setHandler( '*', 'receive', function( repo: string, action: any, update
 
     chain.catch( function( err ) {
         const repoInfo = extractRepoInfoFromPath( repo ) as ExerciseData; // assert good
-        // LOGGING
         logger.err( ErrorType.ON_RECEIVE, repoInfo.userId, repoInfo.exerciseName, {
             msg: err.message
         })
@@ -518,7 +515,6 @@ class ClientConnection {
 
     // per socket
     handleError(event: WebSocket.ErrorEvent) {
-        
         console.error('ws connection error:', event);
     }
     
@@ -537,7 +533,7 @@ class ClientConnection {
         logger.log(EventType.QUIT, this.userId)
     }
 
-    // === Expiremental feature to maintain list of active connections ===
+    // === Maintain list of active connections ===
 
     addToActiveList() {
         // Add the new connection to the array of active connections
@@ -577,7 +573,6 @@ class ClientConnection {
         userKeyPromise.done(( key ) => {
             this.userKey = key as unknown as string // Type assertion
         }, ( err ) => {
-            // LOGGING
             logger.err(ErrorType.DB, this.userId, 'null', {msg: err.message})
         })
     
@@ -585,7 +580,6 @@ class ClientConnection {
             if ( err ) {
                 console.error(err)
     
-                // LOGGING
                 logger.err( ErrorType.DB, this.userId, 'null', {
                     desc: 'userMap get client state',
                     msg: err.message
@@ -609,7 +603,6 @@ class ClientConnection {
                 const exerciseState = clientState[ FIELD_EXERCISE_STATE ],
                       currentExercise = clientState[ FIELD_CURRENT_EXERCISE ]
     
-                // LOGGING
                 logger.log( EventType.SYNC, this.userId, currentExercise, {
                     exerciseState: exerciseState
                 })
@@ -639,7 +632,6 @@ class ClientConnection {
         userMap.getAll(this.userId, handleClientState);
     
         const processNewExercise = ( channel: any, exerciseName: string ) => { // todo: any
-            // LOGGING
             logger.log( EventType.GO, this.userId, exerciseName )
     
             const handleExerciseState = ( err: Error | null, state: State ) => {
@@ -648,7 +640,7 @@ class ClientConnection {
                     return
                 }
 
-                let startState
+                let startState;
                 
                 console.error('hgetall', this.userId, state);
     
@@ -707,7 +699,6 @@ class ClientConnection {
         userMap.delete(this.userId, [FIELD_EXERCISE_STATE], handleNewExercise);
         userMap.set(this.userId, FIELD_CURRENT_EXERCISE, newExercise, handleNewExercise);
     
-        // LOGGING
         logger.log( EventType.CHANGE_EXERCISE, this.userId, newExercise )
     }
 
@@ -759,8 +750,7 @@ class ClientConnection {
         const makeListenerFn = (listenerDef: any) => {
             // send message via websocket and call upon helper function
 
-
-            // todo: refactor this function 
+            // todo: refactor this function
             return (...args: any) => {
                 this.sendMessage(listenerDef.event, args);
     
@@ -789,9 +779,7 @@ class ClientConnection {
 
 let activeConnections: string[] = [];
 
-
 export async function configureApp(app: Application, server: Server) {
-
     // Create a WebSocket connection ontop of the Express app
     // todo: this config might need additional tweaks (though, it does work rn)
     const wss = new WebSocketServer({
@@ -806,9 +794,9 @@ export async function configureApp(app: Application, server: Server) {
     });
 
     // set up routes
-    app.use( compression() )
-    app.use( '/repos', backend )
-    app.use( '/hooks', githookEndpoint )
+    app.use( compression() );
+    app.use( '/repos', backend );
+    app.use( '/hooks', githookEndpoint );
 
     // invoked from the "go" script in client repo
     app.use( '/go', function( req, res ) {
@@ -817,8 +805,8 @@ export async function configureApp(app: Application, server: Server) {
             return res.end()
         }
 
-        const remoteUrl = req.headers['x-gitstream-repo'] as string,
-            repo = remoteUrl.substring( remoteUrl.indexOf( gitHTTPMount ) + gitHTTPMount.length )
+        const remoteUrl = req.headers['x-gitstream-repo'] as string;
+        const repo = remoteUrl.substring( remoteUrl.indexOf( gitHTTPMount ) + gitHTTPMount.length);
 
         createRepo( repo )
         .done( function( repoInfo ) {
@@ -841,7 +829,7 @@ export async function configureApp(app: Application, server: Server) {
         }, function( err ) {
             res.writeHead( 403 )
             res.end()
-            // LOGGING
+
             logger.err( ErrorType.CREATE_REPO, 'null', 'null', {
                 desc: 'New repo on go',
                 repo: repo,
@@ -849,5 +837,5 @@ export async function configureApp(app: Application, server: Server) {
                 msg: err.message
             })
         })
-    })
+    });
 }
