@@ -30,9 +30,9 @@ const logger = createLogger(loggerOpts);
 import { createUser } from './user.js';
 const user = createUser(loggerOpts);
 
+// Constant Global Variables
 const __dirname = import.meta.dirname; // required in ESM
 
-// Constant Global variables
 const PATH_TO_REPOS = '/srv/repos',
     PATH_TO_EXERCISES = __dirname + '/exercises/',
     REPO_NAME_REGEX = /\/[a-z0-9_-]+\/[a-f0-9]{6,}\/.+.git$/,
@@ -49,18 +49,17 @@ enum EVENTS {
     halt = 'halt'
 }
 
-
 const EVENTS_ENDPOINT = '/events'; // configured with nginx
 
-// Dynamic Global Variables
-let eventBus = new angler.EventBus(), // todo: might constant, but leaving here for now
-    githookEndpoint = angler.githookEndpoint({
+const eventBus = new angler.EventBus();
+
+const githookEndpoint = angler.githookEndpoint({
         pathToRepos: PATH_TO_REPOS,
         eventBus: eventBus,
         gitHTTPMount: gitHTTPMount
-    })
+    });
 
-let backend = angler.gitHttpBackend({ // todo: might constant, but leaving here for now
+const backend = angler.gitHttpBackend({
     pathToRepos: PATH_TO_REPOS,
     eventBus: eventBus,
     authenticator: function( params: { repoPath: any; }, callback: any ) { // todo: any
@@ -77,6 +76,7 @@ let backend = angler.gitHttpBackend({ // todo: might constant, but leaving here 
     }
 })
 
+// todo: move to utils?
 /**
  * Logs database errors with additional context information.
  * 
@@ -103,13 +103,11 @@ function logDbErr(userId: string, exercise: string, data: any): (err: Error | nu
 
 const exerciseEvents = new EventEmitter();
 
-// type declerations
+// Custom Types and Interfaces
 
-// 
 // err - An error object if the operation fails.
 // returns void - This function does not return anything (mutator function).
 type errorCallback = ((err: Error | null) => void) | undefined;
-
 // todo: is Error | null good? or should we use Error | undefined?
 
 /**
@@ -127,6 +125,27 @@ interface UserMap {
     delete(userID: string, keys: Array<string>, callback?: errorCallback): void;
     getAll(userID: string, callback: standardCallback): void
 }
+
+interface ExerciseData {
+    userId: string;
+    exerciseName: string;
+    mac: string;
+    macMsg?: string;
+}
+
+type RepoPath = string|string[];
+
+// todo: figure out which of these should not be optional
+type ClientState = {
+    [FIELD_EXERCISE_STATE]?: string;
+    [FIELD_CURRENT_EXERCISE]?: string;
+    user?: {
+      key?: string;
+      id?: string;
+    };
+  };
+
+type State = ClientState; // todo: check if this is strictly true
 
 /**
  * Global map to store user progress. Methods encapsulated.
@@ -219,16 +238,6 @@ let userMap: UserMap = {
         }
     }
 }
-
-
-interface ExerciseData {
-    userId: string;
-    exerciseName: string;
-    mac: string;
-    macMsg?: string;
-}
-
-type RepoPath = string|string[];
 
 /**
  * Extracts data from the components of a repo's path
@@ -407,21 +416,6 @@ eventBus.setHandler( '*', 'receive', function( repo: string, action: any, update
         done()
     })
 })
-
-
-
-
-// todo: figure out which of these should not be optional
-type ClientState = {
-    [FIELD_EXERCISE_STATE]?: string;
-    [FIELD_CURRENT_EXERCISE]?: string;
-    user?: {
-      key?: string;
-      id?: string;
-    };
-  };
-
-type State = ClientState; // todo: check if this is strictly true
 
 class ClientConnection {
     private ws: WebSocket;
