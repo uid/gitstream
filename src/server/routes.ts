@@ -796,8 +796,6 @@ export async function configureApp(app: Application, server: Server) {
 
     // == set up routes ==
 
-    app.use( compression() );
-
     // easter egg / test page
     app.get(GS_ROUTE + '/hi', function (req, res) {
         res.type('text/plain');
