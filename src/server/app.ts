@@ -10,9 +10,8 @@ import settings from '../../settings.js'
 
 export const app = express();
 export const PORT = 4242; 
+const GS_ROUTE = '/gitstream';
 
-
-// todo: replace with praxistutor's
 // set up a session cookie to hold the user's identity after authentication
 const sessionParser = session({
     secret: settings.sessionSecret || crypto.pseudoRandomBytes(16).toString('hex'),
@@ -20,7 +19,9 @@ const sessionParser = session({
     signed: true,
     overwrite: true,
 });
-app.use(sessionParser);
+
+// Apply the sessionParser only to /gitstream route
+app.use(GS_ROUTE, sessionParser);
 
 // Extend the Express Request to include the user property and the session from cookie-session
 interface AuthenticatedRequest extends Request {
@@ -56,9 +57,6 @@ let setUser = function(req: AuthenticatedRequest, res: Response, next: NextFunct
 };
 
 let setUserAuthenticateIfNecessary = setUser; 
-
-
-const GS_ROUTE = '/gitstream';
 
 async function configureApp() {
     // if we have settings for OpenID authentication, configure it
