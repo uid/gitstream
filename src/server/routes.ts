@@ -779,27 +779,36 @@ class ClientConnection {
 
 let activeConnections: string[] = [];
 
+
+const GS_ROUTE = '/gitstream';
+
 export async function configureApp(app: Application, server: Server) {
-    // Create a WebSocket connection ontop of the Express app
-    // todo: this config might need additional tweaks (though, it does work rn)
     const wss = new WebSocketServer({
         server: server,
         path: EVENTS_ENDPOINT
     });
 
-    // Create a new websocket connection
+    // New websocket connection
     wss.on('connection', function(ws) {
         // bug: handling multiple users from the same source (eg userId)
         new ClientConnection(ws);
     });
 
-    // set up routes
+    // == set up routes ==
+
     app.use( compression() );
-    app.use( '/repos', backend );
-    app.use( '/hooks', githookEndpoint );
+
+    // easter egg / test page
+    app.get(GS_ROUTE + '/hi', function (req, res) {
+        res.type('text/plain');
+        res.send("hi");
+    });
+
+    app.use(GS_ROUTE + '/repos', backend );
+    app.use(GS_ROUTE + '/hooks', githookEndpoint );
 
     // invoked from the "go" script in client repo
-    app.use( '/go', function( req, res ) {
+    app.use(GS_ROUTE + '/go', function( req, res ) {
         if ( !req.headers['x-gitstream-repo'] ) {
             res.writeHead(400)
             return res.end()

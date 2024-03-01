@@ -9,8 +9,10 @@ import crypto from 'crypto';
 import settings from '../../settings.js'
 
 export const app = express();
-export const PORT = 4242; // for WebSocket connection
+export const PORT = 4242; 
 
+
+// todo: replace with praxistutor's
 // set up a session cookie to hold the user's identity after authentication
 const sessionParser = session({
     secret: settings.sessionSecret || crypto.pseudoRandomBytes(16).toString('hex'),
@@ -55,10 +57,15 @@ let setUser = function(req: AuthenticatedRequest, res: Response, next: NextFunct
 
 let setUserAuthenticateIfNecessary = setUser; 
 
+
+const GS_ROUTE = '/gitstream';
+
 async function configureApp() {
     // if we have settings for OpenID authentication, configure it
     // this should always be the case, unless you're debugging and want to generate random
     // usernames per session
+
+
     if (settings.openid) {
         const passport = new Passport();
         const openidissuer = await openidclient.Issuer.discover(settings.openid.serverUrl);
@@ -85,7 +92,7 @@ async function configureApp() {
         const returnUserInfo = (userinfo: any, done: any) => done(null, userinfo);
         passport.serializeUser(returnUserInfo);
         passport.deserializeUser(returnUserInfo);
-        
+
         const passportInit = passport.initialize();
         app.use(passportInit);
 
@@ -137,11 +144,11 @@ async function configureApp() {
             next();
         }
 
-        app.use( '/login', <any>setUserAuthenticateIfNecessary, function( req, res ) { // todo: any
+        app.use(GS_ROUTE + '/login', <any>setUserAuthenticateIfNecessary, function( req, res ) { // todo: any
             res.redirect(req.originalUrl.replace(/^\/login/, '/'));
         })
 
-        app.use( '/user', <any>setUser, <any>function( req: AuthenticatedRequest, res: Response ) { // todo: fix any
+        app.use(GS_ROUTE + '/user', <any>setUser, <any>function( req: AuthenticatedRequest, res: Response ) { // todo: fix any
             const userId = ( req.user && req.user.username ) || "";
             res.writeHead( 200, { 'Content-Type': 'text/plain' } )
             res.end( userId )
