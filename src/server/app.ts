@@ -9,7 +9,8 @@ import crypto from 'crypto';
 import settings from '../../settings.js'
 
 export const app = express();
-export const PORT = 4242; 
+
+const PORT = 4242; 
 const GS_ROUTE = '/gitstream';
 
 // set up a session cookie to hold the user's identity after authentication
