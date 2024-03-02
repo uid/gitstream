@@ -21,7 +21,9 @@ const EVENTS = {
     halt: 'halt'
 }
 
-const EVENTS_ENDPOINT = '/events'; // must be the same as server!
+const GS_ROUTE = '/gitstream';
+
+const EVENTS_ENDPOINT = GS_ROUTE + '/events'; // must be the same as server!
 
 // Global variables -- DYNAMIC
 var exerciseEvents = eventEmitter({}), // internal client communication, with ExerciseViewer
@@ -157,10 +159,9 @@ events_WS.onerror = function(event) {
         console.error('ws connection error:', event);
 };
 
-
-$.get( '/user', function( userId ) {
+$.get( GS_ROUTE + '/user', function( userId ) {
     if (!userId) {
-        document.location = "/login" + document.location.search;
+        document.location = GS_ROUTE + "/login" + document.location.search;
     } else {
         sendMessage(EVENTS.sync, userId);
     }
@@ -199,7 +200,7 @@ function renderExerciseView( exerciseName, conf, user ) {
             }
         }),
         mac = hmac( user.id + exerciseName, user.key ).toString().substring( 0, 6 ),
-        cloneUrl = 'http://' + window.location.host + '/repos/' +
+        cloneUrl = 'http://' + window.location.host + GS_ROUTE + '/repos/' +
             user.id + '/' + mac + '/' + exerciseName + '.git',
         templateParams = {
             title: conf.title,
