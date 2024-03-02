@@ -71,7 +71,7 @@ async function configureApp() {
         const client = new openidissuer.Client({
             client_id: settings.openid.clientId,
             client_secret: settings.openid.clientSecret,
-            redirect_uris: [ settings.openid.clientUrl + (settings.openid.clientUrl.endsWith('/') ? '' : '/') + 'auth' ]
+            redirect_uris: [ settings.openid.clientUrl + (settings.openid.clientUrl.endsWith('/') ? '' : '/') + 'auth' ] // todo: what should be done here?
         });
 
         // https://github.com/panva/node-openid-client/blob/master/docs/README.md#customizing-clock-skew-tolerance
@@ -98,7 +98,7 @@ async function configureApp() {
         const passportSession = passport.session();
         app.use(passportSession);
         
-        app.use('/auth',
+        app.use(GS_ROUTE + '/auth',
                 (req, res, next) => {
                     passport.authenticate(
                         'openid',
@@ -137,14 +137,14 @@ async function configureApp() {
         setUserAuthenticateIfNecessary = function(req, res, next) {
             if ( ! req.user ) {
                 req.session.returnTo = req.originalUrl;
-                return res.redirect('/auth');
+                return res.redirect(GS_ROUTE + '/auth');
             }
             console.log('OpenID authenticated as', req.user);
             next();
         }
 
         app.use(GS_ROUTE + '/login', <any>setUserAuthenticateIfNecessary, function( req, res ) { // todo: any
-            res.redirect(req.originalUrl.replace(/^\/login/, '/'));
+            res.redirect(req.originalUrl.replace(new RegExp(`^${GS_ROUTE}/login`), GS_ROUTE));
         })
 
         app.use(GS_ROUTE + '/user', <any>setUser, <any>function( req: AuthenticatedRequest, res: Response ) { // todo: fix any
