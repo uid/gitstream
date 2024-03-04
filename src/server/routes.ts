@@ -49,7 +49,8 @@ enum EVENTS {
     halt = 'halt'
 }
 
-const EVENTS_ENDPOINT = '/events'; // configured with nginx
+const GS_ROUTE = '/gitstream';
+const EVENTS_ENDPOINT = GS_ROUTE + '/events'; // configured with nginx
 
 const eventBus = new angler.EventBus();
 
@@ -780,8 +781,6 @@ class ClientConnection {
 let activeConnections: string[] = [];
 
 
-const GS_ROUTE = '/gitstream';
-
 export async function configureApp(app: Application, server: Server) {
     const wss = new WebSocketServer({
         server: server,
@@ -795,7 +794,7 @@ export async function configureApp(app: Application, server: Server) {
     });
 
     // == set up routes ==
-
+    
     // easter egg / test page
     app.get(GS_ROUTE + '/hi', function (req, res) {
         res.type('text/plain');
