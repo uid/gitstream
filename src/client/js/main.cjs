@@ -18,7 +18,7 @@ const EVENTS = {
     exerciseDone: 'exerciseDone',
     exerciseChanged: 'exerciseChanged',
     step: 'step',
-    halt: 'halt'
+    halt: 'halt' // todo: double check that halt is still being used, then remove it
 }
 
 const GS_ROUTE = '/gitstream';
@@ -29,7 +29,8 @@ const EVENTS_ENDPOINT = GS_ROUTE + '/events'; // must be the same as server!
 var exerciseEvents = eventEmitter({}), // internal client communication, with ExerciseViewer
     radio = eventEmitter({}), // internal client communication, within this file only
     state = {},
-    viewer
+    viewer // todo: remove? doesn't seem to be used. weird because it's the only thing
+    // that involves ExerciseViewer
 
 // ========= For Debugging =========
 const WS_DEBUG = false;
@@ -159,6 +160,7 @@ events_WS.onerror = function(event) {
         console.error('ws connection error:', event);
 };
 
+// some redirecting
 $.get( GS_ROUTE + '/user', function( userId ) {
     if (!userId) {
         document.location = GS_ROUTE + "/login" + document.location.search;
@@ -175,20 +177,6 @@ function triggerExerciseEvent(eventType, done ) {
     return (...args) => exerciseEvents.emit(eventType, ...args, done);
 }
 
-function toTimeStr( msec ) {
-    if ( msec === Infinity ) {
-        return '&infin;'
-    }
-
-    var LAG_COMPENSATION = 400,
-        MSEC_IN_MIN = 60 * 1000,
-        SEC_IN_MSEC = 1000,
-        minutesStr = Math.floor( ( msec + LAG_COMPENSATION ) / MSEC_IN_MIN ),
-        secondsRemaining = Math.round( ( msec + LAG_COMPENSATION ) % MSEC_IN_MIN / SEC_IN_MSEC ),
-        secondsStr = ( secondsRemaining < 10 ? '0' : '' ) + secondsRemaining
-
-    return minutesStr + ':' + secondsStr
-}
 
 // html/css edits
 function renderExerciseView( exerciseName, conf, user ) {
@@ -220,18 +208,6 @@ function selectViewStep( name ) {
     return $('.exercise-view').find( '[data-statename="' + name + '"]' )
 }
 
-// function changeExercise() {
-//     radio.emit( 'exerciseChanged', window.location.search.substring(1) )
-// }
-
-// function changeHashSilent( newHash ) {
-//     $(window).off( 'hashchange', changeExercise )
-//     window.location.search = newHash
-//     setTimeout( function() {
-//         $(window).on( 'hashchange', changeExercise )
-//     }, 0 )
-// }
-
 radio.on( EVENTS.exerciseChanged, function( changeTo ) {
     var exerciseViewerConf,
         exerciseView,
@@ -256,7 +232,6 @@ radio.on( EVENTS.exerciseChanged, function( changeTo ) {
         delete state.exerciseState
     }
 
-    // if ( setHash ) { changeHashSilent( newExercise ) }
 
     if ( exercises[ newExercise ] ) {
         exerciseViewerConf = exercises[ newExercise ]() // config comes directly from gitstream-exercises/exercises folder, not server
@@ -273,7 +248,6 @@ radio.on( EVENTS.exerciseChanged, function( changeTo ) {
 
         viewer = new ExerciseViewer( exerciseViewerConf.feedback, exerciseEvents )
     } else {
-        // changeHashSilent('')
         $('.main-content').html( indexTmp({ desc: exercises._order.map( function( exercise ) {
             return { title: exercises[ exercise ]().title, name: exercise }
         }) }) )
@@ -282,7 +256,6 @@ radio.on( EVENTS.exerciseChanged, function( changeTo ) {
     $('.main-content').removeClass('hide')
 })
 
-// $(window).on( 'hashchange', changeExercise )
 
 function handleSync(newState) {
     var hashExercise = window.location.search.substring(1)
@@ -299,6 +272,7 @@ function handleSync(newState) {
         setHash: true
     })
 
+    // todo: remove? seems redundant
     setTimeout( function() { window.synchronized = true}, 0 )
 }
 
@@ -325,7 +299,8 @@ function handleStepEvent(newState, oldState, stepOutput) {
         }
         newStateFeedback.html( stepOutput )
 
-        newStateFeedback.addClass('flash') // todo: not sure what flash is, might be redundant
+        // todo: remove? seems redundant
+        newStateFeedback.addClass('flash')
         setTimeout( function() {
             newStateFeedback.removeClass('flash')
         }, 70 )
@@ -335,6 +310,8 @@ function handleStepEvent(newState, oldState, stepOutput) {
 function handleHaltEvent() {
 }
 
+
+// todo: remove? seems redundant
 window.resetId = function() {
     // localStorage.clear('userId')
     // window.location.reload()
