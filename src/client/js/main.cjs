@@ -24,7 +24,7 @@ const EVENTS = {
 const EVENTS_ENDPOINT = '/events'; // must be the same as server!
 
 // Global variables -- DYNAMIC
-var exerciseEvents = eventEmitter({}), // internal client communication, with ExerciseViewer
+let exerciseEvents = eventEmitter({}), // internal client communication, with ExerciseViewer
     radio = eventEmitter({}), // internal client communication, within this file only
     state = {},
     viewer
@@ -191,7 +191,7 @@ function toTimeStr( msec ) {
 
 // html/css edits
 function renderExerciseView( exerciseName, conf, user ) {
-    var stepIndex = 1,
+    let stepIndex = 1,
         steps = _.map( conf.steps, function( stateDesc, stateName ) {
             return {
                 name: stateName,
@@ -232,7 +232,7 @@ function selectViewStep( name ) {
 // }
 
 radio.on( EVENTS.exerciseChanged, function( changeTo ) {
-    var exerciseViewerConf,
+    let exerciseViewerConf,
         exerciseView,
         newExercise,
         silent,
@@ -284,7 +284,7 @@ radio.on( EVENTS.exerciseChanged, function( changeTo ) {
 // $(window).on( 'hashchange', changeExercise )
 
 function handleSync(newState) {
-    var hashExercise = window.location.search.substring(1)
+    let hashExercise = window.location.search.substring(1)
 
     // Merge the server's state with the client's state.
     _.forOwn( newState, function( value, key ) {
@@ -307,7 +307,7 @@ function handleStepEvent(newState, oldState, stepOutput) {
     if (newState === 'done') {
         sendMessage(EVENTS.exerciseDone, state.currentExercise);
     }
-    var newStateStepView = selectViewStep( newState ),
+    let newStateStepView = selectViewStep( newState ),
         newStateFeedback = newStateStepView.find('.feedback'),
         exerciseSteps = $('.exercise-view').find('.exercise-step')
 
