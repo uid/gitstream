@@ -31,7 +31,10 @@ import { createUser } from './user.js';
 const user = createUser(loggerOpts);
 
 // Constant Global Variables
-const __dirname = import.meta.dirname; // required in ESM
+
+// esm way to get dirname
+import * as url from 'url';
+const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 
 const PATH_TO_REPOS = '/srv/repos',
     PATH_TO_EXERCISES = __dirname + '/exercises/',
