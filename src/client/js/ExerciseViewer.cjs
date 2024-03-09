@@ -15,7 +15,7 @@ function ExerciseViewer( config, eventEmitter ) {
     if ( !(this instanceof ExerciseViewer) ) {
         return new ExerciseViewer( config, eventEmitter )
     }
-    var stateEntry,
+    let stateEntry,
         onHalt = config.onHalt || function() {}
 
     this._states = {}
@@ -28,7 +28,7 @@ function ExerciseViewer( config, eventEmitter ) {
 
     // note: cb stands for callback, which is `done` in triggerExerciseEvent
     eventEmitter.on( 'step', function( newState, oldState, output, cb ) {
-        var oldStateDef = this._states[ oldState ],
+        let oldStateDef = this._states[ oldState ],
             newStateDef = this._states[ newState ],
             doneCb = ( cb || output || function() {} ).bind( null, newState, oldState )
 
