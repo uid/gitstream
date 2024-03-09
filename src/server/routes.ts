@@ -10,7 +10,7 @@ import EventEmitter from 'events';
 import { spawn } from 'child_process';
 import { MongoClient, Db } from 'mongodb';
 import { rimraf } from 'rimraf';
-import * as _ from 'lodash';
+import _ from 'lodash';
 
 const mongodb: q.Promise<Db> = q.nfcall<MongoClient>(MongoClient.connect, 'mongodb://localhost/gitstream')
   .then((client: MongoClient) => client.db());
