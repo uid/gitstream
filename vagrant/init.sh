@@ -1,5 +1,6 @@
 # install required packages
 sudo apt-get update
+sudo apt-get -y install git nginx make
 
 # install node from https://github.com/nodesource/distributions#installation-instructions
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates gnupg || exit 1

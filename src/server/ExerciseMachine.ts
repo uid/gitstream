@@ -1,9 +1,7 @@
-import util from 'util';
 import _ from 'lodash';
 import { v1 as uuidv1 } from 'uuid';
 import { EventEmitter } from 'events';
 
-// todo: use imports once all files are .ts
 import { utils } from './utils.js'
 import { exerciseUtils } from './exerciseUtils.js';
 
@@ -11,10 +9,7 @@ const GIT_EVENTS = utils.events2Props( [ 'on', 'handle' ],
 [ 'pre-pull', 'pull', 'pre-clone', 'clone', 'pre-push', 'push', 'pre-info', 'info',
 'merge', 'pre-rebase', 'pre-commit', 'commit', 'checkout', 'pre-receive', 'receive' ] )
 
-// todo: solidify these types
-type EventBus = any; // this one can be traced back to angler
-type Conf = any; // review docs
-
+type EventBus = any; // todo: any; this can be traced back to git-angler
 
 /**
  * A state machine that represents multi-step exercises as states.
@@ -24,68 +19,67 @@ type Conf = any; // review docs
  *  Event `halt`: (haltState)`
  *
  */
-export interface ExerciseMachineContext extends EventEmitter {
-    // properties
-    _repo: string;
+export class ExerciseMachine extends EventEmitter {
+    // todo: remove starting '_'
+    // todo: remove need for '!' on these (they're there because of 'this instanceof ExerciseMachine' line)
+    private _repo!: string;
     _state: string | undefined;
-    _eventBus: EventBus;
-    _exerciseUtils: any;
+    private _eventBus: EventBus;
+    private _exerciseUtils: any;
     _states: any;
-    _currentListeners: Array<{ name: string, action: string }>;
-    _currentHandlers: Array<{ action: string }>;
-    halted: boolean;
+    private _currentListeners!: Array<{ name: string, action: string }>;
+    private _currentHandlers!: Array<{ action: string }>;
+    halted!: boolean;
 
-    // methods
-    // todo: not sure if these have to be arrow functions
-     init( startState?: string): void;
-    _step( newState: string | undefined, incomingData?: any): void;
-    _setUp(): void;
-    _tearDown(): void;
-     halt(): void;
- }
+    /**
+     * Add default values to machine.
+     * 
+     * @param config see `gitstream-exercises/README.md` > Configuration File Format > `machine`
+     * @param repoPaths { String path: the repo short path, String fsPath: the fs path }
+     * @param exercisePath the path to the exercise directory
+     * @param eventBus the EventBus on which to listen for repo events
+     */
+    constructor(config: any, repoPaths: {path: string, fsPath: string}, exerciseDir: string, eventBus: EventBus) { // todo: any
+        super();
 
+        // todo: is this needed?
+        if ( !(this instanceof ExerciseMachine) ) {
+            return new ExerciseMachine(config, repoPaths, exerciseDir, eventBus ) // todo: improve type assertion
+        }
 
-/**
- * Add default values to machine.
- * 
- * @param config see `gitstream-exercises/README.md` > Configuration File Format > `machine`
- * @param repoPaths { String path: the repo short path, String fsPath: the fs path }
- * @param exercisePath the path to the exercise directory
- * @param eventBus the EventBus on which to listen for repo events
- */
-function ExerciseMachine(this: ExerciseMachineContext, config: any, repoPaths: {path: string, fsPath: string}, exerciseDir: string, eventBus: EventBus): any { // todo: any
-    if ( !(this instanceof ExerciseMachine) ) {
-        return new (ExerciseMachine as any)(config, repoPaths, exerciseDir, eventBus ) // todo: improve type assertion
+        this._repo = repoPaths.path
+        this._eventBus = eventBus
+
+        this._exerciseUtils = exerciseUtils({ repoDir: repoPaths.fsPath, exerciseDir: exerciseDir })
+
+        this._states = config
+        this._currentListeners = []
+        this._currentHandlers = []
+        this.halted = true
+    
+        // todo: instead have arrow functions in class properties?
+        this.init = this.init.bind(this);
+        this._step = this._step.bind(this);
+        this._setUp = this._setUp.bind(this);
+        this._tearDown = this._tearDown.bind(this);
+        this.halt = this.halt.bind(this);
     }
 
-    this._repo = repoPaths.path
-    this._eventBus = eventBus
 
-    this._exerciseUtils = exerciseUtils({ repoDir: repoPaths.fsPath, exerciseDir: exerciseDir })
-
-    this._states = config
-    this._currentListeners = []
-    this._currentHandlers = []
-    this.halted = true
-}
-
-util.inherits(ExerciseMachine, EventEmitter) // (EventEmitter (ExerciseMachine))
-
-_.extend( ExerciseMachine.prototype, {
     /**
      * Initializes this ExerciseMachine with the provided start state and starts the clock
      * This method is idempotent once the machine has been started
      * @param startState - the start state. Default: startState specified by config
      * @return the current ExerciseMachine
      */
-    init: function(this: ExerciseMachineContext, startState: string ) {
+    public init(startState?: string ): void {
         if ( this._state !== undefined ) { return }
 
         this.halted = false
 
         this._step( startState || this._states.startState )
-        return this
-    },
+    }
+
 
     /**
      * Steps the ExerciseMachine into the given state and fires a corresponding event
@@ -97,7 +91,7 @@ _.extend( ExerciseMachine.prototype, {
      *
      * @param state - the state into which to step
      */
-    _step: function(this: ExerciseMachineContext, newState: string | undefined, incomingData?:any): void {
+    public _step(newState: string | undefined, incomingData?:any): void {
         if ( newState === undefined ) { return }
 
         const oldState = this._state,
@@ -137,12 +131,12 @@ _.extend( ExerciseMachine.prototype, {
         } else {
             stepDone( entryPoint )
         }
-    },
+    }
 
     /**
      * Sets up the current state
      */
-    _setUp: function(this: ExerciseMachineContext) {
+    private _setUp(): void {
         const stateConfig = this._states[ this._state as string], // todo:fix
             transitionDone = ( stepTo: any, data?: any ) => { // todo: any. also not sure if setting data as optional is ok
                 this._step( stepTo, data )
@@ -172,12 +166,12 @@ _.extend( ExerciseMachine.prototype, {
                 }
             })
         })
-    },
+    }
 
     /**
      * Tears down the current state
-     */
-    _tearDown: function(this: ExerciseMachineContext) {
+    */
+    private _tearDown(): void {
         this._currentListeners.map( ( listener: { name: string; action: string; } ) => {
             this._eventBus.removeListener( listener.name, this._repo, listener.action )
         })
@@ -186,14 +180,12 @@ _.extend( ExerciseMachine.prototype, {
         } )
         this._currentListeners = [];
         this._currentHandlers = [];
-    },
+    }
 
     /**
      * Forcibly halts this ExerciseMachine
      */
-    halt: function(this: ExerciseMachineContext) {
+    public halt(): void {
         this._step( undefined );
     }
-})
-
-export { ExerciseMachine };
+}

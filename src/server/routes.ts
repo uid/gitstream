@@ -10,7 +10,7 @@ import EventEmitter from 'events';
 import { spawn } from 'child_process';
 import { MongoClient, Db } from 'mongodb';
 import { rimraf } from 'rimraf';
-import * as _ from 'lodash';
+import _ from 'lodash';
 
 const mongodb: q.Promise<Db> = q.nfcall<MongoClient>(MongoClient.connect, 'mongodb://localhost/gitstream')
   .then((client: MongoClient) => client.db());
@@ -21,7 +21,7 @@ const loggerOpts = { dbcon: mongodb }
 import angler from 'git-angler';
 import exerciseConfs from 'gitstream-exercises';
 
-import { ExerciseMachine, ExerciseMachineContext } from './ExerciseMachine.js';
+import { ExerciseMachine } from './ExerciseMachine.js';
 import { CommitSpec, utils } from './utils.js';
 
 import { createLogger, WebSocketEvent, EventType, ErrorType, UserMapOp } from './logger.js';
@@ -31,7 +31,10 @@ import { createUser } from './user.js';
 const user = createUser(loggerOpts);
 
 // Constant Global Variables
-const __dirname = import.meta.dirname; // required in ESM
+
+// esm way to get dirname
+import * as url from 'url';
+const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 
 const PATH_TO_REPOS = '/srv/repos',
     PATH_TO_EXERCISES = __dirname + '/exercises/',
@@ -333,8 +336,11 @@ function createRepo( repoName: string ): Q.Promise<any> { // todo: any
 
         utils.mkdirp( path.dirname( pathToRepo ) )
         .then( function() {
-            spawn( 'cp', [ '-r', pathToStarterRepo, pathToRepo ] ).on( 'close', function( cpRet ) {
-                if ( cpRet !== 0 ) { return done.reject( Error('Copying exercise repo failed') ) }
+            spawn( 'cp', [ '-r', pathToStarterRepo, pathToRepo ] )
+            .on( 'close', function( cpRet ) {
+                if ( cpRet !== 0 ) {
+                    return done.reject( Error('Copying exercise repo failed') )
+                }
 
                 commits.then( function( commits: CommitSpec[] ) {
                     const addCommit = function( spec: CommitSpec ) {
@@ -419,7 +425,7 @@ class ClientConnection {
     private ws: WebSocket;
 
     // todo: fix the use of nulls here?
-    private exerciseMachine: ExerciseMachineContext | null;
+    private exerciseMachine: ExerciseMachine | null;
     private userId: string;
     private userKey: string;
     private heartbeat: NodeJS.Timeout | undefined; // todo: change?
@@ -611,8 +617,8 @@ class ClientConnection {
                 if ( exerciseState) {
                     // there's already an excercise running. reconnect to it
                     console.log('user refreshed page!')
-                    this.exerciseMachine = this.createExerciseMachine( currentExercise as string) as ExerciseMachineContext // todo: sus
-                    this.exerciseMachine.init( exerciseState)
+                    this.exerciseMachine = this.createExerciseMachine( currentExercise as string);
+                    this.exerciseMachine.init(exerciseState);
     
                 } else if ( exerciseState ) { // last exercise has expired // wait this weird, same conditional as above. todo: fix?
                     userMap.delete(this.userId, [FIELD_EXERCISE_STATE]);
@@ -651,7 +657,7 @@ class ClientConnection {
                     this.exerciseMachine.halt()
                 }
                 this.exerciseMachine = this.createExerciseMachine( exerciseName )
-                startState = this.exerciseMachine!._states.startState // assert exists
+                startState = this.exerciseMachine._states.startState;
                 // set by EM during init, but init sends events. TODO: should probably be fixed
     
                 console.error('hmset', FIELD_EXERCISE_STATE, startState);
@@ -670,7 +676,7 @@ class ClientConnection {
                 state[ FIELD_EXERCISE_STATE ] = startState
     
                 this.sendMessage(EVENTS.sync, state);
-                this.exerciseMachine!.init()
+                this.exerciseMachine.init();
             }
             userMap.getAll(this.userId, handleExerciseState)
         }
@@ -723,7 +729,7 @@ class ClientConnection {
             },
             exerciseDir = path.join( PATH_TO_EXERCISES, exerciseName )
     
-        let exerciseMachine = new (ExerciseMachine as any)( emConf, repoPaths, exerciseDir, eventBus ) // todo: fix any
+        let exerciseMachine = new ExerciseMachine( emConf, repoPaths, exerciseDir, eventBus );
         const unsetExercise = () => {
             userMap.delete(this.userId, [FIELD_EXERCISE_STATE]);
         }
