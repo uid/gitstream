@@ -1,9 +1,0 @@
-terraform.tfvars
-.terraform
-*.tfstate*
-deployed-bundle.tgz
-krb5.keytab
-didit-privatekey.pem
-*.cer
-*.key
-*.pem
