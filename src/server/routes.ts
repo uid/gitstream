@@ -12,8 +12,8 @@ import { MongoClient, Db } from 'mongodb';
 import { rimraf } from 'rimraf';
 import _ from 'lodash';
 
-const mongodb: q.Promise<Db> = q.nfcall<MongoClient>(MongoClient.connect, 'mongodb://localhost/gitstream')
-  .then((client: MongoClient) => client.db());
+const mongodb: Promise<Db> = MongoClient.connect('mongodb://localhost/gitstream')
+    .then((client: MongoClient) => client.db());
 
 // Internal Libraries
 const loggerOpts = { dbcon: mongodb }
