@@ -104,7 +104,7 @@ function getCallerInfo(depth: number = 1): {fileName: string, lineNum: string} {
 }
 
 
-export function createLogger(opts: {dbcon: Q.Promise<Db>}) {
+export function createLogger(opts: {dbcon: Promise<Db>}) {
     const dbcon = opts.dbcon;
 
     return {
@@ -116,11 +116,11 @@ export function createLogger(opts: {dbcon: Q.Promise<Db>}) {
          * @param record The log record object to be inserted
          */
         _log: function(record: LogRecord) {
-            dbcon.done( function( db: any ) {
-                db.collection('logs').insertOne( record, function(err: any) { // todo: fix. soon to be deprecated
-                    if ( err ) { console.error( '[ERROR] Logger error:', record, err ) }
-                })
-            })
+            dbcon.then((db: Db) => {
+                db.collection('logs').insertOne(record);
+            }).catch((err: any) => { // todo: any
+                console.error('[ERROR] Logger error:', record, err);
+            });
         },
 
         /**
