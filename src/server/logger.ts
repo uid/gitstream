@@ -13,6 +13,11 @@ export enum WebSocketEvent {
     RECEIVED = 'Received'
 }
 
+export enum ConnectionType {
+    ADD = 'Add',
+    REMOVE = 'Remove',
+}
+
 enum ConsoleColor {
     MAG = '\x1b[35m', // magenta
     RST = '\x1b[0m',  // reset
@@ -46,17 +51,15 @@ export enum UserMapOp {
     GET_ALL = 'getAll'
 }
 
-// todo: figure out the 'any' types later
 interface LogRecord {
     timestamp: number;
     userId: string;
     event: EventType;
     exercise: string;
     data: any;
+
     errorType?: ErrorType;
 }
-
-const colorCodeRegex = /\x1b\[\d{1,2}m/g; // strips colors from text
 
 /**
  * Format a field and its content with a specified width.
@@ -223,6 +226,19 @@ export function createLogger(mongodb: Promise<Db>) {
                 // todo
             }
         },
+
+
+        /**
+         * Log active connections
+         * 
+         * @param type 
+         * @param active
+         * @returns - nothing
+         */
+        connections: function(type: ConnectionType, active: string[]): void {
+            if (CONFIG.WS_DEBUG_SUM) {
+                console.log(`\n[${type} Connection] Current Active Users:\n${active.join('\n')}\n`);
+            }
         }
     }
 }
