@@ -114,8 +114,6 @@ function getCallerInfo(depth: number = 1): {fileName: string, lineNum: string} {
 
 export function createLogger(mongodb: Promise<Db>) {
     return {
-        CONFIG, // todo: move out of here
-
         /**
          * Method that inserts standardized log records to the database
          * 
