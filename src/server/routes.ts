@@ -21,7 +21,7 @@ import exerciseConfs from 'gitstream-exercises';
 import { ExerciseMachine } from './ExerciseMachine.js';
 import { CommitSpec, utils } from './utils.js';
 
-import { createLogger, WebSocketEvent, EventType, ErrorType, UserMapOp, ConnectionType } from './logger.js';
+import { createLogger, WebSocketEvent, EventType, ErrorType, UserMapOp, ConnectionType, WebSocketDebug } from './logger.js';
 const logger = createLogger(mongodb);
 
 import { createUser } from './user.js';
@@ -448,8 +448,6 @@ class ClientConnection {
 
         // Start heartbeat with client (temporary measure to ensure connection persists)
         this.startHeartbeat();
-
-        if (logger.CONFIG.WS_DEBUG_IND) this.sendMessage('ws', 'Hi from Server!');
     }
 
     /**
@@ -506,19 +504,16 @@ class ClientConnection {
         
             // Special case to relay info about socket connection
             case 'ws':
-                if (logger.CONFIG.WS_DEBUG_SUM)
-                    console.log('ws message received: ', msg)
+                logger.ws_debug(WebSocketDebug.INFO, "ws message received", msg);
                 break;
             
             // Special case to handle errors
             case 'err':
-                if (logger.CONFIG.WS_DEBUG_SUM)
-                    console.log('error event received:', msg)
+                logger.ws_debug(WebSocketDebug.ERROR, "error event received", msg);
                 break;
 
             default:
-                if (logger.CONFIG.WS_DEBUG_SUM)
-                    console.error("error, unknown event: ", msgEvent);
+                logger.ws_debug(WebSocketDebug.ERROR, "error, unknown event", msgEvent);
         }
     }
 
