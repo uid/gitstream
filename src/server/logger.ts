@@ -209,19 +209,20 @@ export function createLogger(mongodb: Promise<Db>) {
          * @returns - nothing
          */
         ws: function(type: WebSocketEvent, output: any) { // todo: standardize type of output
-            if (CONFIG.WS_DEBUG_IND) {
-                const strOutput = JSON.stringify(output);
-                strOutput.replace(/\"/g, ""); // remove extra quotation marks
+            if (!CONFIG.WS_DEBUG_IND) return
 
-                const trueOutput = `\n[WS][Server][${type}] ${strOutput}\n`;
-                
-                if (CONFIG.LOG_CONSOLE) {
-                    console.log(trueOutput);
-                }
-                if (CONFIG.LOG_MONGO) {
-                    // todo
-                }
+            const strOutput = JSON.stringify(output);
+            strOutput.replace(/\"/g, ""); // remove extra quotation marks
+
+            const trueOutput = `\n[WS][Server][${type}] ${strOutput}\n`;
+            
+            if (CONFIG.LOG_CONSOLE) {
+                console.log(trueOutput);
             }
+            if (CONFIG.LOG_MONGO) {
+                // todo
+            }
+        },
         }
     }
 }
