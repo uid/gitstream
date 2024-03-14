@@ -13,6 +13,11 @@ export enum WebSocketEvent {
     RECEIVED = 'Received'
 }
 
+export enum WebSocketDebug {
+    INFO = 'info',
+    ERROR = 'error'
+}
+
 export enum ConnectionType {
     ADD = 'Add',
     REMOVE = 'Remove',
@@ -227,6 +232,11 @@ export function createLogger(mongodb: Promise<Db>) {
             }
         },
 
+        ws_debug: function(type: WebSocketDebug, msg: string, output: any) {
+            if (CONFIG.WS_DEBUG_SUM) {
+                console.log(`[ws ${type} debug]: ${msg}\n`, output)
+            }
+        },
 
         /**
          * Log active connections
