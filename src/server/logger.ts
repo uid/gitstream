@@ -104,9 +104,7 @@ function getCallerInfo(depth: number = 1): {fileName: string, lineNum: string} {
 }
 
 
-export function createLogger(opts: {dbcon: Promise<Db>}) {
-    const dbcon = opts.dbcon;
-
+export function createLogger(mongodb: Promise<Db>) {
     return {
         CONFIG, // todo: move out of here
 
@@ -116,7 +114,7 @@ export function createLogger(opts: {dbcon: Promise<Db>}) {
          * @param record The log record object to be inserted
          */
         _log: function(record: LogRecord) {
-            dbcon.then((db: Db) => {
+            mongodb.then((db: Db) => {
                 db.collection('logs').insertOne(record);
             }).catch((err: any) => { // todo: any
                 console.error('[ERROR] Logger error:', record, err);

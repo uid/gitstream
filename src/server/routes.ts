@@ -15,8 +15,6 @@ const mongodb: Promise<Db> = MongoClient.connect('mongodb://localhost/gitstream'
     .then((client: MongoClient) => client.db());
 
 // Internal Libraries
-const loggerOpts = { dbcon: mongodb }
-
 import angler from 'git-angler';
 import exerciseConfs from 'gitstream-exercises';
 
@@ -24,10 +22,10 @@ import { ExerciseMachine } from './ExerciseMachine.js';
 import { CommitSpec, utils } from './utils.js';
 
 import { createLogger, WebSocketEvent, EventType, ErrorType, UserMapOp } from './logger.js';
-const logger = createLogger(loggerOpts);
+const logger = createLogger(mongodb);
 
 import { createUser } from './user.js';
-const user = createUser(loggerOpts);
+const user = createUser(mongodb);
 
 // Constant Global Variables
 
