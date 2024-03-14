@@ -746,20 +746,23 @@ class ClientConnection {
 
 let activeConnections: string[] = [];
 
-export async function configureApp(app: Application, server: Server) {
+function setupWebSocketServer(server: Server) {
     const wss = new WebSocketServer({
         server: server,
         path: EVENTS_ENDPOINT
     });
 
-    // New websocket connection
     wss.on('connection', function(ws) {
         // bug: handling multiple users from the same source (eg userId)
         new ClientConnection(ws);
     });
+}
+
+export async function configureApp(app: Application, server: Server) {
+    // Set up WebSocket server
+    setupWebSocketServer(server);
 
     // set up routes
-    
     app.use( compression() );
     app.use( '/repos', backend );
     app.use( '/hooks', githookEndpoint );
