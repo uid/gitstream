@@ -21,7 +21,7 @@ import exerciseConfs from 'gitstream-exercises';
 import { ExerciseMachine } from './ExerciseMachine.js';
 import { CommitSpec, utils } from './utils.js';
 
-import { createLogger, WebSocketEvent, EventType, ErrorType, UserMapOp } from './logger.js';
+import { createLogger, WebSocketEvent, EventType, ErrorType, UserMapOp, ConnectionType } from './logger.js';
 const logger = createLogger(mongodb);
 
 import { createUser } from './user.js';
@@ -545,24 +545,13 @@ class ClientConnection {
     // === Maintain list of active connections ===
 
     addToActiveList() {
-        // Add the new connection to the array of active connections
         activeConnections.push(this.userId);
-
-        // Log the number of active connections
-        if (logger.CONFIG.WS_DEBUG_SUM) {
-            // todo: log these to MongoDB entry
-            console.log(`\n[New connection] List of Active Users:\n${activeConnections.join('\n')}\n`);
-        }        
+        logger.connections(ConnectionType.ADD, activeConnections);
     }
 
     removeFromActiveList() {
-        // Remove the connection from the array of active connections
         activeConnections = activeConnections.filter(userId => userId !== this.userId);
-
-        if (logger.CONFIG.WS_DEBUG_SUM) {
-            // Log the number of active connections
-            console.log(`\n[Connection Closed] List of Active Users:\n${activeConnections.join('\n')}\n`);
-        }
+        logger.connections(ConnectionType.REMOVE, activeConnections);
     }
 
 
