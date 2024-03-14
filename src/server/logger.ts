@@ -247,6 +247,30 @@ export function createLogger(mongodb: Promise<Db>) {
             if (CONFIG.WS_DEBUG_SUM) {
                 console.log(`\n[${type} Connection] Current Active Users:\n${active.join('\n')}\n`);
             }
+        },
+
+        /**
+         * Logs database errors with additional context information.
+         * 
+         * This function returns a callback that, when invoked with an error, logs the error
+         * along with the user ID, exercise name, and additional data provided. If the error
+         * is null, indicating no error occurred, the callback will simply return without
+         * performing any logging.
+         *
+         * @param userId - The ID of the user associated with the database operation
+         * @param exercise - The name of the exercise
+         * @param data - Additional data to be logged
+         * @returns A callback function that takes an optional Error object.
+         */
+        logDbErr: function(userId: string, exercise: string, data: any): (err: Error | null) => void { // todo: any
+            return (err: Error | null) => { // todo: any
+                if (!err) return
+                data.msg = err.message
+                
+                console.error(err);
+
+                this.err(ErrorType.DB, userId, exercise, data);
+            }
         }
     }
 }

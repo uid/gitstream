@@ -78,30 +78,6 @@ const backend = angler.gitHttpBackend({
     }
 })
 
-// todo: move to utils?
-/**
- * Logs database errors with additional context information.
- * 
- * This function returns a callback that, when invoked with an error, logs the error
- * along with the user ID, exercise name, and additional data provided. If the error
- * is null, indicating no error occurred, the callback will simply return without
- * performing any logging.
- *
- * @param userId - The ID of the user associated with the database operation
- * @param exercise - The name of the exercise
- * @param data - Additional data to be logged
- * @returns A callback function that takes an optional Error object.
- */
-function logDbErr(userId: string, exercise: string, data: any): (err: Error | null) => void { // todo: any
-    return (err: Error | null) => { // todo: any
-        if (!err) return
-        data.msg = err.message
-        
-        console.error(err);
-
-        logger.err(ErrorType.DB, userId, exercise, data)
-    }
-}
 
 const exerciseEvents = new EventEmitter();
 
@@ -585,7 +561,7 @@ class ClientConnection {
 
                 console.error('hmset', FIELD_EXERCISE_STATE, null);
                 
-                const handleUnsetClientState = logDbErr( this.userId, 'null', {
+                const handleUnsetClientState = logger.logDbErr( this.userId, 'null', {
                     desc: 'userMap unset client state'
                 })
     
@@ -685,7 +661,7 @@ class ClientConnection {
     
         console.error('hset', this.userId, FIELD_CURRENT_EXERCISE, newExercise);
         
-        const handleNewExercise = logDbErr(this.userId, newExercise, {
+        const handleNewExercise = logger.logDbErr(this.userId, newExercise, {
             desc: 'userMap change exercise'
         })
     
@@ -697,7 +673,7 @@ class ClientConnection {
 
     handleExerciseDone(doneExercise: string) {
         utils.exportToOmnivore(this.userId, doneExercise,
-            logDbErr( this.userId, doneExercise, { desc: 'Omnivore POST error' } ));
+            logger.logDbErr( this.userId, doneExercise, { desc: 'Omnivore POST error' } ));
     }
 
 
@@ -723,7 +699,7 @@ class ClientConnection {
         const stepHelper = (newState: any) => { // todo: any
             console.error('hset', this.userId, FIELD_EXERCISE_STATE, newState);
     
-            const updateState =  logDbErr( this.userId, exerciseName, {
+            const updateState = logger.logDbErr( this.userId, exerciseName, {
                 desc: 'userMap step update exercise state',
                 newState: newState
             });
@@ -805,7 +781,7 @@ export async function configureApp(app: Application, server: Server) {
         .then( function( repoInfo ) {
             // only 1 instance of publish
             // note: this messaging system will kept for now
-            const handlePublishError =  logDbErr( repoInfo.userId, repoInfo.exerciseName, {
+            const handlePublishError = logger.logDbErr( repoInfo.userId, repoInfo.exerciseName, {
                 desc: 'userMap go emit'
             })
 
