@@ -1,11 +1,13 @@
+// External Imports
 import express from 'express';
 import session from 'cookie-session';
 import { Request, Response, NextFunction } from 'express';
 import { Passport } from 'passport';
 import openidclient from 'openid-client';
-import { Strategy as OpenIdClientStrategy, TokenSet, UserinfoResponse } from 'openid-client';
+import { TokenSet, UserinfoResponse } from 'openid-client';
 import crypto from 'crypto';
 
+// Internal Files
 import settings from '../../settings.js'
 
 export const app = express();
@@ -18,6 +20,7 @@ const sessionParser = session({
     signed: true,
     overwrite: true,
 });
+
 app.use(sessionParser);
 
 // Extend the Express Request to include the user property and the session from cookie-session
@@ -28,7 +31,6 @@ interface AuthenticatedRequest extends Request {
     };
     session?: any //todo: any
 }
-  
 
 /**
  * Generates a random 5 character ID string prefixed with 'user'
@@ -92,36 +94,34 @@ async function configureApp() {
         const passportSession = passport.session();
         app.use(passportSession);
         
-        app.use('/auth',
-                (req, res, next) => {
-                    passport.authenticate(
-                        'openid',
-                        // see "Custom Callback" at http://www.passportjs.org/docs/authenticate/
-                        (err: Error, user: any, info: any) => { // todo: any
-                            if (err || !user) {
-                                // put some debugging info in the log
-                                console.log('problem in OpenId authentication', req.originalUrl);
-                                console.log('error', err);
-                                console.log('user', user);
-                                console.log('info', info);
-                            }
+        app.use('/auth', (req, res, next) => {
+            passport.authenticate(
+                'openid',
+                // see "Custom Callback" at http://www.passportjs.org/docs/authenticate/
+                (err: Error, user: any, info: any) => { // todo: any
+                    if (err || !user) {
+                        // put some debugging info in the log
+                        console.log('problem in OpenId authentication', req.originalUrl);
+                        console.log('error', err);
+                        console.log('user', user);
+                        console.log('info', info);
+                    }
 
+                    if (err) { return next(err); }
+                    if (!user) {
+                        // unsuccessful authentication
+                        return res.status(401).send('Unauthorized: ' + info);
+                    } else {
+                        // successful authentication, log the user in
+                        // http://www.passportjs.org/docs/login/
+                        req.login(user, (err) => {
                             if (err) { return next(err); }
-                            if (!user) {
-                                // unsuccessful authentication
-                                return res.status(401).send('Unauthorized: ' + info);
-                            } else {
-                                // successful authentication, log the user in
-                                // http://www.passportjs.org/docs/login/
-                                req.login(user, (err) => {
-                                    if (err) { return next(err); }
-                                    return res.redirect(req.session!.returnTo); // assert
-                                });
-                            }
-                        }
-                    ) (req, res, next);
+                            return res.redirect(req.session!.returnTo); // assert
+                        });
+                    }
                 }
-        );
+            )(req, res, next);
+        });
         
         setUser = function(req, res, next) {
             console.log('OpenID authenticated as', req.user);
@@ -150,6 +150,7 @@ async function configureApp() {
         console.log('openid auth is ready');
     }
 }
+
 configureApp().catch(err => console.error(err));
 
 export const server = app.listen(PORT)

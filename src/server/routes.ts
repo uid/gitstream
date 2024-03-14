@@ -10,28 +10,27 @@ import { spawn } from 'child_process';
 import { MongoClient, Db } from 'mongodb';
 import { rimraf } from 'rimraf';
 import _ from 'lodash';
+import * as url from 'url';
 
 const mongodb: Promise<Db> = MongoClient.connect('mongodb://localhost/gitstream')
     .then((client: MongoClient) => client.db());
 
-// Internal Libraries
+// Internal Files
 import angler from 'git-angler';
 import exerciseConfs from 'gitstream-exercises';
-
 import { ExerciseMachine } from './ExerciseMachine.js';
 import { CommitSpec, utils } from './utils.js';
-
 import { createLogger, WebSocketEvent, EventType, ErrorType, UserMapOp, ConnectionType, WebSocketDebug } from './logger.js';
-const logger = createLogger(mongodb);
-
 import { createUser } from './user.js';
+
+
+// Configure user and logger
+const logger = createLogger(mongodb);
 const user = createUser(mongodb);
 
 // Constant Global Variables
 
-// esm way to get dirname
-import * as url from 'url';
-const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
+const __dirname = url.fileURLToPath(new URL('.', import.meta.url)); // esm way to get dirname
 
 const PATH_TO_REPOS = '/srv/repos',
     PATH_TO_EXERCISES = __dirname + '/exercises/',
@@ -39,7 +38,7 @@ const PATH_TO_REPOS = '/srv/repos',
     gitHTTPMount = '/repos'; // no trailing slash
 
 const FIELD_EXERCISE_STATE = 'exerciseState',
-    FIELD_CURRENT_EXERCISE = 'currentExercise'
+    FIELD_CURRENT_EXERCISE = 'currentExercise';
 
 enum EVENTS {
     sync = 'sync',
@@ -77,7 +76,6 @@ const backend = angler.gitHttpBackend({
         })
     }
 })
-
 
 const exerciseEvents = new EventEmitter();
 
@@ -749,20 +747,19 @@ class ClientConnection {
 let activeConnections: string[] = [];
 
 export async function configureApp(app: Application, server: Server) {
-    // Create a WebSocket connection ontop of the Express app
-    // todo: this config might need additional tweaks (though, it does work rn)
     const wss = new WebSocketServer({
         server: server,
         path: EVENTS_ENDPOINT
     });
 
-    // Create a new websocket connection
+    // New websocket connection
     wss.on('connection', function(ws) {
         // bug: handling multiple users from the same source (eg userId)
         new ClientConnection(ws);
     });
 
     // set up routes
+    
     app.use( compression() );
     app.use( '/repos', backend );
     app.use( '/hooks', githookEndpoint );
