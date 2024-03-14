@@ -4,7 +4,6 @@ import compression from 'compression';
 import { Application } from 'express';
 import { Server } from 'http';
 import path from 'path';
-import q from 'q';
 import WebSocket, { WebSocketServer } from 'ws';
 import EventEmitter from 'events';
 import { spawn } from 'child_process';
@@ -12,8 +11,8 @@ import { MongoClient, Db } from 'mongodb';
 import { rimraf } from 'rimraf';
 import _ from 'lodash';
 
-const mongodb: q.Promise<Db> = q.nfcall<MongoClient>(MongoClient.connect, 'mongodb://localhost/gitstream')
-  .then((client: MongoClient) => client.db());
+const mongodb: Promise<Db> = MongoClient.connect('mongodb://localhost/gitstream')
+    .then((client: MongoClient) => client.db());
 
 // Internal Libraries
 const loggerOpts = { dbcon: mongodb }
@@ -68,13 +67,15 @@ const backend = angler.gitHttpBackend({
     eventBus: eventBus,
     authenticator: function( params: { repoPath: any; }, callback: any ) { // todo: any
         verifyAndGetRepoInfo( params.repoPath )
-        .done( function() {
-            callback({ ok: true })
-        }, function( err ) {
-            let info = extractRepoInfoFromPath( params.repoPath )! // type assertion;
-            logger.err( ErrorType.GIT_HTTP, info.userId, info.exerciseName, {
-                msg: err.message
-            })
+        .then( function() {
+            callback({ok: true})
+        }).catch(function( err ) {
+            const info = extractRepoInfoFromPath( params.repoPath );
+            if (info) {
+                logger.err( ErrorType.GIT_HTTP, info.userId, info.exerciseName, {
+                    msg: err.message
+                })
+            }
             callback({ ok: false, status: 404 })
         })
     }
@@ -284,90 +285,94 @@ function createRepoShortPath( info: ExerciseData ) {
  * @param repoPath a path string or an array of path components
  * @return promise
  */
-function verifyAndGetRepoInfo( repoPath: RepoPath): q.Promise<ExerciseData>{
-    const repoInfo = extractRepoInfoFromPath( repoPath )
+function verifyAndGetRepoInfo(repoPath: RepoPath): Promise<ExerciseData> {
+    const repoInfo = extractRepoInfoFromPath(repoPath);
 
     if (!repoInfo) {
-        throw Error('Could not get repo info')
+        throw Error('Could not get repo info');
     }
 
-    return user.verifyMac( repoInfo.userId, repoInfo.mac, repoInfo.macMsg as string )
+    return user.verifyMac(repoInfo.userId, repoInfo.mac, repoInfo.macMsg as string)
         .then(function() {
-            return repoInfo
-        })
+            return repoInfo;
+        });
 }
+
 
 /**
  * Creates a new exercise repo.
  * @param repoName - the full repo name. e.g. /nhynes/12345/exercise1.git
  * @return a promise resolved with the repo info as returned by verifyAndGetRepoInfo
  */
-function createRepo( repoName: string ): Q.Promise<any> { // todo: any
+function createRepo(repoName: string): Promise<ExerciseData> {
+    const pathToRepo = path.join( PATH_TO_REPOS, repoName );
+    const pathToRepoDir = path.dirname( pathToRepo );
+
     let repoInfo: ExerciseData,
-        pathToRepo = path.join( PATH_TO_REPOS, repoName ),
-        pathToRepoDir = path.dirname( pathToRepo ),
         pathToExercise: string,
-        pathToStarterRepo: string
+        pathToStarterRepo: string;
 
-    return verifyAndGetRepoInfo( repoName )
-    .then( function( info ) {
-        repoInfo = info
-        pathToExercise = path.join( PATH_TO_EXERCISES, repoInfo.exerciseName )
-        pathToStarterRepo = path.join( pathToExercise, 'starting.git' )
+    return verifyAndGetRepoInfo(repoName)
+    .then(function (info) {
+        repoInfo = info;
+        pathToExercise = path.join(PATH_TO_EXERCISES, repoInfo.exerciseName);
+        pathToStarterRepo = path.join(pathToExercise, 'starting.git');
 
-        return rimraf(pathToRepoDir, {} ) // second param = no additional options
+        return rimraf(pathToRepoDir, {});
     })
-    .then( function() {
-        let done = q.defer(),
-            repoUtils = {
-                _: _, // todo: looks weird, change later
-                resourcesPath: pathToExercise
-            },
-            commits: any = q.Promise( function( resolve ) { // todo: any
-                const commitsConf = exerciseConfs.repos[ repoInfo.exerciseName ]().commits
-                if ( Array.isArray( commitsConf ) && commitsConf.length ) {
-                    resolve( commitsConf )
-                } else if ( typeof commitsConf === 'function' ) {
-                    commitsConf.call( repoUtils, resolve )
-                } else {
-                    resolve()
-                }
-            }).catch( function( err ) { done.reject( err ) })
-
-        utils.mkdirp( path.dirname( pathToRepo ) )
-        .then( function() {
-            spawn( 'cp', [ '-r', pathToStarterRepo, pathToRepo ] )
-            .on( 'close', function( cpRet ) {
-                if ( cpRet !== 0 ) {
-                    return done.reject( Error('Copying exercise repo failed') )
-                }
-
-                commits.then( function( commits: CommitSpec[] ) {
-                    const addCommit = function( spec: CommitSpec ) {
-                        return utils.addCommit.bind( null, pathToRepo, pathToExercise, spec )
-                    }
-                    if ( commits ) { // todo: fix
-                        return commits.map( function( commit: CommitSpec ) {
-                            return addCommit( commit )
-                        }).reduce( q.when, (<any>q).fulfill() ) // todo: any
-                    } else {
-                        return utils.git( pathToRepo, 'commit', [ '-m', 'Initial commit' ] )
-                    }
-                })
-                .done( function() {
-                    done.resolve( repoInfo )
-                }, function( err: any) {
-                    done.reject( err )
-                })
-            })
+    .then(function () {
+        let repoUtils = {
+            _: _, // todo: looks weird, change later
+            resourcesPath: pathToExercise
+        };
+        let commits: Promise<CommitSpec[] | undefined> = new Promise(function (resolve, reject) {
+            const commitsConf = exerciseConfs.repos[repoInfo.exerciseName]().commits;
+            
+            if (Array.isArray(commitsConf) && commitsConf.length) {
+                resolve(commitsConf as CommitSpec[]);
+            } else if (typeof commitsConf === 'function') {
+                commitsConf.call(repoUtils, resolve);
+            } else {
+                resolve(undefined);
+            }
         })
-        .catch( function( err ) { done.reject( err ) })
-        .done() // TODO: make promises impl of cp-r
 
-        return done.promise
-    })
+        return utils.mkdirp(path.dirname(pathToRepo))
+            .then(function () {
+                return new Promise(function (resolve, reject) {
+                    spawn('cp', ['-r', pathToStarterRepo, pathToRepo])
+                        .on('close', function (cpRet) {
+                            if (cpRet !== 0) {
+                                reject(Error('Copying exercise repo failed'));
+                            } else {
+                                resolve(undefined);
+                            }
+                        });
+                });
+            })
+            .then(function () {
+                return commits.then(function (commits) {
+                    const addCommit = function (spec: CommitSpec) {
+                        return utils.addCommit.bind(null, pathToRepo, pathToExercise, spec); // todo: not use bind?
+                    };
+
+                    if (commits) {
+                        return commits.reduce(function (promise, commit) {
+                            return promise.then(function () {
+                                return addCommit(commit)();
+                            });
+                        }, Promise.resolve());
+                    } else {
+                        return utils.git(pathToRepo, 'commit', ['-m', 'Initial commit']);
+                    }
+                });
+            })
+            .then(function () {
+                return repoInfo;
+            });
+    });
 }
-
+    
 // transparently initialize exercise repos right before user clones it
 eventBus.setHandler( '*', '404', function( repoName: string, _: any, data: any, clonable: any ) { // todo: any
     if ( !REPO_NAME_REGEX.test( repoName ) ) { return clonable( false ) }
@@ -375,15 +380,15 @@ eventBus.setHandler( '*', '404', function( repoName: string, _: any, data: any, 
     const repoInfo = extractRepoInfoFromPath( repoName ) as ExerciseData; // assert good
     logger.log( EventType.INIT_CLONE, repoInfo.userId, repoInfo.exerciseName )
 
-    createRepo( repoName )
-    .done( function() {
-        clonable( true )
-    }, function( err ) {
-        clonable( false )
-        logger.err( ErrorType.CREATE_REPO, repoInfo.userId, repoInfo.exerciseName, {
-            msg: err.message
+    createRepo(repoName)
+        .then(function() {
+            clonable(true)
+        }).catch(function(err) {
+            clonable(false)
+            logger.err(ErrorType.CREATE_REPO, repoInfo.userId, repoInfo.exerciseName, {
+                msg: err.message
+            })
         })
-    })
 })
 
 // hard resets and checks out the updated HEAD after a push to a non-bare remote repo
@@ -577,11 +582,11 @@ class ClientConnection {
 
         const userKeyPromise = user.getUserKey( this.userId )
     
-        userKeyPromise.done(( key ) => {
-            this.userKey = key as unknown as string // Type assertion
-        }, ( err ) => {
+        userKeyPromise.then(( key ) => {
+            this.userKey = key
+        }).catch(( err ) => {
             logger.err(ErrorType.DB, this.userId, 'null', {msg: err.message})
-        })
+        });
     
         const handleClientState = ( err: Error | null, clientState: ClientState ) => {
             if ( err ) {
@@ -821,7 +826,7 @@ export async function configureApp(app: Application, server: Server) {
         const repo = remoteUrl.substring( remoteUrl.indexOf( gitHTTPMount ) + gitHTTPMount.length);
 
         createRepo( repo )
-        .done( function( repoInfo ) {
+        .then( function( repoInfo ) {
             // only 1 instance of publish
             // note: this messaging system will kept for now
             const handlePublishError =  logDbErr( repoInfo.userId, repoInfo.exerciseName, {
@@ -838,7 +843,7 @@ export async function configureApp(app: Application, server: Server) {
 
             res.writeHead( 200 )
             res.end()
-        }, function( err ) {
+        }).catch( function( err ) {
             res.writeHead( 403 )
             res.end()
 

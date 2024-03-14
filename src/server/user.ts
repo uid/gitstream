@@ -1,5 +1,4 @@
 import crypto from 'crypto';
-import q from 'q';
 import { Collection, Db } from 'mongodb';
 
 interface User {
@@ -8,66 +7,63 @@ interface User {
     created: number;
 }
 
-export function createUser(opts: {dbcon: Q.Promise<Db>}) {
+export function createUser(opts: {dbcon: Promise<Db>}) {
     const dbcon = opts.dbcon;
 
     return {
-        getUserKey: function( userId: any ) { // todo: update userId's type
-            return dbcon.then( function( db:Db ) { 
-                const users: Collection<User> = db.collection('users')
-                return q.nfcall( users.findOne.bind( users ), { id: userId }, { key: true } )
-                .then( function( user: User | null) {
-                    let newUserKey: string;
+        getUserKey: function(userId: string) {
+            return dbcon.then(function( db: Db ) { 
+                const users: Collection<User> = db.collection('users');
 
-                    if ( user ) {
-                        return (<any>q).fulfill(user.key ) // todo: fix, not sure how to remove 'any'
-                    } else {
-                        newUserKey = crypto.pseudoRandomBytes(20).toString('hex'),
-                        user = {
-                            id: userId,
-                            key: newUserKey,
-                            created: Date.now()
+                return users.findOne({id: userId} , {projection: { key: true }})
+                    .then(function(user: User | null) {
+                        if (user) {
+                            return Promise.resolve(user.key);
+                        } else {
+                            const newUserKey = crypto.pseudoRandomBytes(20).toString('hex'),
+
+                            user = {
+                                id: userId,
+                                key: newUserKey,
+                                created: Date.now()
+                            };
+
+                            return users.insertOne(user)
+                                .then( function() {
+                                    return newUserKey;
+                                });
                         }
-
-                        return q.nfcall( users.insertOne.bind( users ), user )
-                        .then( function() {
-                            return newUserKey;
-                        })
-                    }
-                } as (value: unknown) => void) // todo: fix.
-                // Type assertion. Can't normally add type annotation here b/c q.nfcall expects param of type 'unknown' 
+                    });
             })
         },
 
-        verifyMac: function( userId: string, mac: string, macMsg: string ) {
-            return dbcon.then( function( db: Db ) {
-                const users: Collection<User> = db.collection('users')
-                return q.nfcall( users.findOne.bind( users ), { id: userId }, { key: true } )
-            })
-            .then( function( user: User | null ) {
-                let hmac;
+        verifyMac: function(userId: string, mac: string, macMsg: string) {
+            return dbcon.then(function( db: Db) {
+                const users: Collection<User> = db.collection('users');
 
-                if ( !user ) {
+                return users.findOne({id: userId}, {projection: {key: true}});
+            })
+            .then(function(user: User | null) {
+                if (!user) {
                     throw Error('No user with id ' + userId)
                 }
 
-                hmac = crypto.createHmac( 'sha1', user.key )
+                const hmac = crypto.createHmac( 'sha1', user.key )
                     .update( macMsg )
                     .digest('hex')
 
-                if ( mac.length < 6 || hmac.indexOf( mac ) !== 0 ) {
+                if (mac.length < 6 || hmac.indexOf(mac) !== 0 ) {
                     throw Error('HMACs do not match')
                 }
-            } as (value: unknown) => void) //  todo: fix
-            // Type assertion. Can't normally add type annotation here b/c q.nfcall expects param of type 'unknown'
+            });
         },
 
         // length's default is 6 for repos
-        createMac: function( key: string, macMsg: string, length: number = 6 ) {
-            return crypto.createHmac( 'sha1', key )
-                .update( macMsg )
+        createMac: function(key: string, macMsg: string, length: number = 6) {
+            return crypto.createHmac('sha1', key)
+                .update(macMsg)
                 .digest('hex')
-                .substring( 0, length )
+                .substring(0, length)
         },
     }
 }
