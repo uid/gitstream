@@ -25,11 +25,17 @@ app.use(sessionParser);
 
 // Extend the Express Request to include the user property and the session from cookie-session
 interface AuthenticatedRequest extends Request {
-    user?: {
+    user: {
         username: string,
         fullname: string
     };
-    session?: any //todo: any
+    session: {
+        guest_user: {
+            username: string,
+            fullname: string
+        },
+        returnTo: string
+    }
 }
 
 /**
@@ -75,7 +81,9 @@ async function configureApp() {
         
         const usernameFromEmail = settings.openid.usernameFromEmail || ((email: string) => email);
         
-        passport.use('openid', new openidclient.Strategy({
+        // todo: this use can be moved out/above
+        const OpenIdStrategy = "openid";
+        passport.use(OpenIdStrategy, new openidclient.Strategy({
             client,
             params: { scope: 'openid email profile' },
         }, (tokenset: TokenSet, passportUserInfo: UserinfoResponse, done: any) => { // todo: any
@@ -84,6 +92,8 @@ async function configureApp() {
             const fullname = passportUserInfo.name || '';
             done(null, { username, fullname });
         }));
+
+
         const returnUserInfo = (userinfo: any, done: any) => done(null, userinfo);
         passport.serializeUser(returnUserInfo);
         passport.deserializeUser(returnUserInfo);
@@ -95,8 +105,7 @@ async function configureApp() {
         app.use(passportSession);
         
         app.use('/auth', (req, res, next) => {
-            passport.authenticate(
-                'openid',
+            passport.authenticate(OpenIdStrategy,
                 // see "Custom Callback" at http://www.passportjs.org/docs/authenticate/
                 (err: Error, user: any, info: any) => { // todo: any
                     if (err || !user) {
