@@ -1,5 +1,5 @@
 // External Imports
-import express from 'express';
+import { Application } from 'express';
 import session from 'cookie-session';
 import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
@@ -8,9 +8,6 @@ import { setupAuth } from './auth.js'
 // Internal Files
 import settings from '../../settings.js'
 import * as routesUtils from './routesUtils.js';
-
-export const app = express();
-export const PORT = 4242; // for WebSocket connection
 
 // Extend the Express Request to include the user property and the session from cookie-session
 interface AuthenticatedRequest extends Request {
@@ -27,7 +24,7 @@ interface AuthenticatedRequest extends Request {
     }
 }
 
-async function configureApp() {
+export async function configureAppFirst(app: Application) {
     // set up a session cookie to hold the user's identity after authentication
     const sessionParser = session({
         secret: settings.sessionSecret || crypto.pseudoRandomBytes(16).toString('hex'),
@@ -91,7 +88,3 @@ async function configureApp() {
         res.end( userId )
     });    
 }
-
-configureApp().catch(err => console.error(err));
-
-export const server = app.listen(PORT)
