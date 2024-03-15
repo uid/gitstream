@@ -9,6 +9,7 @@ import crypto from 'crypto';
 
 // Internal Files
 import settings from '../../settings.js'
+import * as routesUtils from './routesUtils.js';
 
 export const app = express();
 export const PORT = 4242; // for WebSocket connection
@@ -38,23 +39,19 @@ interface AuthenticatedRequest extends Request {
     }
 }
 
-/**
- * Generates a random 5 character ID string prefixed with 'user'
- */
-function createRandomId(): string {
-    return 'user' + crypto.pseudoRandomBytes(3).toString('hex').substring(0, 5)
-}
-
 // this middleware sets req.user to an object { username:string, fullname:string }, either from
 // session cookie information or by authenticating the user using the authentication method selected in settings.js.
 //
 // By default there is no authentication method, so this method authenticates as a guest user with a randomly-generated username.
 let setUser = function(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-    if ( !req.user ) {
+    if (!req.user) {
         if (req.session.guest_user){
             req.user = req.session.guest_user;
         } else {
-            req.user = req.session.guest_user = { username: createRandomId(), fullname: "Guest User" }
+            req.user = req.session.guest_user = {
+                username: routesUtils.createRandomId(),
+                fullname: "Guest User"
+            };
         }
     }
     console.log('guest user connected as', req.user);

@@ -22,7 +22,7 @@ import { ExerciseMachine } from './ExerciseMachine.js';
 import { CommitSpec, utils } from './utils.js';
 import { createLogger, WebSocketEvent, EventType, ErrorType, UserMapOp, ConnectionType, WebSocketDebug } from './logger.js';
 import { createUser } from './user.js';
-
+import * as routesUtils from './routesUtils.js';
 
 // Configure user and logger
 const logger = createLogger(mongodb);
@@ -66,7 +66,7 @@ const backend = angler.gitHttpBackend({
         .then( function() {
             callback({ok: true})
         }).catch(function( err ) {
-            const info = extractRepoInfoFromPath( params.repoPath );
+            const info = routesUtils.extractRepoInfoFromPath( params.repoPath );
             if (info) {
                 logger.err( ErrorType.GIT_HTTP, info.userId, info.exerciseName, {
                     msg: err.message
@@ -102,14 +102,14 @@ interface UserMap {
     getAll(userID: string, callback: standardCallback): void
 }
 
-interface ExerciseData {
+export interface ExerciseData {
     userId: string;
     exerciseName: string;
     mac: string;
     macMsg?: string;
 }
 
-type RepoPath = string|string[];
+export type RepoPath = string | string[];
 
 // todo: figure out which of these should not be optional
 type ClientState = {
@@ -215,41 +215,6 @@ let userMap: UserMap = {
     }
 }
 
-/**
- * Extracts data from the components of a repo's path
- * @param repoPath - a path string or an array of path components
- * @return data - if repo path is invalid, returns null
- */
-function extractRepoInfoFromPath( repoPath: RepoPath):ExerciseData | null {
-    // slice(1) to remove the '' from splitting '/something'
-    let splitRepoPath = repoPath instanceof Array ? repoPath : repoPath.split('/').slice(1),
-        userId,
-        repoMac,
-        exerciseName,
-        macMsg
-
-    if ( splitRepoPath.length < 3) {
-        return null
-    }
-
-    // e.g. /nhynes/12345/exercisename.git
-    userId = splitRepoPath[0]
-    repoMac = splitRepoPath[1]
-    exerciseName = splitRepoPath[2].replace( /\.git$/, '' ),
-    macMsg = userId + exerciseName
-
-    return {
-        userId: userId,
-        mac: repoMac,
-        exerciseName: exerciseName,
-        macMsg: macMsg
-    }
-}
-
-/** Does the inverse of @see extractRepoInfoFromPath. macMsg is not required */
-function createRepoShortPath( info: ExerciseData ) {
-    return path.join( '/', info.userId, info.mac, info.exerciseName + '.git' )
-}
 
 /**
  * Verifies the MAC provided in a repo's path (ex. /username/beef42-exercise2.git)
@@ -257,7 +222,7 @@ function createRepoShortPath( info: ExerciseData ) {
  * @return promise
  */
 function verifyAndGetRepoInfo(repoPath: RepoPath): Promise<ExerciseData> {
-    const repoInfo = extractRepoInfoFromPath(repoPath);
+    const repoInfo = routesUtils.extractRepoInfoFromPath(repoPath);
 
     if (!repoInfo) {
         throw Error('Could not get repo info');
@@ -268,7 +233,6 @@ function verifyAndGetRepoInfo(repoPath: RepoPath): Promise<ExerciseData> {
             return repoInfo;
         });
 }
-
 
 /**
  * Creates a new exercise repo.
@@ -348,7 +312,7 @@ function createRepo(repoName: string): Promise<ExerciseData> {
 eventBus.setHandler( '*', '404', function( repoName: string, _: any, data: any, clonable: any ) { // todo: any
     if ( !REPO_NAME_REGEX.test( repoName ) ) { return clonable( false ) }
 
-    const repoInfo = extractRepoInfoFromPath( repoName ) as ExerciseData; // assert good
+    const repoInfo = routesUtils.extractRepoInfoFromPath( repoName ) as ExerciseData; // assert good
     logger.log( EventType.INIT_CLONE, repoInfo.userId, repoInfo.exerciseName )
 
     createRepo(repoName)
@@ -387,7 +351,7 @@ eventBus.setHandler( '*', 'receive', function( repo: string, action: any, update
     }
 
     chain.catch( function( err ) {
-        const repoInfo = extractRepoInfoFromPath( repo ) as ExerciseData; // assert good
+        const repoInfo = routesUtils.extractRepoInfoFromPath( repo ) as ExerciseData; // assert good
         logger.err( ErrorType.ON_RECEIVE, repoInfo.userId, repoInfo.exerciseName, {
             msg: err.message
         })
@@ -678,7 +642,7 @@ class ClientConnection {
     createExerciseMachine(exerciseName: string) {
         const emConf = exerciseConfs.machines[ exerciseName ](),
             repoMac = user.createMac( this.userKey, this.userId + exerciseName ),
-            exerciseRepo = createRepoShortPath({
+            exerciseRepo = routesUtils.createRepoShortPath({
                 userId: this.userId,
                 exerciseName: exerciseName,
                 mac: repoMac
