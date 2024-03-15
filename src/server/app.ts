@@ -79,18 +79,18 @@ async function configureApp() {
             next();
         }
 
-        app.use( '/login', <any>setUserAuthenticateIfNecessary, function( req, res ) { // todo: any
-            res.redirect(req.originalUrl.replace(/^\/login/, '/'));
-        })
-
-        app.use( '/user', <any>setUser, <any>function( req: AuthenticatedRequest, res: Response ) { // todo: fix any
-            const userId = ( req.user && req.user.username ) || "";
-            res.writeHead( 200, { 'Content-Type': 'text/plain' } )
-            res.end( userId )
-        });
-
         console.log('openid auth is ready');
     }
+
+    app.use( '/login', <any>setUserAuthenticateIfNecessary, function( req, res ) { // todo: any
+        res.redirect(req.originalUrl.replace(/^\/login/, '/'));
+    })
+
+    app.use( '/user', <any>setUser, <any>function( req: AuthenticatedRequest, res: Response ) { // todo: fix any
+        const userId = ( req.user && req.user.username ) || "";
+        res.writeHead( 200, { 'Content-Type': 'text/plain' } )
+        res.end( userId )
+    });    
 }
 
 configureApp().catch(err => console.error(err));
