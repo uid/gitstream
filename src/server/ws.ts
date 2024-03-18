@@ -21,7 +21,8 @@ enum EVENTS {
   halt = 'halt'
 }
 
-const EVENTS_ENDPOINT = '/events';
+const GS_ROUTE = '/gitstream';
+const EVENTS_ENDPOINT = GS_ROUTE + '/events';
 
 const FIELD_EXERCISE_STATE = 'exerciseState',
     FIELD_CURRENT_EXERCISE = 'currentExercise';

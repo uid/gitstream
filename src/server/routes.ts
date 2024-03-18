@@ -59,6 +59,9 @@ interface AuthenticatedRequest extends Request {
 
 
 // == Constant Global Variables ==
+
+const GS_ROUTE = '/gitstream';
+
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url)); // esm way to get dirname
 
 export const PATH_TO_REPOS = '/srv/repos',
@@ -320,6 +323,13 @@ export async function configureApp(app: Application, server: Server) {
 
     let setUserAuthenticateIfNecessary = setUser; 
 
+    // easter egg / test page
+    app.get(GS_ROUTE + '/hi', function (req, res) {
+        res.type('text/plain');
+        res.send("hi");
+    });
+
+
     // if we have settings for OpenID authentication, configure it
     // this should always be the case, unless you're debugging and want to generate random
     // usernames per session
@@ -343,11 +353,11 @@ export async function configureApp(app: Application, server: Server) {
         console.log('openid auth is ready');
     }
 
-    app.use( '/login', <any>setUserAuthenticateIfNecessary, function( req, res ) { // todo: any
+    app.use(GS_ROUTE + '/login', <any>setUserAuthenticateIfNecessary, function( req, res ) { // todo: any
         res.redirect(req.originalUrl.replace(/^\/login/, '/'));
     })
 
-    app.use( '/user', <any>setUser, <any>function( req: AuthenticatedRequest, res: Response ) { // todo: fix any
+    app.use(GS_ROUTE + '/user', <any>setUser, <any>function( req: AuthenticatedRequest, res: Response ) { // todo: fix any
         const userId = ( req.user && req.user.username ) || "";
         res.writeHead( 200, { 'Content-Type': 'text/plain' } )
         res.end( userId )
@@ -361,10 +371,9 @@ export async function configureApp(app: Application, server: Server) {
     setupWebSocketServer(server);
 
     // set up routes
-    app.use( compression() );
-    app.use( '/repos', backend );
-    app.use( '/hooks', githookEndpoint );
+    app.use(GS_ROUTE + '/repos', backend );
+    app.use(GS_ROUTE + '/hooks', githookEndpoint );
 
     // invoked from the "go" script in client repo
-    app.use( '/go', handleGo);
+    app.use(GS_ROUTE + '/go', handleGo);
 }
