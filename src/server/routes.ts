@@ -1,5 +1,5 @@
 
-// External Libraries
+// == External Libraries ==
 import compression from 'compression';
 import { Application } from 'express';
 import { Server } from 'http';
@@ -11,10 +11,8 @@ import { rimraf } from 'rimraf';
 import _ from 'lodash';
 import * as url from 'url';
 
-const mongodb: Promise<Db> = MongoClient.connect('mongodb://localhost/gitstream')
-    .then((client: MongoClient) => client.db());
 
-// Internal Files
+// == Internal Files ==
 import angler from 'git-angler';
 import exerciseConfs from 'gitstream-exercises';
 import { CommitSpec, utils } from './utils.js';
@@ -23,12 +21,25 @@ import { createUser } from './user.js';
 import * as routesUtils from './routesUtils.js';
 import { setupWebSocketServer } from './ws.js';
 
-// Configure user and logger
+// == Configure User and Logger == 
+const mongodb: Promise<Db> = MongoClient.connect('mongodb://localhost/gitstream')
+    .then((client: MongoClient) => client.db());
 export const logger = createLogger(mongodb);
 export const user = createUser(mongodb);
 
-// Constant Global Variables
 
+// == Custom Types and Interfaces == 
+
+export interface ExerciseData {
+    userId: string;
+    exerciseName: string;
+    mac: string;
+    macMsg?: string;
+}
+
+export type RepoPath = string | string[];
+
+// == Constant Global Variables ==
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url)); // esm way to get dirname
 
 export const PATH_TO_REPOS = '/srv/repos',
@@ -66,16 +77,7 @@ const backend = angler.gitHttpBackend({
 
 export const exerciseEvents = new EventEmitter();
 
-// Custom Types and Interfaces
-
-export interface ExerciseData {
-    userId: string;
-    exerciseName: string;
-    mac: string;
-    macMsg?: string;
-}
-
-export type RepoPath = string | string[];
+// == Helper Functions ==
 
 /**
  * Verifies the MAC provided in a repo's path (ex. /username/beef42-exercise2.git)
@@ -168,7 +170,10 @@ function createRepo(repoName: string): Promise<ExerciseData> {
             });
     });
 }
-    
+
+
+// == Configure EventBus ==
+
 // transparently initialize exercise repos right before user clones it
 eventBus.setHandler( '*', '404', function( repoName: string, _: any, data: any, clonable: any ) { // todo: any
     if ( !REPO_NAME_REGEX.test( repoName ) ) { return clonable( false ) }
@@ -221,6 +226,9 @@ eventBus.setHandler( '*', 'receive', function( repo: string, action: any, update
         done()
     })
 })
+
+
+
 
 export async function configureApp(app: Application, server: Server) {
     // Set up WebSocket server
