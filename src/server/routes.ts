@@ -1,7 +1,7 @@
 
 // == External Libraries ==
 import compression from 'compression';
-import { Application } from 'express';
+import { Application, Request, Response } from 'express';
 import { Server } from 'http';
 import path from 'path';
 import EventEmitter from 'events';
@@ -229,6 +229,46 @@ eventBus.setHandler( '*', 'receive', function( repo: string, action: any, update
 
 
 
+async function handleGo(req: Request, res: Response) {
+    if ( !req.headers['x-gitstream-repo'] ) {
+        res.writeHead(400)
+        return res.end()
+    }
+
+    const remoteUrl = req.headers['x-gitstream-repo'] as string;
+    const repo = remoteUrl.substring( remoteUrl.indexOf( gitHTTPMount ) + gitHTTPMount.length);
+
+    createRepo( repo )
+    .then( function( repoInfo ) {
+        // only 1 instance of publish
+        // note: this messaging system will kept for now
+        const handlePublishError = logger.logDbErr( repoInfo.userId, repoInfo.exerciseName, {
+            desc: 'userMap go emit'
+        })
+
+        try {
+            exerciseEvents.emit(repoInfo.userId + ':go', repoInfo.exerciseName); 
+        } catch (err) {
+            if (err instanceof Error){
+                handlePublishError(err);
+            }
+        }
+
+        res.writeHead( 200 )
+        res.end()
+    }).catch( function( err ) {
+        res.writeHead( 403 )
+        res.end()
+
+        logger.err( ErrorType.CREATE_REPO, 'null', 'null', {
+            desc: 'New repo on go',
+            repo: repo,
+            remoteUrl: remoteUrl,
+            msg: err.message
+        })
+    })
+}
+
 
 export async function configureApp(app: Application, server: Server) {
     // Set up WebSocket server
@@ -240,43 +280,5 @@ export async function configureApp(app: Application, server: Server) {
     app.use( '/hooks', githookEndpoint );
 
     // invoked from the "go" script in client repo
-    app.use( '/go', function( req, res ) {
-        if ( !req.headers['x-gitstream-repo'] ) {
-            res.writeHead(400)
-            return res.end()
-        }
-
-        const remoteUrl = req.headers['x-gitstream-repo'] as string;
-        const repo = remoteUrl.substring( remoteUrl.indexOf( gitHTTPMount ) + gitHTTPMount.length);
-
-        createRepo( repo )
-        .then( function( repoInfo ) {
-            // only 1 instance of publish
-            // note: this messaging system will kept for now
-            const handlePublishError = logger.logDbErr( repoInfo.userId, repoInfo.exerciseName, {
-                desc: 'userMap go emit'
-            })
-
-            try {
-                exerciseEvents.emit(repoInfo.userId + ':go', repoInfo.exerciseName); 
-            } catch (err) {
-                if (err instanceof Error){
-                    handlePublishError(err);
-                }
-            }
-
-            res.writeHead( 200 )
-            res.end()
-        }).catch( function( err ) {
-            res.writeHead( 403 )
-            res.end()
-
-            logger.err( ErrorType.CREATE_REPO, 'null', 'null', {
-                desc: 'New repo on go',
-                repo: repo,
-                remoteUrl: remoteUrl,
-                msg: err.message
-            })
-        })
-    });
+    app.use( '/go', handleGo);
 }
