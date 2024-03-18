@@ -199,6 +199,8 @@ export function createLogger(mongodb: Promise<Db>) {
 
             const output = `[User Map][${userID}]\n${location}\n${contentAll}`;
             
+
+            // todo: add conditional for if logging individual, proceed
             if (CONFIG.LOG_CONSOLE) {
                 console.log(`\n${output}`);
             }
