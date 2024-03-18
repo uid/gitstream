@@ -23,7 +23,6 @@ import { createUser } from './user.js';
 import * as routesUtils from './routesUtils.js';
 import { setupWebSocketServer } from './ws.js';
 import settings from '../../settings.js'
-import { setupAuth } from './auth.js'
 
 // == Configure User and Logger == 
 const mongodb: Promise<Db> = MongoClient.connect('mongodb://localhost/gitstream')
@@ -330,28 +329,26 @@ export async function configureApp(app: Application, server: Server) {
     });
 
 
-    // if we have settings for OpenID authentication, configure it
-    // this should always be the case, unless you're debugging and want to generate random
-    // usernames per session
-    if (settings.openid) {
-        await setupAuth(app);
+    // don't use openid in Gitstream for now (will eventually use PraxisTutor's openid authentication system)
+    // if (settings.openid) {
+    //     await setupAuth(app);
         
-        setUser = function(req, res, next) {
-            console.log('OpenID authenticated as', req.user);
-            next();
-        }
+    //     setUser = function(req, res, next) {
+    //         console.log('OpenID authenticated as', req.user);
+    //         next();
+    //     }
         
-        setUserAuthenticateIfNecessary = function(req, res, next) {
-            if ( ! req.user ) {
-                req.session.returnTo = req.originalUrl;
-                return res.redirect('/auth');
-            }
-            console.log('OpenID authenticated as', req.user);
-            next();
-        }
+    //     setUserAuthenticateIfNecessary = function(req, res, next) {
+    //         if ( ! req.user ) {
+    //             req.session.returnTo = req.originalUrl;
+    //             return res.redirect('/auth');
+    //         }
+    //         console.log('OpenID authenticated as', req.user);
+    //         next();
+    //     }
 
-        console.log('openid auth is ready');
-    }
+    //     console.log('openid auth is ready');
+    // }
 
     app.use(GS_ROUTE + '/login', <any>setUserAuthenticateIfNecessary, function( req, res ) { // todo: any
         res.redirect(req.originalUrl.replace(/^\/login/, '/'));
