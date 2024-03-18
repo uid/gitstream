@@ -7,12 +7,10 @@ interface User {
     created: number;
 }
 
-export function createUser(opts: {dbcon: Promise<Db>}) {
-    const dbcon = opts.dbcon;
-
+export function createUser(mongodb: Promise<Db>) {
     return {
         getUserKey: function(userId: string) {
-            return dbcon.then(function( db: Db ) { 
+            return mongodb.then(function( db: Db ) { 
                 const users: Collection<User> = db.collection('users');
 
                 return users.findOne({id: userId} , {projection: { key: true }})
@@ -38,7 +36,7 @@ export function createUser(opts: {dbcon: Promise<Db>}) {
         },
 
         verifyMac: function(userId: string, mac: string, macMsg: string) {
-            return dbcon.then(function( db: Db) {
+            return mongodb.then(function( db: Db) {
                 const users: Collection<User> = db.collection('users');
 
                 return users.findOne({id: userId}, {projection: {key: true}});

@@ -13,6 +13,16 @@ export enum WebSocketEvent {
     RECEIVED = 'Received'
 }
 
+export enum WebSocketDebug {
+    INFO = 'info',
+    ERROR = 'error'
+}
+
+export enum ConnectionType {
+    ADD = 'Add',
+    REMOVE = 'Remove',
+}
+
 enum ConsoleColor {
     MAG = '\x1b[35m', // magenta
     RST = '\x1b[0m',  // reset
@@ -46,17 +56,15 @@ export enum UserMapOp {
     GET_ALL = 'getAll'
 }
 
-// todo: figure out the 'any' types later
 interface LogRecord {
     timestamp: number;
     userId: string;
     event: EventType;
     exercise: string;
     data: any;
+
     errorType?: ErrorType;
 }
-
-const colorCodeRegex = /\x1b\[\d{1,2}m/g; // strips colors from text
 
 /**
  * Format a field and its content with a specified width.
@@ -104,19 +112,15 @@ function getCallerInfo(depth: number = 1): {fileName: string, lineNum: string} {
 }
 
 
-export function createLogger(opts: {dbcon: Promise<Db>}) {
-    const dbcon = opts.dbcon;
-
+export function createLogger(mongodb: Promise<Db>) {
     return {
-        CONFIG, // todo: move out of here
-
         /**
          * Method that inserts standardized log records to the database
          * 
          * @param record The log record object to be inserted
          */
         _log: function(record: LogRecord) {
-            dbcon.then((db: Db) => {
+            mongodb.then((db: Db) => {
                 db.collection('logs').insertOne(record);
             }).catch((err: any) => { // todo: any
                 console.error('[ERROR] Logger error:', record, err);
@@ -195,6 +199,8 @@ export function createLogger(opts: {dbcon: Promise<Db>}) {
 
             const output = `[User Map][${userID}]\n${location}\n${contentAll}`;
             
+
+            // todo: add conditional for if logging individual, proceed
             if (CONFIG.LOG_CONSOLE) {
                 console.log(`\n${output}`);
             }
@@ -211,18 +217,61 @@ export function createLogger(opts: {dbcon: Promise<Db>}) {
          * @returns - nothing
          */
         ws: function(type: WebSocketEvent, output: any) { // todo: standardize type of output
-            if (CONFIG.WS_DEBUG_IND) {
-                const strOutput = JSON.stringify(output);
-                strOutput.replace(/\"/g, ""); // remove extra quotation marks
+            if (!CONFIG.WS_DEBUG_IND) return
 
-                const trueOutput = `\n[WS][Server][${type}] ${strOutput}\n`;
+            const strOutput = JSON.stringify(output);
+            strOutput.replace(/\"/g, ""); // remove extra quotation marks
+
+            const trueOutput = `\n[WS][Server][${type}] ${strOutput}\n`;
+            
+            if (CONFIG.LOG_CONSOLE) {
+                console.log(trueOutput);
+            }
+            if (CONFIG.LOG_MONGO) {
+                // todo
+            }
+        },
+
+        ws_debug: function(type: WebSocketDebug, msg: string, output: any) {
+            if (CONFIG.WS_DEBUG_SUM) {
+                console.log(`[ws ${type} debug]: ${msg}\n`, output)
+            }
+        },
+
+        /**
+         * Log active connections
+         * 
+         * @param type 
+         * @param active
+         * @returns - nothing
+         */
+        connections: function(type: ConnectionType, active: string[]): void {
+            if (CONFIG.WS_DEBUG_SUM) {
+                console.log(`\n[${type} Connection] Current Active Users:\n${active.join('\n')}\n`);
+            }
+        },
+
+        /**
+         * Logs database errors with additional context information.
+         * 
+         * This function returns a callback that, when invoked with an error, logs the error
+         * along with the user ID, exercise name, and additional data provided. If the error
+         * is null, indicating no error occurred, the callback will simply return without
+         * performing any logging.
+         *
+         * @param userId - The ID of the user associated with the database operation
+         * @param exercise - The name of the exercise
+         * @param data - Additional data to be logged
+         * @returns A callback function that takes an optional Error object.
+         */
+        logDbErr: function(userId: string, exercise: string, data: any): (err: Error | null) => void { // todo: any
+            return (err: Error | null) => { // todo: any
+                if (!err) return
+                data.msg = err.message
                 
-                if (CONFIG.LOG_CONSOLE) {
-                    console.log(trueOutput);
-                }
-                if (CONFIG.LOG_MONGO) {
-                    // todo
-                }
+                console.error(err);
+
+                this.err(ErrorType.DB, userId, exercise, data);
             }
         }
     }

@@ -64,6 +64,9 @@ uninstall:
 clean:
 	rm -rf dist
 
+super-clean:
+	rm -rf node_modules
+
 test:
 	npm run test-server
 	npm run test-client
