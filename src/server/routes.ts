@@ -1,7 +1,7 @@
 
 // == External Libraries ==
 import compression from 'compression';
-import { Application, Request, Response } from 'express';
+import { Application, Request, Response, NextFunction } from 'express';
 import { Server } from 'http';
 import path from 'path';
 import EventEmitter from 'events';
@@ -10,6 +10,8 @@ import { MongoClient, Db } from 'mongodb';
 import { rimraf } from 'rimraf';
 import _ from 'lodash';
 import * as url from 'url';
+import session from 'cookie-session';
+import crypto from 'crypto';
 
 
 // == Internal Files ==
@@ -20,6 +22,8 @@ import { createLogger, EventType, ErrorType } from './logger.js';
 import { createUser } from './user.js';
 import * as routesUtils from './routesUtils.js';
 import { setupWebSocketServer } from './ws.js';
+import settings from '../../settings.js'
+import { setupAuth } from './auth.js'
 
 // == Configure User and Logger == 
 const mongodb: Promise<Db> = MongoClient.connect('mongodb://localhost/gitstream')
@@ -38,6 +42,21 @@ export interface ExerciseData {
 }
 
 export type RepoPath = string | string[];
+
+interface AuthenticatedRequest extends Request {
+    user: {
+        username: string,
+        fullname: string
+    };
+    session: {
+        guest_user: {
+            username: string,
+            fullname: string
+        },
+        returnTo: string
+    }
+}
+
 
 // == Constant Global Variables ==
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url)); // esm way to get dirname
@@ -271,6 +290,73 @@ async function handleGo(req: Request, res: Response) {
 
 
 export async function configureApp(app: Application, server: Server) {
+    // set up a session cookie to hold the user's identity after authentication
+    const sessionParser = session({
+        secret: settings.sessionSecret || crypto.pseudoRandomBytes(16).toString('hex'),
+        sameSite: 'lax',
+        signed: true,
+        overwrite: true,
+    });
+
+    app.use(sessionParser);
+
+    // this middleware sets req.user to an object { username:string, fullname:string }, either from
+    // session cookie information or by authenticating the user using the authentication method selected in settings.js.
+    // By default there is no authentication method, so this method authenticates as a guest user with a randomly-generated username.
+    let setUser = function(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+        if (!req.user) {
+            if (req.session.guest_user){
+                req.user = req.session.guest_user;
+            } else {
+                req.user = req.session.guest_user = {
+                    username: routesUtils.createRandomId(),
+                    fullname: "Guest User"
+                };
+            }
+        }
+        console.log('guest user connected as', req.user);
+        next();
+    };
+
+    let setUserAuthenticateIfNecessary = setUser; 
+
+    // if we have settings for OpenID authentication, configure it
+    // this should always be the case, unless you're debugging and want to generate random
+    // usernames per session
+    if (settings.openid) {
+        await setupAuth(app);
+        
+        setUser = function(req, res, next) {
+            console.log('OpenID authenticated as', req.user);
+            next();
+        }
+        
+        setUserAuthenticateIfNecessary = function(req, res, next) {
+            if ( ! req.user ) {
+                req.session.returnTo = req.originalUrl;
+                return res.redirect('/auth');
+            }
+            console.log('OpenID authenticated as', req.user);
+            next();
+        }
+
+        console.log('openid auth is ready');
+    }
+
+    app.use( '/login', <any>setUserAuthenticateIfNecessary, function( req, res ) { // todo: any
+        res.redirect(req.originalUrl.replace(/^\/login/, '/'));
+    })
+
+    app.use( '/user', <any>setUser, <any>function( req: AuthenticatedRequest, res: Response ) { // todo: fix any
+        const userId = ( req.user && req.user.username ) || "";
+        res.writeHead( 200, { 'Content-Type': 'text/plain' } )
+        res.end( userId )
+    });    
+
+
+    // -------
+
+
     // Set up WebSocket server
     setupWebSocketServer(server);
 
