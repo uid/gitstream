@@ -188,7 +188,7 @@ function renderExerciseView( exerciseName, conf, user ) {
             }
         }),
         mac = hmac( user.id + exerciseName, user.key ).toString().substring( 0, 6 ),
-        cloneUrl = 'http://' + window.location.host + GS_ROUTE + '/repos/' +
+        cloneUrl = 'https://' + window.location.host + GS_ROUTE + '/repos/' +
             user.id + '/' + mac + '/' + exerciseName + '.git',
         templateParams = {
             title: conf.title,
