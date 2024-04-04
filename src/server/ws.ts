@@ -200,7 +200,8 @@ class ClientConnection {
                 return this.sendMessage('err', err) // todo: stringify the error?
             }
 
-            if ( !clientState ) { // Aka user is new and we want to initialize their data
+            // User is new and we want to initialize their data
+            if ( !clientState ) { // || Object.keys(clientState).length === 0) { // todo: review this change
 
                 console.error('hmset', FIELD_EXERCISE_STATE, null);
                 
@@ -219,7 +220,7 @@ class ClientConnection {
                     exerciseState: exerciseState
                 })
 
-                if ( exerciseState) {
+                if ( exerciseState) { // todo: change to a conditional on currentExercise ?
                     // there's already an excercise running. reconnect to it
                     console.log('user refreshed page!')
                     this.exerciseMachine = this.createExerciseMachine( currentExercise as string);
@@ -228,7 +229,7 @@ class ClientConnection {
                 } else if ( exerciseState ) { // last exercise has expired // wait this weird, same conditional as above. todo: fix?
                     userMap.delete(this.userId, [FIELD_EXERCISE_STATE]);
     
-                    delete clientState[ FIELD_EXERCISE_STATE ]
+                        delete clientState[ FIELD_EXERCISE_STATE ]
                 }
                 
                 clientState.user = {
