@@ -99,7 +99,7 @@ class ClientConnection {
 
     }
 
-    prviate handleMessage(event: WebSocket.MessageEvent) {
+    private handleMessage(event: WebSocket.MessageEvent) {
         const event_data = event.data as string; // Type assertion
 
         const msg = JSON.parse(event_data);
