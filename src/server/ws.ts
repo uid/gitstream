@@ -243,44 +243,46 @@ class ClientConnection {
       userMap.getAll(this.userId, handleClientState);
   
       const processNewExercise = ( channel: any, exerciseName: string ) => { // todo: any
-          logger.log( EventType.GO, this.userId, exerciseName )
-  
-          const handleExerciseState = ( err: Error | null, state: State ) => {
-              if (err){
-                  console.log('err', err)
-                  return
-              }
+            logger.log( EventType.GO, this.userId, exerciseName )
+    
+            const handleExerciseState = ( err: Error | null, state: State ) => {
+                if (err){
+                    console.log('err', err)
+                    return
+                }
 
-              let startState;
-              
-              console.error('hgetall', this.userId, state);
-  
-              // only start exercise if user is on the exercise page
-              if (exerciseName !== state.currentExercise) return
-              if (this.exerciseMachine) {
-                  this.exerciseMachine.halt()
-              }
-              this.exerciseMachine = this.createExerciseMachine( exerciseName )
-              startState = this.exerciseMachine._states.startState;
-              // set by EM during init, but init sends events. TODO: should probably be fixed
-  
-              console.error('hmset', FIELD_EXERCISE_STATE, startState);
-              
-              const handleError = ( err: Error | null) => {
-                  if ( err ) {
-                      // LOGGING
-                      logger.err( ErrorType.DB, this.userId, exerciseName, {
-                          desc: 'userMap go',
-                          msg: err.message
-                      })
-                  }
-              }
-              userMap.set(this.userId, FIELD_EXERCISE_STATE, startState, handleError);
-  
-              state[ FIELD_EXERCISE_STATE ] = startState
-  
-              this.sendMessage(EVENTS.sync, state);
-              this.exerciseMachine.init();
+                let startState;
+                
+                console.error('hgetall', this.userId, state);
+    
+                // only start exercise if user is on the exercise page
+                if (exerciseName !== state.currentExercise) return
+                
+                if (this.exerciseMachine) {
+                    this.exerciseMachine.halt()
+                }
+
+                this.exerciseMachine = this.createExerciseMachine( exerciseName )
+                startState = this.exerciseMachine._states.startState;
+                // set by EM during init, but init sends events. TODO: should probably be fixed
+    
+                console.error('hmset', FIELD_EXERCISE_STATE, startState);
+                
+                const handleError = ( err: Error | null) => {
+                    if ( err ) {
+                        // LOGGING
+                        logger.err( ErrorType.DB, this.userId, exerciseName, {
+                            desc: 'userMap go',
+                            msg: err.message
+                        })
+                    }
+                }
+                userMap.set(this.userId, FIELD_EXERCISE_STATE, startState, handleError);
+    
+                state[ FIELD_EXERCISE_STATE ] = startState
+    
+                this.sendMessage(EVENTS.sync, state);
+                this.exerciseMachine.init();
           }
           userMap.getAll(this.userId, handleExerciseState)
       }
