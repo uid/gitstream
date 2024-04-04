@@ -63,8 +63,9 @@ const GS_ROUTE = '/gitstream';
 
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url)); // esm way to get dirname
 
-export const PATH_TO_REPOS = '/srv/repos',
-    PATH_TO_EXERCISES = __dirname + '/exercises/'
+export const PATH_TO_REPOS = settings.reposPath; // note, before this was '/srv/repos'
+                                                 // but due to perms that location may not be ideal
+export const PATH_TO_EXERCISES = __dirname + '/exercises/';
 
 const REPO_NAME_REGEX = /\/[a-z0-9_-]+\/[a-f0-9]{6,}\/.+.git$/,
     gitHTTPMount = '/repos'; // no trailing slash

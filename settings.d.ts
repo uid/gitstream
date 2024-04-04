@@ -12,6 +12,7 @@ declare const settings: {
     clockTolerance: number;
   };
   sessionSecret: string;
+  reposPath: string;
 };
 
 export default settings;
