@@ -72,7 +72,7 @@ class ClientConnection {
      * Pings client every 55 seconds (less than the standard Nginx connection halt of 60 seconds).
      * If no response, connection presumed dead
      */
-    startHeartbeat() {
+    private startHeartbeat() {
         const hb_time = 55*1000;
 
         this.heartbeat = setInterval(() => {
@@ -86,7 +86,7 @@ class ClientConnection {
      * @param msgEvent
      * @param msgData the object to be transmitted
      */
-    sendMessage(msgEvent: EVENTS | 'ws' | 'err', msgData: any) { // todo: any
+    private sendMessage(msgEvent: EVENTS | 'ws' | 'err', msgData: any) { // todo: any
         const msg = {event: msgEvent, data: msgData};
         const strMsg = JSON.stringify(msg);
 
@@ -99,7 +99,7 @@ class ClientConnection {
 
     }
 
-    handleMessage(event: WebSocket.MessageEvent) {
+    prviate handleMessage(event: WebSocket.MessageEvent) {
         const event_data = event.data as string; // Type assertion
 
         const msg = JSON.parse(event_data);
@@ -136,12 +136,12 @@ class ClientConnection {
     }
 
     // per socket
-    handleError(event: WebSocket.ErrorEvent) {
+    private handleError(event: WebSocket.ErrorEvent) {
         console.error('ws connection error:', event);
     }
     
     // per socket
-    handleClose(event: WebSocket.CloseEvent) {
+    private handleClose(event: WebSocket.CloseEvent) {
         if (this.exerciseMachine) {
             this.exerciseMachine.removeAllListeners()
             this.exerciseMachine.halt()
@@ -157,12 +157,12 @@ class ClientConnection {
 
     // === Maintain list of active connections ===
 
-    addToActiveList() {
+    private addToActiveList() {
         activeConnections.push(this.userId);
         logger.connections(ConnectionType.ADD, activeConnections);
     }
 
-    removeFromActiveList() {
+    private removeFromActiveList() {
         activeConnections = activeConnections.filter(userId => userId !== this.userId);
         logger.connections(ConnectionType.REMOVE, activeConnections);
     }
@@ -175,7 +175,7 @@ class ClientConnection {
      * 
      * @param {*} recvUserId 
      */
-    handleClientSync(recvUserId: string) {
+    private handleClientSync(recvUserId: string) {
         this.userId = recvUserId; // initial and sole assignment
         this.addToActiveList();
 
@@ -257,7 +257,7 @@ class ClientConnection {
     
                 // only start exercise if user is on the exercise page
                 if (exerciseName !== state.currentExercise) return
-                
+
                 if (this.exerciseMachine) {
                     this.exerciseMachine.halt()
                 }
@@ -293,7 +293,7 @@ class ClientConnection {
   }
 
     // user changed exercise page
-    handleExerciseChanged(newExercise: string) {
+    private handleExerciseChanged(newExercise: string) {
 
         if (this.exerciseMachine) { // stop the old machine
             this.exerciseMachine.halt()
@@ -315,13 +315,12 @@ class ClientConnection {
         logger.log( EventType.CHANGE_EXERCISE, this.userId, newExercise )
     }
 
-    handleExerciseDone(doneExercise: string) {
+    private handleExerciseDone(doneExercise: string) {
         utils.exportToOmnivore(this.userId, doneExercise,
             logger.logDbErr( this.userId, doneExercise, { desc: 'Omnivore POST error' } ));
     }
 
-
-    createExerciseMachine(exerciseName: string) {
+    private createExerciseMachine(exerciseName: string) {
         const emConf = exerciseConfs.machines[ exerciseName ](),
             repoMac = user.createMac( this.userKey, this.userId + exerciseName ),
             exerciseRepo = routesUtils.createRepoShortPath({
