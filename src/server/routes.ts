@@ -67,8 +67,8 @@ export const PATH_TO_REPOS = settings.reposPath; // note, before this was '/srv/
                                                  // but due to perms that location may not be ideal
 export const PATH_TO_EXERCISES = __dirname + '/exercises/';
 
-const REPO_NAME_REGEX = /\/[a-z0-9_-]+\/[a-f0-9]{6,}\/.+.git$/,
-    gitHTTPMount = '/repos'; // no trailing slash
+const REPO_NAME_REGEX = /\/[a-z0-9_-]+\/[a-f0-9]{6,}\/.+.git$/;
+const gitHTTPMount = GS_ROUTE + '/repos'; // note: slightly misleading var name bc this is now HTTPS land
 
 export const eventBus = new angler.EventBus();
 
@@ -253,6 +253,8 @@ eventBus.setHandler( '*', 'receive', function( repo: string, action: any, update
 
 async function handleGo(req: Request, res: Response) {
     if ( !req.headers['x-gitstream-repo'] ) {
+        // todo: add an error log here
+
         res.writeHead(400)
         return res.end()
     }
@@ -262,6 +264,7 @@ async function handleGo(req: Request, res: Response) {
 
     createRepo( repo )
     .then( function( repoInfo ) {
+        console.log('got here3')
         // only 1 instance of publish
         // note: this messaging system will kept for now
         const handlePublishError = logger.logDbErr( repoInfo.userId, repoInfo.exerciseName, {
