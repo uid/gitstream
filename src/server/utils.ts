@@ -225,7 +225,7 @@ export let utils = {
                 let sign = crypto.createSign('RSA-SHA256')
                 sign.update(JSON.stringify(input))
                 
-                const privateKey = fs.readFileSync('gitstream.pem');
+                const privateKey = fs.readFileSync(settings.pemPath);
                 const signature = sign.sign(privateKey, 'base64')
                 
                 const url = omnivoreEndpoint.url;

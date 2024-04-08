@@ -13,6 +13,7 @@ declare const settings: {
   };
   sessionSecret: string;
   reposPath: string;
+  pemPath: string;
 };
 
 export default settings;
