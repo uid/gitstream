@@ -104,9 +104,9 @@ module.exports = function( opts ) {
                 repoPathParser = hook.indexOf('receive') !== -1 ? getLocalRepo : getRemoteRepo;
                 repoStr = repoPathParser( repoPath )
                     .replace( /\/\.git$/, '' ); // remove the trailing .git from receive hooks
-                bufferBody( req, function( body ) {
-                    hookHandlers[ hook ]( hook, repoStr, body, res );
-                });
+
+                hookHandlers[ hook ]( hook, repoStr, req.rawBody, res );
+
             } else if ( hook && repoPath ) {
                 res.writeHead( 400, 'Invalid hook type' );
                 res.end();
