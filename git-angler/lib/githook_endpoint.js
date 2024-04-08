@@ -8,24 +8,6 @@
 var url = require('url'),
     utils = require('./utils');
 
-function bufferBody( req, cb ) {
-    var chunks = [],
-        totalLen = 0;
-
-    req.on( 'data', function( chunk ) {
-        chunks.push( chunk );
-        totalLen += chunk.length;
-    });
-
-    req.on( 'error', function( err ) {
-        cb( null, err );
-    });
-
-    req.on('end', function() {
-        cb( Buffer.concat( chunks ).toString(), totalLen );
-    });
-}
-
 function processReceiveData( updates ) {
     return [ updates.trimRight().split('\n').map( function( updateInfo ) {
         var updateParams = updateInfo.split(' ');
