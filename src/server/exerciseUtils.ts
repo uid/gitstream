@@ -28,7 +28,7 @@ export function exerciseUtils( config: Config ) {
 
     // todo: this function is weird, take a closer look
     const shadowFn = function( fn: Function, args: any ): Q.Promise<any> { // todo: fix use of any
-            let callback: (reason: any, value: any) => void = () => {}; // todo: fix, kinda jank
+            let callback: (reason: any, value: any) => void; // todo: any
             let result: any; // todo: fix use of any
             
             if ( typeof args[ args.length - 1 ] === 'function' ) {
@@ -44,7 +44,7 @@ export function exerciseUtils( config: Config ) {
                 .then( function() {
                     return result
                 })
-                .nodeify( callback )
+                .nodeify( callback! )
         }
 
     const exUtils = {
