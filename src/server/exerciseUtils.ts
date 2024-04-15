@@ -285,39 +285,17 @@ export function exerciseUtils( config: Config ) {
             .nodeify(callback)
         },
 
-
-        // NOTE: this logic may not be correct, but I've yet to check due to it currently not being used
         /**
          * Performs a glob match in the repo directory
          * @param fileGlob the glob to match against
          * @param callback Optional. (err, [String]: matching filenames)
          * @return a promise if no callback is given
          */
-        filesMatching: function(
-            fileGlob: string,
-            callback?: (err: Error | null, matchingFilenames: string[] | null) => void
-        ): Q.Promise<string[]> {
-            const deferred = Q.defer<string[]>();
-            const options = { cwd: repoDir, root: repoDir, silent: true };
-        
-            glob(fileGlob, options)
-            .then((files) => {
-                deferred.resolve(files);
-                if (callback) {
-                    callback(null, files);
-                }
-            })
-            .catch((err) => {
-                deferred.reject(err);
-                if (callback) {
-                    callback(err, null);
-                }
-            })
-        
-            return deferred.promise;
+        filesMatching: function(fileGlob: string, callback?: any): Q.Promise<any> { // todo: any
+            return Q(glob(fileGlob, { cwd: repoDir, root: repoDir, /*silent: true*/ } )) // todo: add silent flag?
+            .nodeify( callback )
         },
 
-        // todo: remove? not used
         shadowFilesMatching: function(... args: any[]) {
             return shadowFn( exUtils.filesMatching, args)
         },
