@@ -55,16 +55,10 @@ export function exerciseUtils( config: Config ) {
          * @param callback - Optional callback. (err, data)  
          * @returns a promise if no callback is given
          */
-        git: function (
-            cmd: string,
-            args: string[] | string,
-            callback?: (err: any, data: any) => void
-        ): Q.Promise<any> | void {
-            const argsArray = Array.isArray(args) ? args : args.trim().split(' ');
-            
-            if (callback) {
-                return utils.git(repoPath, cmd, argsArray).nodeify(callback);
-            }
+        git: function() {
+            const args = Array.prototype.slice.call( arguments ),
+                callback = args.length >= 3 ? args.pop() : undefined
+            return git.apply( null, args as any ).nodeify( callback )
         },
         
         /**
@@ -115,6 +109,7 @@ export function exerciseUtils( config: Config ) {
             return shadowFn( exUtils.compareFiles, Array.prototype.slice.call( arguments ) )
         },
 
+        // todo: refactor
         /**
          * Diffs two refs.
          * @param from - the ref to be compared against
@@ -124,37 +119,18 @@ export function exerciseUtils( config: Config ) {
          * If `to` is undefined, `from` will be compared to its parent(s).
          * If both `from` and `to` are undefined, `from` will default to HEAD
          */
-        diff: function( from?: string,
-            to?: string,
-            callback: (err: any, diff: any) => void = () => {}
-        ): Q.Promise<any> {
-            const diffArgs = [ '-p' ];
+        diff: function(from: any, to: any) {
+            const diffArgs = [ '-p' ],
+                callback = arguments[ arguments.length - 1 ],
+                cbfnp = typeof callback === 'function' ? 1 : 0
+    
+            diffArgs.push( arguments.length < 1 + cbfnp ? 'HEAD' : from )
 
-            const cbfnp: number = typeof callback === 'function' ? 1 : 0; // I think this stands for call back function present?
-
-            diffArgs.push( arguments.length < 1 + cbfnp ? 'HEAD' : from as string); // // todo: fix
             if ( arguments.length >= 2 + cbfnp ) {
-                diffArgs.push(to as string) // todo: fix
+                diffArgs.push(to)
             }
-
-            return git( 'diff-tree', diffArgs )
-            .nodeify(callback)
-            
-
-            // todo: verify that this refactoring is correct before swapping 
-
-            // const diffArgs = ['-p'];
-
-            // if (from === undefined) {
-            //     diffArgs.push('HEAD');
-            // } else {
-            //     diffArgs.push(from);
-            //     if (to !== undefined) {
-            //         diffArgs.push(to);
-            //     }
-            // }
-        
-            // return git('diff-tree', diffArgs).nodeify(callback || (() => {})); // todo: fix, kinda weird
+    
+            return git( 'diff-tree', diffArgs ).nodeify( cbfnp ? callback : null )
         },
 
         /**
@@ -208,23 +184,14 @@ export function exerciseUtils( config: Config ) {
             return shadowFn( exUtils.fileContains, args)
         },
 
-        // todo: remove? doesn't seem to be used
+        // todo: refactor
         /**
          * Adds the specified files (possibly templated) to the given repo and commits them
          * @param callback Optional. err
          * @return a promise if no callback is given
          */
-        addCommit: function(
-            spec: CommitSpec,
-            callback: (err: any) => void = () => {}
-        ): Q.Promise<any> { // todo: any. also, the default val for repo may be wrong
-            // note: default values are defined at top of file
-
-            const repo = repoPath; // the path to the repository. Dest files are relative to the repo root
-            const srcBase = exercisePath; // path to which src files paths are relative. Default: `/`
-            
-            return utils.addCommit( repo, srcBase, spec )
-            .nodeify( callback )
+        addCommit: function( spec: any, callback: any ) {
+            return utils.addCommit( repoPath, exercisePath, spec ).nodeify( callback )
         },
 
         /**
@@ -322,7 +289,6 @@ export function exerciseUtils( config: Config ) {
             return shadowFn( exUtils.filesMatching, args)
         },
 
-        // todo: remove? used in a test file but that's also currently commented out
         /**
          * Checks for the existence of a file in the repo
          * @param fileGlob a glob describing the the file
@@ -331,14 +297,13 @@ export function exerciseUtils( config: Config ) {
          */
         fileExists: function(
             fileGlob: string,
-            callback: (err: Error | null, fileExists: boolean) => void = () => {}
+            callback: (err: Error | null, fileExists: boolean) => void
         ): Q.Promise<boolean> {
             return exUtils.filesMatching(fileGlob)
-            .then( function( files:any ) { return files.length !== 0 })
+            .then(function(files: any) { return files.length !== 0 })
             .nodeify( callback )
         },
 
-        // todo: remove? not used
         /**
          * Checks for the existence of a file in the repo's shadowbranch
          * @see fileExists and the description of the shadowbranch
