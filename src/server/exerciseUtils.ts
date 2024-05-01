@@ -56,9 +56,9 @@ export function exerciseUtils( config: Config ) {
          * @returns a promise if no callback is given
          */
         git: function() {
-            const args = Array.prototype.slice.call( arguments ),
-                callback = args.length >= 3 ? args.pop() : undefined
-            return git.apply( null, args as any ).nodeify( callback )
+            const args = Array.prototype.slice.call( arguments );
+            const callback = args.length >= 3 ? args.pop() : undefined;
+            return git.apply( null, args as any ).nodeify( callback );
         },
         
         /**
@@ -263,8 +263,8 @@ export function exerciseUtils( config: Config ) {
             .nodeify( callback )
         },
 
-        shadowFilesMatching: function(... args: any[]) {
-            return shadowFn( exUtils.filesMatching, args)
+        shadowFilesMatching: function() {
+            return shadowFn( exUtils.filesMatching, Array.prototype.slice.call( arguments ) )
         },
 
         /**
