@@ -4,8 +4,8 @@
 import WebSocket, { WebSocketServer } from 'ws';
 
 import { ExerciseMachine } from './ExerciseMachine.js';
-import { logger, user, exerciseEvents, PATH_TO_REPOS, PATH_TO_EXERCISES, eventBus } from './routes.js'
-import { WebSocketEvent, ConnectionType, WebSocketDebug, EventType, ErrorType } from './logger.js';
+import { user, exerciseEvents, PATH_TO_REPOS, PATH_TO_EXERCISES, eventBus } from './routes.js'
+import { logger, WebSocketEvent, ConnectionType, WebSocketDebug, EventType, ErrorType } from './logger.js';
 import { userMap } from './userMap.js';
 import * as routesUtils from './routesUtils.js';
 import { utils } from './utils.js';

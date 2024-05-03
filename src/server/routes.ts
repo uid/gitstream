@@ -18,7 +18,7 @@ import crypto from 'crypto';
 import angler from 'git-angler';
 import exerciseConfs from 'gitstream-exercises';
 import { CommitSpec, utils } from './utils.js';
-import { createLogger, EventType, ErrorType } from './logger.js';
+import { logger, EventType, ErrorType } from './logger.js';
 import { createUser } from './user.js';
 import * as routesUtils from './routesUtils.js';
 import { setupWebSocketServer } from './ws.js';
@@ -28,7 +28,6 @@ import settings from '../../settings.js'
 const mongodb: Promise<Db> = MongoClient.connect('mongodb://localhost/gitstream')
     .then((client: MongoClient) => client.db());
 
-export const logger = createLogger();
 export const user = createUser(mongodb);
 
 // == Custom Types and Interfaces == 

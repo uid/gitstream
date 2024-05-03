@@ -1,5 +1,4 @@
-import { logger } from './routes.js'
-import {UserMapOp} from './logger.js'
+import { logger, UserMapOp} from './logger.js'
 
 // err - An error object if the operation fails.
 // returns void - This function does not return anything (mutator function).
