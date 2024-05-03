@@ -1,9 +1,10 @@
-import { Db } from "mongodb";
+import { log } from "../../../log.js"
 
+// todo: add these to settings.js?
 const CONFIG = {
     LOG_CONSOLE: true,
     LOG_MONGO: true,
-    WS_DEBUG_IND: false, // all individual user events (normal and error)
+    WS_DEBUG_IND: true,  // all individual user events (normal and error)
     WS_DEBUG_SUM: true   // summary of user events (aggregated stats and individual errors)
 }
 
