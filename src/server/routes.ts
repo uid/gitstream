@@ -27,9 +27,9 @@ import settings from '../../settings.js'
 // == Configure User and Logger == 
 const mongodb: Promise<Db> = MongoClient.connect('mongodb://localhost/gitstream')
     .then((client: MongoClient) => client.db());
-export const logger = createLogger(mongodb);
-export const user = createUser(mongodb);
 
+export const logger = createLogger();
+export const user = createUser(mongodb);
 
 // == Custom Types and Interfaces == 
 

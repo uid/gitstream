@@ -112,7 +112,7 @@ function getCallerInfo(depth: number = 1): {fileName: string, lineNum: string} {
 }
 
 
-export function createLogger(mongodb: Promise<Db>) {
+export function createLogger() {
     return {
         /**
          * Method that inserts standardized log records to the database
@@ -120,11 +120,14 @@ export function createLogger(mongodb: Promise<Db>) {
          * @param record The log record object to be inserted
          */
         _log: function(record: LogRecord) {
-            mongodb.then((db: Db) => {
-                db.collection('logs').insertOne(record);
-            }).catch((err: any) => { // todo: any
-                console.error('[ERROR] Logger error:', record, err);
-            });
+            // todo: insert praxistutor logger here
+            
+            // mongodb.then((db: Db) => {
+            //     db.collection('logs').insertOne(record);
+            // }).catch((err: any) => { // todo: any
+            //     console.error('[ERROR] GS Logger error:', record, err);
+            // });
+            console.log('[_log called]')
         },
 
         /**
