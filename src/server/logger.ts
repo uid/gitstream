@@ -113,20 +113,47 @@ function getCallerInfo(depth: number = 1): {fileName: string, lineNum: string} {
 
 
 export const logger = {
+
+    // todo: unify _logOther and _log? they're currently diff bc of any vs standardized log obj
+
+    /**
+     * Inserts a log record to the database.
+     * 
+     * @param record The object to be inserted (can be anything).
+     */
+    _logOther(record: any) {
+        console.log('[_logOther called]')
+
+        if (CONFIG.LOG_CONSOLE) {
+            console.log(record);
+        }
+
+        if (CONFIG.LOG_MONGO) {
+            // todo: use praxistutor log here
+        }
+    },
+
     /**
      * Method that inserts standardized log records to the database
      * 
      * @param record The log record object to be inserted
      */
     _log: function(record: LogRecord) {
-        // todo: insert praxistutor logger here
-        
-        // mongodb.then((db: Db) => {
-        //     db.collection('logs').insertOne(record);
-        // }).catch((err: any) => { // todo: any
-        //     console.error('[ERROR] GS Logger error:', record, err);
-        // });
-        console.log('[_log called]')
+        console.log('[_log called]') // todo: remove
+
+        if (CONFIG.LOG_CONSOLE) {
+            console.log(record)
+        }
+
+        if (CONFIG.LOG_MONGO){
+            // todo: insert praxistutor logger here
+            
+            // mongodb.then((db: Db) => {
+            //     db.collection('logs').insertOne(record);
+            // }).catch((err: any) => { // todo: any
+            //     console.error('[ERROR] GS Logger error:', record, err);
+            // });
+        }
     },
 
     /**
@@ -138,10 +165,6 @@ export const logger = {
      * @param data Additional data relevant to the event (optional).
      */
     log: function(eventType: EventType, userId: string, exerciseName?: string, data?: any) {          
-        if (CONFIG.LOG_CONSOLE) {
-            console.info(eventType, userId, exerciseName, data);
-        }
-
         this._log({
             userId: userId,
             event: eventType,
@@ -160,10 +183,6 @@ export const logger = {
      * @param data Additional data relevant to the error.
      */
     err: function( type: ErrorType, userId: string, exercise: string, data: any ) {
-        if (CONFIG.LOG_CONSOLE) {
-            console.error(type, userId, exercise, data);
-        }
-
         this._log({
             event: EventType.ERROR,
             errorType: type,
@@ -182,8 +201,6 @@ export const logger = {
      * @param type - Type of operation
      */
     userMapMod: function(userMap: {[userID: string]: any}, userID: string, type: UserMapOp) {
-        if (!(CONFIG.LOG_CONSOLE || CONFIG.LOG_MONGO)) return; // if both false, skip this function
-
         const callerInfo = getCallerInfo(2);
 
         const location = `${ConsoleColor.GRN}[${callerInfo.fileName}:${callerInfo.lineNum}]` +
@@ -201,14 +218,7 @@ export const logger = {
 
         const output = `[User Map][${userID}]\n${location}\n${contentAll}`;
         
-
-        // todo: add conditional for if logging individual, proceed
-        if (CONFIG.LOG_CONSOLE) {
-            console.log(`\n${output}`);
-        }
-        if (CONFIG.LOG_MONGO) {
-            // todo: praxis stuff here
-        }
+        this._logOther(output);
     },
 
     /**
@@ -225,32 +235,31 @@ export const logger = {
         strOutput.replace(/\"/g, ""); // remove extra quotation marks
 
         const trueOutput = `\n[WS][Server][${type}] ${strOutput}\n`;
-        
-        if (CONFIG.LOG_CONSOLE) {
-            console.log(trueOutput);
-        }
-        if (CONFIG.LOG_MONGO) {
-            // log.info(trueOutput);
-        }
+
+        this._logOther(trueOutput);
     },
 
+    // todo: formalize the purpose of this function
     ws_debug: function(type: WebSocketDebug, msg: string, output: any) {
-        if (CONFIG.WS_DEBUG_SUM) {
-            console.log(`[ws ${type} debug]: ${msg}\n`, output)
-        }
+        if (!CONFIG.WS_DEBUG_SUM) return
+
+        const statement = [`[ws ${type} debug]: ${msg}\n`, output];
+        this._logOther(statement);
+    
     },
 
     /**
-     * Log active connections
+     * Log connections that connect or disconnect
      * 
      * @param type 
      * @param active
      * @returns - nothing
      */
     connections: function(type: ConnectionType, active: string[]): void {
-        if (CONFIG.WS_DEBUG_SUM) {
-            console.log(`\n[${type} Connection] Current Active Users:\n${active.join('\n')}\n`);
-        }
+        if (!CONFIG.WS_DEBUG_SUM) return
+
+        const statement = `\n[${type} Connection] Current Active Users:\n${active.join('\n')}\n`;
+        this._logOther(statement);
     },
 
     /**
@@ -272,7 +281,7 @@ export const logger = {
             
             data.msg = err.message
             
-            console.error(err);
+            console.error(err); // todo: remove?
 
             this.err(ErrorType.DB, userId, exercise, data);
         }
