@@ -1,39 +1,38 @@
 'use strict'
 
-// Imports -- EXTERNAL
+// External Imports
 const $ = require('zeptojs'),
-    _ = require('lodash'), // todo: replace? source: https://youmightnotneed.com/lodash
+    _ = require('lodash'), // todo: replace? src: https://youmightnotneed.com/lodash
     hmac = require('crypto-js/hmac-sha1'),
     eventEmitter = require('event-emitter')
 
-// Imports -- INTERNAL
+// Internal Imports
 const exercises = require('gitstream-exercises/viewers'),
     ExerciseViewer = require('./ExerciseViewer.cjs'),
     exerciseTmp = require('../templates/exercise.hbs'),
     indexTmp = require('../templates/index.hbs');
 
-// Global variables -- CONSTNAT
+// Constant Global Variables
 const EVENTS = {
     sync: 'sync',
     exerciseDone: 'exerciseDone',
     exerciseChanged: 'exerciseChanged',
     step: 'step',
     halt: 'halt' // todo: double check that halt is still being used, then remove it
-}
+};
 
 const GS_ROUTE = '/gitstream';
 
 const EVENTS_ENDPOINT = GS_ROUTE + '/events'; // must be the same as server!
 
-// Global variables -- DYNAMIC
+// Global variables
 let exerciseEvents = eventEmitter({}), // internal client communication, with ExerciseViewer
     radio = eventEmitter({}), // internal client communication, within this file only
     state = {},
     viewer // todo: remove? doesn't seem to be used. weird because it's the only thing
     // that involves ExerciseViewer
 
-// ========= For Debugging =========
-const WS_DEBUG = false;
+const WS_DEBUG = true; // recommended to always be on (even for production)
 
 const WS_TYPE = {
     STATUS: 'Status',
@@ -41,22 +40,32 @@ const WS_TYPE = {
     RECEIVED: 'Received'
 }
 
+
+// todo: seperate logs into actual logs (received/sent) and interpreted logs (status/error)?
 /**
  * Log WebSocket events to console
  * 
  * @param {typeof WS_TYPE} type of WebSocket event
  * @param {object} output any object
+ * @param {boolean} is_err is this an error log?
  * @returns nothing
  */
-function ws_log(type, output){
+function ws_log(type, output, is_err = false){
     if (WS_DEBUG) {
         const strOutput = JSON.stringify(output);
         strOutput.replace(/\"/g, ""); // remove extra quotation marks
 
         const trueOutput = `\n[WS][Client][${type}] ${strOutput}\n`;
-        console.log(trueOutput);
+
+        if (is_err) {
+            console.error(trueOutput);
+        } else {
+            console.log(trueOutput);
+        }
     }
 }
+
+
 // ========= X =========
 
 // URL must be absolute
@@ -66,7 +75,7 @@ const ws_url = (document.location.protocol == 'https:' ? 'wss://' : 'ws://')
 
 const events_WS = new WebSocket(ws_url);
 
-let msgs = []; // awaiting connection to establish
+const msgs = []; // awaiting connection to be established
 
 /**
  * Sends messages via WebSocket. Queues messages if connection is not yet established.
@@ -76,11 +85,10 @@ let msgs = []; // awaiting connection to establish
  */
 function sendMessage(msgEvent, msgData) {
     const msg = {event: msgEvent, data: msgData};
-    
 
     ws_log(WS_TYPE.SENT, msg);
 
-    if (events_WS.readyState !== 1) { // (connection not ready)
+    if (events_WS.readyState !== 1) { // connection not ready
         msgs.push(msg);
     } else {
         const strMsg = JSON.stringify(msg);
@@ -89,7 +97,7 @@ function sendMessage(msgEvent, msgData) {
 }
 
 events_WS.onopen = function(event) {
-    if (WS_DEBUG) sendMessage('ws', 'Hi from Client!');
+    sendMessage('ws', 'Hi from Client!'); // todo: remove?
 
     while (msgs.length > 0) { // send queued messages
         ws_log(WS_TYPE.STATUS, "Waiting for WS connection...");
@@ -126,8 +134,7 @@ events_WS.onmessage = function(event) {
 
         // Special case to share info about socket connection
         case 'ws':
-            if (WS_DEBUG)
-                console.log('ws message received:', msg)
+            ws_log(WS_TYPE.STATUS, {"message": "ws message received", "msg": msg})
             break;
 
         // User changed exercise
@@ -139,28 +146,23 @@ events_WS.onmessage = function(event) {
 
         // Special case to handle errors
         case 'err':
-            if (WS_DEBUG)
-                console.log('err event received:', msg)
+            ws_log(WS_TYPE.STATUS, {"message": "err event received", "event": event}, true)
             break;
 
         // Edge cases
         default:
-            if (WS_DEBUG)
-                console.error("error: unknown event: ", msgEvent);
+            ws_log(WS_TYPE.STATUS, {"message": "error: unknown event", "event": event}, true)
     }
 };
 
 events_WS.onclose = function(event) {
-    if (WS_DEBUG)
-        console.log('ws connection closed:', event.reason);
+    ws_log(WS_TYPE.STATUS, {"message": "ws connection closed", "event": event})
 };
 
 events_WS.onerror = function(event) {
-    if (WS_DEBUG)
-        console.error('ws connection error:', event);
+    ws_log(WS_TYPE.STATUS, {"message": "ws connection error", "event": event}, true)
 };
 
-// some redirecting
 $.get( GS_ROUTE + '/user', function( userId ) {
     if (!userId) {
         document.location = GS_ROUTE + "/login" + document.location.search;
@@ -173,10 +175,9 @@ $.get( GS_ROUTE + '/user', function( userId ) {
  * @param {typeof EVENTS} eventType the type of event: step, halt
  * @param {Function} done the function to call when the transition has completed
  */
-function triggerExerciseEvent(eventType, done ) {
+function triggerExerciseEvent(eventType, done) {
     return (...args) => exerciseEvents.emit(eventType, ...args, done);
 }
-
 
 // html/css edits
 function renderExerciseView( exerciseName, conf, user ) {
@@ -256,7 +257,6 @@ radio.on( EVENTS.exerciseChanged, function( changeTo ) {
     $('.main-content').removeClass('hide')
 })
 
-
 function handleSync(newState) {
     let hashExercise = window.location.search.substring(1)
 
@@ -307,9 +307,9 @@ function handleStepEvent(newState, oldState, stepOutput) {
     }
 }
 
+// todo: safe to remove?
 function handleHaltEvent() {
 }
-
 
 // todo: remove? seems redundant
 window.resetId = function() {
