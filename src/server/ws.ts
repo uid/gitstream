@@ -139,6 +139,7 @@ class ClientConnection {
     // per socket
     private handleError(event: WebSocket.ErrorEvent) {
         console.error('ws connection error:', event);
+        logger.ws_debug(WebSocketDebug.ERROR, "ws connection error", event);
     }
     
     // per socket
@@ -305,7 +306,7 @@ class ClientConnection {
             this.exerciseMachine = null
         }
     
-        console.error('hset', this.userId, FIELD_CURRENT_EXERCISE, newExercise);
+        console.error('*hset', this.userId, FIELD_CURRENT_EXERCISE, newExercise); // todo: remove or turn into a log?
         
         const handleNewExercise = logger.logDbErr(this.userId, newExercise, {
             desc: 'userMap change exercise'
@@ -342,7 +343,7 @@ class ClientConnection {
         }
     
         const stepHelper = (newState: any) => { // todo: any
-            console.error('hset', this.userId, FIELD_EXERCISE_STATE, newState);
+            console.error('*hset', this.userId, FIELD_EXERCISE_STATE, newState); // todo: change to a log statement? 
     
             const updateState = logger.logDbErr( this.userId, exerciseName, {
                 desc: 'userMap step update exercise state',
