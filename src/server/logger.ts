@@ -24,14 +24,6 @@ export enum ConnectionType {
     REMOVE = 'Remove',
 }
 
-// todo: find a library for coloring output
-enum ConsoleColor {
-    MAG = '\x1b[35m', // magenta
-    RST = '\x1b[0m',  // reset
-    GRN = '\x1b[32m', // green
-    BLU = '\x1b[34m', // blue
-};
-
 export enum EventType {
     NEW_USER = 'NEW_USER',
     INIT_CLONE = 'INIT_CLONE',
@@ -201,20 +193,19 @@ export const logger = {
      * @param type - Type of operation
      */
     userMapMod: function(userMap: {[userID: string]: any}, userID: string, type: UserMapOp) {
+        // todo: probably update the formatting of this log into an object
+        
         const callerInfo = getCallerInfo(2);
 
-        const location = `${ConsoleColor.GRN}[${callerInfo.fileName}:${callerInfo.lineNum}]` +
-                            `${ConsoleColor.MAG}[${type}]${ConsoleColor.RST}`;
+        const location = `[${callerInfo.fileName}:${callerInfo.lineNum}][${type}]`;
 
         const userInfo = userMap[userID] ?? {};
-        let contentAll: string = ConsoleColor.BLU;
+        let contentAll = "";
 
         Object.keys(userInfo).forEach(field => {
             const formattedEntry = formatField(field, userInfo[field]);
             contentAll += formattedEntry + '\n';
         });
-
-        contentAll += ConsoleColor.RST;
 
         const output = `[User Map][${userID}]\n${location}\n${contentAll}`;
         
