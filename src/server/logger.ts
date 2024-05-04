@@ -24,6 +24,7 @@ export enum ConnectionType {
     REMOVE = 'Remove',
 }
 
+// todo: find a library for coloring output
 enum ConsoleColor {
     MAG = '\x1b[35m', // magenta
     RST = '\x1b[0m',  // reset
@@ -123,14 +124,14 @@ export const logger = {
      * @param record The object to be inserted (can be anything).
      */
     _logOther(record: any) {
-        console.log('[_logOther called]')
+        console.log('_logOther called')
 
         if (CONFIG.LOG_CONSOLE) {
             console.log(record);
         }
 
         if (CONFIG.LOG_MONGO) {
-            // todo: use praxistutor log here
+            log.info(record);
         }
     },
 
@@ -140,20 +141,18 @@ export const logger = {
      * @param record The log record object to be inserted
      */
     _log: function(record: LogRecord) {
-        console.log('[_log called]') // todo: remove
+        console.log('_log called') // todo: remove
 
         if (CONFIG.LOG_CONSOLE) {
-            console.log(record)
+            console.log(record);
         }
 
         if (CONFIG.LOG_MONGO){
-            // todo: insert praxistutor logger here
-            
-            // mongodb.then((db: Db) => {
-            //     db.collection('logs').insertOne(record);
-            // }).catch((err: any) => { // todo: any
-            //     console.error('[ERROR] GS Logger error:', record, err);
-            // });
+            if (record.event == EventType.ERROR){
+                log.error(record);
+            } else {
+                log.info(record);
+            }
         }
     },
 
