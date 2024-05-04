@@ -2,7 +2,7 @@ import { log } from "../../../log.js"
 
 // todo: add these to settings.js?
 const CONFIG = {
-    LOG_CONSOLE: true,
+    LOG_CONSOLE: false,
     LOG_MONGO: true,
     WS_DEBUG_IND: true,  // all individual user events (normal and error)
     WS_DEBUG_SUM: true   // summary of user events (aggregated stats and individual errors)
@@ -60,21 +60,6 @@ interface LogRecord {
     errorType?: ErrorType;
 }
 
-/**
- * Format a field and its content with a specified width.
- * Truncates content if it exceeds the specified width.
- * 
- * @param field - The field name.
- * @param content - The content associated with the field.
- * @param width - The desired width for the field. Default 20.
- * @returns - The formatted string with proper padding.
- */
-function formatField(field: string, content: string, width: number = 20): string {
-    const fieldString = field + ':';
-    const contentString = String(content).substring(0, width);
-    const padding = ' '.repeat(width - fieldString.length);
-    return fieldString + padding + contentString;
-}
 
 /**
  * Retrieves filename and line number information from some ancestor caller function that was called.
@@ -116,14 +101,17 @@ export const logger = {
      * @param record The object to be inserted (can be anything).
      */
     _logOther(record: any) {
-        console.log('_logOther called')
+        const trueLog = {
+            service: "gitstream",
+            record: record
+        };
 
         if (CONFIG.LOG_CONSOLE) {
             console.log(record);
         }
 
         if (CONFIG.LOG_MONGO) {
-            log.info(record);
+            log.info(trueLog);
         }
     },
 
@@ -133,7 +121,10 @@ export const logger = {
      * @param record The log record object to be inserted
      */
     _log: function(record: LogRecord) {
-        console.log('_log called') // todo: remove
+        const trueLog = {
+            service: "gitstream",
+            record: record
+        };
 
         if (CONFIG.LOG_CONSOLE) {
             console.log(record);
@@ -141,9 +132,9 @@ export const logger = {
 
         if (CONFIG.LOG_MONGO){
             if (record.event == EventType.ERROR){
-                log.error(record);
+                log.error(trueLog);
             } else {
-                log.info(record);
+                log.info(trueLog);
             }
         }
     },
@@ -192,51 +183,49 @@ export const logger = {
      * @param userID - ID of user
      * @param type - Type of operation
      */
-    userMapMod: function(userMap: {[userID: string]: any}, userID: string, type: UserMapOp) {
-        // todo: probably update the formatting of this log into an object
-        
+    userMapMod: function(userMap: {[userID: string]: any}, userID: string, type: UserMapOp) {    
         const callerInfo = getCallerInfo(2);
-
-        const location = `[${callerInfo.fileName}:${callerInfo.lineNum}][${type}]`;
-
         const userInfo = userMap[userID] ?? {};
-        let contentAll = "";
 
-        Object.keys(userInfo).forEach(field => {
-            const formattedEntry = formatField(field, userInfo[field]);
-            contentAll += formattedEntry + '\n';
-        });
+        const record = {
+            userMapOp: type,
+            callerInfo: callerInfo,
+            user: userID,
+            info: userInfo
+        }
 
-        const output = `[User Map][${userID}]\n${location}\n${contentAll}`;
-        
-        this._logOther(output);
+        this._logOther(record);
     },
 
     /**
      * Log WebSocket events
      * 
      * @param type - of WebSocket
-     * @param output - any object
+     * @param info - any object
      * @returns - nothing
      */
-    ws: function(type: WebSocketEvent, output: any) { // todo: standardize type of output
+    ws: function(type: WebSocketEvent, info: any) { // todo: standardize type of info
         if (!CONFIG.WS_DEBUG_IND) return
 
-        const strOutput = JSON.stringify(output);
-        strOutput.replace(/\"/g, ""); // remove extra quotation marks
+        const record = {
+            ws_event: type,
+            info: info
+        };
 
-        const trueOutput = `\n[WS][Server][${type}] ${strOutput}\n`;
-
-        this._logOther(trueOutput);
+        this._logOther(record);
     },
 
     // todo: formalize the purpose of this function
-    ws_debug: function(type: WebSocketDebug, msg: string, output: any) {
+    ws_debug: function(type: WebSocketDebug, msg: string, info: any) {
         if (!CONFIG.WS_DEBUG_SUM) return
 
-        const statement = [`[ws ${type} debug]: ${msg}\n`, output];
-        this._logOther(statement);
-    
+        const record = {
+            ws_debug_event: type,
+            msg: msg,
+            info: info
+        };
+        
+        this._logOther(record);
     },
 
     /**
@@ -249,8 +238,12 @@ export const logger = {
     connections: function(type: ConnectionType, active: string[]): void {
         if (!CONFIG.WS_DEBUG_SUM) return
 
-        const statement = `\n[${type} Connection] Current Active Users:\n${active.join('\n')}\n`;
-        this._logOther(statement);
+        const record = {
+            connection_event: type,
+            active_users: active
+        };
+        
+        this._logOther(record);
     },
 
     /**
