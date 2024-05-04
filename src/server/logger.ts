@@ -2,7 +2,7 @@ import { log } from "../../../log.js"
 
 // todo: add these to settings.js?
 const CONFIG = {
-    LOG_CONSOLE: false,
+    LOG_CONSOLE: false,  // off b/c praxistutor logs to console
     LOG_MONGO: true,
     WS_DEBUG_IND: true,  // all individual user events (normal and error)
     WS_DEBUG_SUM: true   // summary of user events (aggregated stats and individual errors)
@@ -51,7 +51,6 @@ export enum UserMapOp {
 }
 
 interface LogRecord {
-    timestamp: number;
     userId: string;
     event: EventType;
     exercise: string;
@@ -152,8 +151,7 @@ export const logger = {
             userId: userId,
             event: eventType,
             exercise: exerciseName || "NA",
-            data: data,
-            timestamp: Date.now()
+            data: data
         })
     },
 
@@ -171,8 +169,7 @@ export const logger = {
             errorType: type,
             userId: userId,
             exercise: exercise,
-            data: data,
-            timestamp: Date.now()
+            data: data
         })
     },
     
