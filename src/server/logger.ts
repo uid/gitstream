@@ -90,54 +90,53 @@ function getCallerInfo(depth: number = 1): {fileName: string, lineNum: string} {
 }
 
 
-export const logger = {
+// todo: unify _logOther and _log? they're currently diff bc of any vs standardized log obj
 
-    // todo: unify _logOther and _log? they're currently diff bc of any vs standardized log obj
+/**
+ * Inserts a log record to the database.
+ * 
+ * @param record The object to be inserted (can be anything).
+ */
+function _logOther(record: any) {
+    const trueLog = {
+        service: "gitstream",
+        record: record
+    };
 
-    /**
-     * Inserts a log record to the database.
-     * 
-     * @param record The object to be inserted (can be anything).
-     */
-    _logOther(record: any) {
-        const trueLog = {
-            service: "gitstream",
-            record: record
-        };
+    if (CONFIG.LOG_CONSOLE) {
+        console.log(record);
+    }
 
-        if (CONFIG.LOG_CONSOLE) {
-            console.log(record);
-        }
+    if (CONFIG.LOG_MONGO) {
+        log.info(trueLog);
+    }
+}
 
-        if (CONFIG.LOG_MONGO) {
+/**
+ * Method that inserts standardized log records to the database
+ * 
+ * @param record The log record object to be inserted
+ */
+function _log(record: LogRecord) {
+    const trueLog = {
+        service: "gitstream",
+        record: record
+    };
+
+    if (CONFIG.LOG_CONSOLE) {
+        console.log(record);
+    }
+
+    if (CONFIG.LOG_MONGO){
+        if (record.event == EventType.ERROR){
+            log.error(trueLog);
+        } else {
             log.info(trueLog);
         }
-    },
+    }
+}
 
-    /**
-     * Method that inserts standardized log records to the database
-     * 
-     * @param record The log record object to be inserted
-     */
-    _log: function(record: LogRecord) {
-        const trueLog = {
-            service: "gitstream",
-            record: record
-        };
-
-        if (CONFIG.LOG_CONSOLE) {
-            console.log(record);
-        }
-
-        if (CONFIG.LOG_MONGO){
-            if (record.event == EventType.ERROR){
-                log.error(trueLog);
-            } else {
-                log.info(trueLog);
-            }
-        }
-    },
-
+export const logger = {
     /**
      * Logs an event with its associated data.
      * 
@@ -147,7 +146,7 @@ export const logger = {
      * @param data Additional data relevant to the event (optional).
      */
     log: function(eventType: EventType, userId: string, exerciseName?: string, data?: any) {          
-        this._log({
+        _log({
             userId: userId,
             event: eventType,
             exercise: exerciseName || "NA",
@@ -164,7 +163,7 @@ export const logger = {
      * @param data Additional data relevant to the error.
      */
     err: function( type: ErrorType, userId: string, exercise: string, data: any ) {
-        this._log({
+        _log({
             event: EventType.ERROR,
             errorType: type,
             userId: userId,
@@ -191,7 +190,7 @@ export const logger = {
             info: userInfo
         }
 
-        this._logOther(record);
+        _logOther(record);
     },
 
     /**
@@ -209,7 +208,7 @@ export const logger = {
             info: info
         };
 
-        this._logOther(record);
+        _logOther(record);
     },
 
     // todo: formalize the purpose of this function
@@ -222,7 +221,7 @@ export const logger = {
             info: info
         };
         
-        this._logOther(record);
+        _logOther(record);
     },
 
     /**
@@ -240,7 +239,7 @@ export const logger = {
             active_users: active
         };
         
-        this._logOther(record);
+        _logOther(record);
     },
 
     /**
