@@ -12,7 +12,8 @@ declare const settings: {
     clockTolerance: number;
   };
   sessionSecret: string;
-  reposPath: string;
+  // note: there may be issues if these are not absolute
+  reposPath: string; // The filepath where all user repos will live
   pemPath: string;
 };
 
