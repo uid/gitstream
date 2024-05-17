@@ -263,7 +263,6 @@ async function handleGo(req: Request, res: Response) {
 
     createRepo( repo )
     .then( function( repoInfo ) {
-        console.log('got here3')
         // only 1 instance of publish
         // note: this messaging system will kept for now
         const handlePublishError = logger.logDbErr( repoInfo.userId, repoInfo.exerciseName, {
