@@ -55,7 +55,8 @@ export function createUser(mongodb: Promise<Db>) {
                 }
             });
         },
-
+        
+        // todo: I think this function can be safely moved outside parent export function
         // length's default is 6 for repos
         createMac: function(key: string, macMsg: string, length: number = 6) {
             return crypto.createHmac('sha1', key)
