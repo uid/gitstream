@@ -9,7 +9,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     v.name = "gitstream"
   end
 
-  config.vm.box = "ubuntu/focal64"
+  #config.vm.box = "ubuntu/focal64" # Ubuntu 20
+  config.vm.box = "ubuntu/jammy64" # Ubuntu 22
 
   # Create a forwarded port mapping which allows access to a specific port
   # within the machine from a port on the host machine. In the example below,
