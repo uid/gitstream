@@ -5,7 +5,6 @@ REPOS = $(DESTDIR)/srv/repos
 MONGO = $(DESTDIR)/var/opt/gitstream/mongo
 NGINXLOGS = $(DESTDIR)/var/log/nginx
 GSLOGS = $(NGINXLOGS)/gitstream_access.log $(NGINXLOGS)/gitstream_error.log
-GITSTREAM_USER := $(shell grep gitstream /etc/passwd; echo $$?)
 
 # source paths
 SRC_CLIENT_STATIC = src/client/resources/ src/client/*.html

@@ -11,9 +11,7 @@ ifeq ($(REBUILD_EXERCISES),1)
 	gitstream-exercises/createx.js
 endif
 
-ifeq ($(PACKAGING),)
 	npm install
-endif
 	npm run sass
 	npm run browserify
 
@@ -44,16 +42,12 @@ ifneq ($(DEST), $(SRC))
 endif
 	sudo touch $(GSLOGS)
 
-ifeq ($(PACKAGING),)
-ifeq ($(GITSTREAM_USER), 1)
-	sudo useradd -m gitstream
-	sudo -u gitstream git config --global user.email "gitstream@gitstream.csail.mit.edu"
-	sudo -u gitstream git config --global user.name "GitStream"
-endif
+	-sudo useradd -m gitstream
+	sudo -u gitstream sh -c 'cd /home/gitstream ; git config --global user.email "gitstream@gitstream.csail.mit.edu" ; git config --global user.name "GitStream" '
 	sudo chown -R gitstream:gitstream $(DEST)
 	sudo chown gitstream:gitstream $(REPOS) $(MONGO) $(GSLOGS)
+	sudo rm -f /etc/nginx/nginx.conf
 	sudo ln -sf /opt/gitstream/nginx-deployed.conf /etc/nginx/nginx.conf
-endif
 
 uninstall:
 	sudo rm -rf $(DEST) $(REPOS) $(GSLOGS) $(DESTDIR)/var/opt/gitstream
