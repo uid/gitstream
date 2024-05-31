@@ -9,7 +9,8 @@ variable "private_key_file" { }
 #variable "bastion_password" { }
 
 variable "boot-image-uuid" {
-  default = "ef794b7d-4a30-4e28-8230-e599de4d9b19" # CSAIL-Ubuntu-20.04LTS 12-Nov-2020
+  default = "4bd956aa-36b5-43f0-85ef-5f83350fdd7d" # CSAIL-Ubuntu-22.04LTS May 26, 2024
+  # don't upgrade Ubuntu further without checking what version MongoDB can run
 }
 
 # CSAIL's OpenStack provider.
