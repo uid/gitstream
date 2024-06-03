@@ -43,7 +43,7 @@ endif
 	sudo touch $(GSLOGS)
 
 	-sudo useradd -m gitstream
-	sudo -u gitstream sh -c 'cd /home/gitstream ; git config --global user.email "gitstream@gitstream.csail.mit.edu" ; git config --global user.name "GitStream" '
+	sudo -u gitstream sh -c 'cd /home/gitstream ; git config --global user.email "gitstream@gitstream.mit.edu" ; git config --global user.name "GitStream" '
 	sudo chown -R gitstream:gitstream $(DEST)
 	sudo chown gitstream:gitstream $(REPOS) $(MONGO) $(GSLOGS)
 	sudo rm -f /etc/nginx/nginx.conf
