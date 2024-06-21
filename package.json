@@ -33,7 +33,7 @@
     "mustache": "^4.1.0",
     "node-uuid": "^1.4.8",
     "openid-client": "^5.1.8",
-    "passport": "^0.5.3",
+    "passport": "^0.7.0",
     "q": "^1.5.1",
     "rimraf": "^3.0.2",
     "ws": "^8.14.2"

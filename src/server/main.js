@@ -375,6 +375,18 @@ const sessionParser = session({
     overwrite: true,
 });
 app.use(sessionParser);
+// workaround for Passport versions 6.0 and later, which require session to have regenerate and save methods
+// adapted from https://github.com/jaredhanson/passport/issues/904#issuecomment-1307558283
+app.use(function(request, response, next) {
+    const doNothingAndCallCallback = (cb) => cb();
+    if (request.session && !request.session.regenerate) {
+        request.session.regenerate = doNothingAndCallCallback;
+    }
+    if (request.session && !request.session.save) {
+        request.session.save = doNothingAndCallCallback;
+    }
+    next();
+})
 
 // setUserAuthenticateIfNecessary: this middleware sets req.user to an object { username:string, fullname:string }, either from
 // session cookie information or by authenticating the user using the authentication method selected in settings.js.
