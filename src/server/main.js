@@ -12,7 +12,7 @@ const compression = require('compression'),
     EventEmitter = require('events'),
     { spawn } = require('child_process'),
     MongoClient = require('mongodb').MongoClient,
-    mongodb = q.nfcall(MongoClient.connect, 'mongodb://localhost/gitstream')
+    mongodb = q.nfcall(MongoClient.connect, process.env['MONGO_URL'] || 'mongodb://localhost/gitstream')
         .then(client => client.db());
   
 // Imported Libraries -- INTERNAL

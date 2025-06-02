@@ -1,0 +1,27 @@
+services:
+  server:
+    build:
+      context: .
+    ports:
+      - '8000:80'
+    environment:
+      - MONGO_URL=mongodb://mongo:27017/gitstream
+    depends_on:
+      mongo:
+        condition: service_healthy  # wait for MongoDB to be running before starting the server
+
+  mongo:
+    image: mongo
+    command: mongod --quiet --logpath /dev/null  # https://stackoverflow.com/questions/54695525/how-to-reduce-mongo-log-verbosity-in-a-docker-compose-image
+    volumes:
+      - mongo-data:/data/db
+      - mongo-configdb-not-used:/data/configdb  # the mongo image creates this volume, but it is not used unless you use --configsvr
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mongo-data:
+  mongo-configdb-not-used:
