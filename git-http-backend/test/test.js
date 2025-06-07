@@ -1,5 +1,5 @@
 var test = require('tape');
-var rimraf = require('rimraf');
+var { rimraf } = require('rimraf');
 var fs = require('fs');
 var path = require('path');
 var child = require('child_process');
@@ -53,8 +53,5 @@ function setup(t) {
 }
 
 function cleanup(t) {
-    rimraf(repoDir, function(err) {
-        t.false(err);
-        t.end();
-    });
+    rimraf(repoDir).catch((err) => t.false(err)).finally(() => t.end());
 };

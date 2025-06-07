@@ -16,6 +16,6 @@
     "git-http-backend": "file:../git-http-backend"
   },
   "devDependencies": {
-    "mocha": "^10.2.0"
+    "mocha": "^11.5.0"
   }
 }
