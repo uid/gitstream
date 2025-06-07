@@ -76,8 +76,7 @@ sudo systemctl start mongod.service
 sudo -H npm install -g pm2 || exit 1
 
 # make Gitstream
-make
-sudo make install
+make install
 
 # restart Nginx
 sudo systemctl restart nginx

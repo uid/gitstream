@@ -41,9 +41,8 @@ sudo -u gitstream pm2 start dist/server/main.js
 ### Install Dependencies
 1. Download [GitStream Excercises](https://github.com/uid/gitstream-exercises) repository and
 place inside the root folder of GitStream.
-2. Install [Vagrant](https://www.vagrantup.com/).
-3. Add a new Vagrant box to your machine: `vagrant box add ubuntu/focal64`.
-4. Ensure special configuration files are in the main directory: `gistream.pem`, `settings.js`
+2. Install [Docker](https://www.docker.com/).
+3. Ensure special configuration files are in the main directory: `gistream.pem`, `settings.js`
 
 ### Test
 
@@ -52,15 +51,7 @@ place inside the root folder of GitStream.
 
 ### Run
 
-1. Access the VM by entering the vagrant folder (`cd vagrant`) and running `vagrant up && vagrant ssh`.
-The first boot will be slow as the VM is being initialized.
+1. Start the Docker containers using `docker compose up --build`.
 
-2. Once in the VM, head to the gitstream directory: `cd /opt/gitstream`.
-
-3. Whenever you edit the sourcecode, rebuild and restart the server by running `make run`.
-
-4. You can now view GitStream by navigating your browser to one of the exercises,
+2. You can now view GitStream by navigating your browser to one of the exercises,
 e.g.: [http://localhost:8000?theGitGo](http://localhost:8000?theGitGo).
-
-### Misc. Debugging
-* MIT's OpenID is not friendly with VPNs. Make sure your VPN is disabled when accessing the GitStream webpage.
