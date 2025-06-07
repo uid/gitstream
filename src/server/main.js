@@ -3,7 +3,7 @@ const compression = require('compression'),
     express = require('express'),
     path = require('path'),
     q = require('q'),
-    rimraf = require('rimraf'),
+    { rimraf } = require('rimraf'),
     WebSocket = require('ws'),
     session = require('cookie-session'),
     { Passport } = require('passport'),
@@ -260,7 +260,7 @@ function createRepo( repoName ) {
         repoInfo = info
         pathToExercise = path.join( PATH_TO_EXERCISES, repoInfo.exerciseName )
         pathToStarterRepo = path.join( pathToExercise, 'starting.git' )
-        return q.nfcall( rimraf, pathToRepoDir )
+        return rimraf(pathToRepoDir);
     })
     .then( function() {
         var done = q.defer(),
