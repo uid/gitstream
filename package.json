@@ -51,5 +51,11 @@
     "normalize.css": "^8.0.1",
     "sass": "^1.54.5",
     "zeptojs": "^1.1.4"
+  },
+  "allowScripts": {
+    "esbuild@0.25.12": true,
+    "es5-ext@0.10.64": true,
+    "node-sass@9.0.0": true,
+    "file:../gitstream-exercises": true
   }
 }
